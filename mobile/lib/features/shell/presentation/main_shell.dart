@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../dashboard/presentation/screens/dashboard_screen.dart';
+import '../../products/presentation/screens/products_list_screen.dart';
+import '../../sales/presentation/screens/sales_list_screen.dart';
 
 /// Main App Shell — Spec Ch. 7 (Navigation)
 /// 4-item bottom nav: Dashboard, Sales, Inventory, More.
@@ -19,8 +21,8 @@ class _MainShellState extends State<MainShell> {
 
   static const _tabs = [
     DashboardScreen(),
-    _PlaceholderScreen(title: 'Sales'),
-    _PlaceholderScreen(title: 'Inventory'),
+    SalesListScreen(),
+    ProductsListScreen(),
     _MoreMenu(),
   ];
 
@@ -37,21 +39,6 @@ class _MainShellState extends State<MainShell> {
           BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Inventory'),
           BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
         ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text('$title screen — built in a later Phase-2 batch'),
       ),
     );
   }
