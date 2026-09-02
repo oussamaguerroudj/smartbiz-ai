@@ -1,0 +1,28 @@
+name: smartbiz_ai
+description: SmartBiz AI — AI-powered small business management app.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  # NOTE: Google Fonts "Inter" is referenced in core/theme/app_typography.dart
+  # via fontFamily: 'Inter'. To actually render Inter (instead of falling
+  # back to the platform default), either:
+  #   1) add the google_fonts package and switch to GoogleFonts.inter(...), or
+  #   2) download Inter's .ttf files and declare them here under `fonts:`.
+  # Left as a deliberate follow-up so Phase 2 stays dependency-light and
+  # something you can `flutter pub get` immediately without extra config.
