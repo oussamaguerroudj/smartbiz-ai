@@ -22,7 +22,8 @@ class SalesListScreen extends ConsumerWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.sm),
               itemCount: sales.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.xs),
               itemBuilder: (context, i) {
                 final sale = sales[i];
                 Invoice? invoice;
@@ -59,9 +60,12 @@ class SalesListScreen extends ConsumerWidget {
                       ),
                       Text(
                         '${sale.total.toStringAsFixed(0)} DZD',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: isUnpaid ? AppColors.danger : AppColors.primary,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: isUnpaid
+                                      ? AppColors.danger
+                                      : AppColors.primary,
+                                ),
                       ),
                     ],
                   ),
@@ -69,7 +73,6 @@ class SalesListScreen extends ConsumerWidget {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'sales_fab',
         backgroundColor: AppColors.primary,
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const CreateSaleScreen()),

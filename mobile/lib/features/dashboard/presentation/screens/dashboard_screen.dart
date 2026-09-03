@@ -26,8 +26,10 @@ class DashboardScreen extends ConsumerWidget {
 
     final todaySales = sales.where((s) => _isToday(s.soldAt)).toList();
     final todayRevenue = todaySales.fold<double>(0, (sum, s) => sum + s.total);
-    final todayProfit = todaySales.fold<double>(0, (sum, s) => sum + s.grossProfit);
-    final lowStock = products.where((p) => p.isLowStock || p.isOutOfStock).toList();
+    final todayProfit =
+        todaySales.fold<double>(0, (sum, s) => sum + s.grossProfit);
+    final lowStock =
+        products.where((p) => p.isLowStock || p.isOutOfStock).toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard')),
@@ -46,7 +48,8 @@ class DashboardScreen extends ConsumerWidget {
                     color: AppColors.primary,
                   ),
                   const SizedBox(width: AppSpacing.xs),
-                  const _KpiCard(label: 'Expenses', value: '—', color: AppColors.danger),
+                  const _KpiCard(
+                      label: 'Expenses', value: '—', color: AppColors.danger),
                   const SizedBox(width: AppSpacing.xs),
                   _KpiCard(
                     label: 'Profit',
@@ -59,11 +62,16 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
-                Expanded(child: _MiniKpi(label: 'Sales', value: '${todaySales.length}')),
+                Expanded(
+                    child: _MiniKpi(
+                        label: 'Sales', value: '${todaySales.length}')),
                 const SizedBox(width: AppSpacing.xs),
-                Expanded(child: _MiniKpi(label: 'Low Stock', value: '${lowStock.length}')),
+                Expanded(
+                    child: _MiniKpi(
+                        label: 'Low Stock', value: '${lowStock.length}')),
                 const SizedBox(width: AppSpacing.xs),
-                const Expanded(child: _MiniKpi(label: 'Unpaid Inv.', value: '—')),
+                const Expanded(
+                    child: _MiniKpi(label: 'Unpaid Inv.', value: '—')),
               ],
             ),
             if (lowStock.isNotEmpty) ...[
@@ -88,7 +96,8 @@ class DashboardScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Recent Sales', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Recent Sales',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: AppSpacing.sm),
                     if (sales.isEmpty)
                       const Text('No sales recorded yet.')
@@ -97,9 +106,11 @@ class DashboardScreen extends ConsumerWidget {
                             (s) => Padding(
                               padding: const EdgeInsets.symmetric(vertical: 4),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('${s.customerName ?? "Walk-in"} · ${s.items.length} item(s)'),
+                                  Text(
+                                      '${s.customerName ?? "Walk-in"} · ${s.items.length} item(s)'),
                                   Text('${s.total.toStringAsFixed(0)} DZD'),
                                 ],
                               ),
@@ -117,7 +128,8 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _KpiCard extends StatelessWidget {
-  const _KpiCard({required this.label, required this.value, required this.color});
+  const _KpiCard(
+      {required this.label, required this.value, required this.color});
 
   final String label;
   final String value;
@@ -140,7 +152,8 @@ class _KpiCard extends StatelessWidget {
           const Spacer(),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
+            style:
+                Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
           ),
         ],
       ),

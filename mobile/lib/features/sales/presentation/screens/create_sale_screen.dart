@@ -72,7 +72,8 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
       if (newQty <= 0) {
         _cart.remove(line);
       } else if (newQty > line.product.quantity) {
-        _showSnack('Only ${line.product.quantity} in stock for ${line.product.name}');
+        _showSnack(
+            'Only ${line.product.quantity} in stock for ${line.product.name}');
       } else {
         line.quantity = newQty;
       }
@@ -80,7 +81,8 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _confirmSale() {
@@ -104,7 +106,8 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
             discount: _discount,
             paymentStatus: PaymentStatus.paid,
           );
-      final invoice = ref.read(invoicesRepositoryProvider.notifier).forSale(sale.id);
+      final invoice =
+          ref.read(invoicesRepositoryProvider.notifier).forSale(sale.id);
       if (mounted) {
         Navigator.of(context).pop();
         _showSnack('Sale recorded — ${invoice?.invoiceNumber ?? sale.id}');
@@ -138,19 +141,24 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
           ),
           Expanded(
             child: _cart.isEmpty
-                ? const Center(child: Text('Cart is empty — add a product above'))
+                ? const Center(
+                    child: Text('Cart is empty — add a product above'))
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                     itemCount: _cart.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.xs),
                     itemBuilder: (context, i) {
                       final line = _cart[i];
                       return Container(
                         padding: const EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                          border: Border.all(color: Theme.of(context).dividerColor),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusCard),
+                          border:
+                              Border.all(color: Theme.of(context).dividerColor),
                         ),
                         child: Row(
                           children: [
@@ -204,7 +212,8 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Total',
+                        style: Theme.of(context).textTheme.titleMedium),
                     Text(
                       '${_total.toStringAsFixed(0)} DZD',
                       style: Theme.of(context)

@@ -117,7 +117,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       '⚠ Selling price is below purchase price',
-                      style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12),
                     ),
                   ),
                 const SizedBox(height: AppSpacing.sm),

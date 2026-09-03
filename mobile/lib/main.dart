@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
+import 'features/settings/data/settings_providers.dart';
 import 'features/onboarding/presentation/screens/splash_screen.dart';
 import 'features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
@@ -16,17 +18,35 @@ void main() {
   runApp(const ProviderScope(child: SmartBizApp()));
 }
 
-class SmartBizApp extends StatelessWidget {
+class SmartBizApp extends ConsumerWidget {
   const SmartBizApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
+
     return MaterialApp(
       title: 'SmartBiz AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
+      locale: locale,
+      supportedLocales: supportedLocales,
+      // NOTE: this enables real RTL layout mirroring (Directionality
+      // flows from the active Locale via GlobalWidgetsLocalizations) —
+      // switching to Arabic in Settings will visibly mirror the whole
+      // app. Actual string TRANSLATION (AppLocalizations.of(context))
+      // is a separate, larger follow-up: the .arb files under
+      // core/localization/ are ready, but wiring flutter gen-l10n and
+      // replacing every hardcoded string across ~20 screens needs its
+      // own reviewable batch — flagged in README, not done here.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const _AppFlow(),
     );
   }

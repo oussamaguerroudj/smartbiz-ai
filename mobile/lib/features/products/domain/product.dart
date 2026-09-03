@@ -28,8 +28,9 @@ class Product {
   bool get isOutOfStock => quantity <= 0;
   bool get isLowStock => quantity > 0 && quantity <= minimumStock;
 
-  double get marginPercent =>
-      sellingPrice <= 0 ? 0 : ((sellingPrice - purchasePrice) / sellingPrice) * 100;
+  double get marginPercent => sellingPrice <= 0
+      ? 0
+      : ((sellingPrice - purchasePrice) / sellingPrice) * 100;
 
   Product copyWith({
     String? name,

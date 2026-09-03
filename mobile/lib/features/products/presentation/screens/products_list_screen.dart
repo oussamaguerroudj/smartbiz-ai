@@ -46,16 +46,18 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
             child: filtered.isEmpty
                 ? const Center(child: Text('No products found'))
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
-                    itemBuilder: (context, i) => _ProductRow(product: filtered[i]),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.xs),
+                    itemBuilder: (context, i) =>
+                        _ProductRow(product: filtered[i]),
                   ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'products_fab',
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const AddProductScreen()),
         ),
@@ -86,7 +88,8 @@ class _ProductRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ProductDetailsScreen(productId: product.id)),
+        MaterialPageRoute(
+            builder: (_) => ProductDetailsScreen(productId: product.id)),
       ),
       borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
       child: Container(
@@ -108,10 +111,14 @@ class _ProductRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.name, style: Theme.of(context).textTheme.titleMedium),
+                  Text(product.name,
+                      style: Theme.of(context).textTheme.titleMedium),
                   Text(
                     _statusLabel,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: _statusColor),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: _statusColor),
                   ),
                 ],
               ),

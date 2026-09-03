@@ -11,8 +11,8 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.validator,
-    this.onChanged,
     this.suffixIcon,
+    this.onChanged,
   });
 
   final String label;
@@ -21,8 +21,8 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
-  final void Function(String)? onChanged;
   final Widget? suffixIcon;
+  final void Function(String)? onChanged;
 
   @override
   Widget build(BuildContext context) {

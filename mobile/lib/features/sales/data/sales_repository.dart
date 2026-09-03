@@ -42,7 +42,8 @@ class SalesRepository extends StateNotifier<List<Sale>> {
       requestedQuantities[item.productId] =
           (requestedQuantities[item.productId] ?? 0) + item.quantity;
     }
-    productsRepo.validateStockAvailable(requestedQuantities); // throws on failure
+    productsRepo
+        .validateStockAvailable(requestedQuantities); // throws on failure
 
     // Step: Update inventory (auto) — only reached if validation passed above
     productsRepo.decrementStock(requestedQuantities);
