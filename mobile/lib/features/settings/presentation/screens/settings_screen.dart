@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../data/settings_providers.dart';
+import '../../../auth/data/auth_repository.dart';
 
-/// Settings — Spec Ch. 23. Business profile / currency / notification
-/// preferences editing needs its own repository (mirrors `companies`
-/// table) — stubbed with static display text here since there is no
-/// single "current company" concept yet without a real logged-in
-/// session (that arrives with the real Auth API in Phase 5). Theme and
-/// language are fully functional now.
+/// Settings — Spec Ch. 23. Business profile / currency editing from
+/// Settings still needs its own dedicated edit screen — PUT /companies/me
+/// exists and IS used already (Business Setup screen, onboarding), but
+/// there's no "edit later" UI wired to it yet from here. Theme and
+/// language are fully functional (Phase 5 wiring). Logout is real.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -38,9 +38,8 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsTile(
             code: 'BZ',
             title: 'Business Profile',
-            subtitle: 'Requires Phase 5 Auth/Companies API',
-            onTap: () => _snack(context,
-                'Business profile editing lands with the real backend (Phase 5)'),
+            subtitle: 'Edit-from-Settings UI not wired yet',
+            onTap: () => _snack(context, 'Business profile is set during onboarding — an edit screen is a follow-up'),
           ),
           _SettingsTile(
             code: 'CUR',
@@ -70,7 +69,7 @@ class SettingsScreen extends ConsumerWidget {
             code: 'OUT',
             title: 'Logout',
             iconColor: AppColors.danger,
-            onTap: () {},
+            onTap: () => _confirmLogout(context, ref),
           ),
         ],
       ),
@@ -80,30 +79,50 @@ class SettingsScreen extends ConsumerWidget {
   void _snack(BuildContext context, String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  void _showThemePicker(
-      BuildContext context, WidgetRef ref, ThemeMode current) {
+  void _confirmLogout(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              ref.read(authRepositoryProvider).logout();
+              // Pop every pushed screen back to the app's base route —
+              // main.dart's _AppFlow will then rebuild and, seeing the
+              // now-empty session, fall back to the Login screen.
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showThemePicker(BuildContext context, WidgetRef ref, ThemeMode current) {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
-        child: RadioGroup<ThemeMode>(
-          groupValue: current,
-          onChanged: (v) {
-            if (v != null) {
-              ref.read(themeModeProvider.notifier).state = v;
-              Navigator.of(context).pop();
-            }
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: ThemeMode.values
-                .map(
-                  (m) => RadioListTile<ThemeMode>(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ThemeMode.values
+              .map((m) => RadioListTile<ThemeMode>(
                     title: Text(_themeLabel(m)),
                     value: m,
-                  ),
-                )
-                .toList(),
-          ),
+                    groupValue: current,
+                    onChanged: (v) {
+                      ref.read(themeModeProvider.notifier).state = v!;
+                      Navigator.of(context).pop();
+                    },
+                  ))
+              .toList(),
         ),
       ),
     );
@@ -113,25 +132,19 @@ class SettingsScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
-        child: RadioGroup<Locale>(
-          groupValue: current,
-          onChanged: (v) {
-            if (v != null) {
-              ref.read(localeProvider.notifier).state = v;
-              Navigator.of(context).pop();
-            }
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: supportedLocales
-                .map(
-                  (l) => RadioListTile<Locale>(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: supportedLocales
+              .map((l) => RadioListTile<Locale>(
                     title: Text(_localeLabel(l)),
                     value: l,
-                  ),
-                )
-                .toList(),
-          ),
+                    groupValue: current,
+                    onChanged: (v) {
+                      ref.read(localeProvider.notifier).state = v!;
+                      Navigator.of(context).pop();
+                    },
+                  ))
+              .toList(),
         ),
       ),
     );

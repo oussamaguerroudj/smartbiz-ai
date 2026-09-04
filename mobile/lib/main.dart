@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
+import 'core/network/session.dart';
 import 'features/settings/data/settings_providers.dart';
 import 'features/onboarding/presentation/screens/splash_screen.dart';
 import 'features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -74,14 +75,14 @@ enum _AppPhase {
   main,
 }
 
-class _AppFlow extends StatefulWidget {
+class _AppFlow extends ConsumerStatefulWidget {
   const _AppFlow();
 
   @override
-  State<_AppFlow> createState() => _AppFlowState();
+  ConsumerState<_AppFlow> createState() => _AppFlowState();
 }
 
-class _AppFlowState extends State<_AppFlow> {
+class _AppFlowState extends ConsumerState<_AppFlow> {
   _AppPhase _phase = _AppPhase.splash;
   BusinessType? _selectedBusinessType;
 
@@ -95,6 +96,16 @@ class _AppFlowState extends State<_AppFlow> {
 
   @override
   Widget build(BuildContext context) {
+    // Logout support: Settings screen calls authRepository.logout()
+    // (clears sessionProvider) then pops back to this base route. Once
+    // popped, this rebuilds — if we're still holding onto _phase.main
+    // from before, fall back to login instead of showing MainShell with
+    // no valid session/token.
+    final session = ref.watch(sessionProvider);
+    if (_phase == _AppPhase.main && !session.isLoggedIn) {
+      _phase = _AppPhase.login;
+    }
+
     switch (_phase) {
       case _AppPhase.splash:
         return const SplashScreen();

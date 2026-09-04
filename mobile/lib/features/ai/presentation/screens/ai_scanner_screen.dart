@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../products/data/products_repository.dart';
-import '../../../products/domain/product.dart';
 
 /// AI Invoice Scanner — Spec Ch. 15.
 ///
@@ -12,16 +11,14 @@ import '../../../products/domain/product.dart';
 /// step is MOCKED (a fixed delay + fixed extracted items) rather than a
 /// real OpenAI Vision call — that integration is explicitly Phase 6
 /// ("OpenAI + OCR + AI Assistant + AI Insights + Invoice Scanner"), and
-/// requires a backend proxy endpoint that doesn't exist until Phase 5.
+/// requires a real OpenAI-backed endpoint that doesn't exist until
+/// Phase 6.
 /// What IS real and enforced here: extracted items are NEVER written to
 /// ProductsRepository until the user reviews and taps Confirm — matching
 /// the spec's "AI layer never writes directly to inventory" design
 /// principle (Ch. 15.2).
 class ScannedItem {
-  ScannedItem(
-      {required this.name,
-      required this.quantity,
-      required this.purchasePrice});
+  ScannedItem({required this.name, required this.quantity, required this.purchasePrice});
   String name;
   int quantity;
   double purchasePrice;
@@ -53,12 +50,10 @@ class AiScannerScreen extends StatelessWidget {
               ),
               child: const Column(
                 children: [
-                  Icon(Icons.receipt_long_outlined,
-                      size: 48, color: AppColors.primary),
+                  Icon(Icons.receipt_long_outlined, size: 48, color: AppColors.primary),
                   SizedBox(height: 8),
                   Text('Point camera at invoice', textAlign: TextAlign.center),
-                  Text('Keep the invoice flat and well lit',
-                      style: TextStyle(fontSize: 12)),
+                  Text('Keep the invoice flat and well lit', style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
@@ -119,8 +114,7 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      appBar: PreferredSize(
-          preferredSize: Size.fromHeight(0), child: SizedBox.shrink()),
+      appBar: PreferredSize(preferredSize: Size.fromHeight(0), child: SizedBox.shrink()),
       backgroundColor: AppColors.primary,
       body: Center(
         child: Column(
@@ -155,16 +149,14 @@ class AiResultsScreen extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 itemCount: items.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.xs),
+                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
                 itemBuilder: (context, i) {
                   final item = items[i];
                   return Container(
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.radiusCard),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
                       border: Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: Row(
@@ -173,9 +165,7 @@ class AiResultsScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.name,
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium),
+                              Text(item.name, style: Theme.of(context).textTheme.titleMedium),
                               Text('Qty: ${item.quantity}'),
                             ],
                           ),
@@ -219,25 +209,23 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
     _items = widget.items;
   }
 
-  void _confirmAndAddToInventory() {
+  void _confirmAndAddToInventory() async {
     final repo = ref.read(productsRepositoryProvider.notifier);
     for (final item in _items) {
-      repo.addProduct(
-        Product(
-          id: repo.generateId(),
-          name: item.name,
-          category: 'Uncategorized',
-          purchasePrice: item.purchasePrice,
-          sellingPrice:
-              item.purchasePrice * 1.3, // placeholder markup; user edits later
-          quantity: item.quantity,
-        ),
+      await repo.addProduct(
+        name: item.name,
+        category: 'Uncategorized',
+        purchasePrice: item.purchasePrice,
+        sellingPrice: item.purchasePrice * 1.3, // placeholder markup; user edits later
+        quantity: item.quantity,
       );
     }
-    Navigator.of(context).popUntil((route) => route.isFirst);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${_items.length} product(s) added to inventory')),
-    );
+    if (mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_items.length} product(s) added to inventory')),
+      );
+    }
   }
 
   @override
@@ -251,8 +239,7 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
             Expanded(
               child: ListView.separated(
                 itemCount: _items.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.sm),
+                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, i) {
                   final item = _items[i];
                   return Card(
@@ -263,8 +250,7 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
                         children: [
                           TextFormField(
                             initialValue: item.name,
-                            decoration: const InputDecoration(
-                                labelText: 'Product name'),
+                            decoration: const InputDecoration(labelText: 'Product name'),
                             onChanged: (v) => item.name = v,
                           ),
                           Row(
@@ -272,22 +258,19 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
                               Expanded(
                                 child: TextFormField(
                                   initialValue: '${item.quantity}',
-                                  decoration: const InputDecoration(
-                                      labelText: 'Quantity'),
+                                  decoration: const InputDecoration(labelText: 'Quantity'),
                                   keyboardType: TextInputType.number,
-                                  onChanged: (v) => item.quantity =
-                                      int.tryParse(v) ?? item.quantity,
+                                  onChanged: (v) => item.quantity = int.tryParse(v) ?? item.quantity,
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.xs),
                               Expanded(
                                 child: TextFormField(
                                   initialValue: '${item.purchasePrice}',
-                                  decoration: const InputDecoration(
-                                      labelText: 'Purchase price'),
+                                  decoration: const InputDecoration(labelText: 'Purchase price'),
                                   keyboardType: TextInputType.number,
-                                  onChanged: (v) => item.purchasePrice =
-                                      double.tryParse(v) ?? item.purchasePrice,
+                                  onChanged: (v) =>
+                                      item.purchasePrice = double.tryParse(v) ?? item.purchasePrice,
                                 ),
                               ),
                             ],

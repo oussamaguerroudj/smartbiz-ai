@@ -21,15 +21,15 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final products = ref.watch(productsRepositoryProvider);
-    final filtered = _query.isEmpty
-        ? products
-        : products
-            .where((p) => p.name.toLowerCase().contains(_query.toLowerCase()))
-            .toList();
+    final productsAsync = ref.watch(productsRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Products · ${products.length}')),
+      appBar: AppBar(
+        title: productsAsync.maybeWhen(
+          data: (products) => Text('Products · ${products.length}'),
+          orElse: () => const Text('Products'),
+        ),
+      ),
       body: Column(
         children: [
           Padding(
@@ -39,21 +39,34 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
                 hintText: 'Search products...',
                 prefixIcon: Icon(Icons.search),
               ),
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: (v) {
+                setState(() => _query = v);
+                // NOTE: fires one request per keystroke — fine for MVP
+                // correctness; debouncing (e.g. 300ms) is a nice-to-have
+                // follow-up, not required for this batch's scope.
+                ref.read(productsRepositoryProvider.notifier).load(search: v);
+              },
             ),
           ),
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(child: Text('No products found'))
-                : ListView.separated(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.xs),
-                    itemBuilder: (context, i) =>
-                        _ProductRow(product: filtered[i]),
-                  ),
+            child: productsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, st) => _ErrorRetry(
+                message: err.toString(),
+                onRetry: () => ref.read(productsRepositoryProvider.notifier).load(search: _query),
+              ),
+              data: (products) => products.isEmpty
+                  ? const Center(child: Text('No products found'))
+                  : RefreshIndicator(
+                      onRefresh: () => ref.read(productsRepositoryProvider.notifier).load(search: _query),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                        itemCount: products.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                        itemBuilder: (context, i) => _ProductRow(product: products[i]),
+                      ),
+                    ),
+            ),
           ),
         ],
       ),
@@ -63,6 +76,31 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
         ),
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _ErrorRetry extends StatelessWidget {
+  const _ErrorRetry({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_outlined, size: 40, color: AppColors.danger),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
       ),
     );
   }
@@ -88,8 +126,7 @@ class _ProductRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-            builder: (_) => ProductDetailsScreen(productId: product.id)),
+        MaterialPageRoute(builder: (_) => ProductDetailsScreen(productId: product.id)),
       ),
       borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
       child: Container(
@@ -111,14 +148,10 @@ class _ProductRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.name,
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(product.name, style: Theme.of(context).textTheme.titleMedium),
                   Text(
                     _statusLabel,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: _statusColor),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: _statusColor),
                   ),
                 ],
               ),

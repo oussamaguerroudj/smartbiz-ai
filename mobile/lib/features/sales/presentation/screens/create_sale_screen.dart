@@ -2,15 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../products/data/products_repository.dart';
 import '../../../products/domain/product.dart';
 import '../../data/sales_repository.dart';
 import '../../domain/sale.dart';
 
-/// Create Sale — Spec Ch. 11.2. Implements the full guided flow:
-/// Select product(s) → Enter quantity → Add to cart → Calculate total
-/// → Confirm sale → (repository handles: Update inventory, Calculate
-/// profit, Generate invoice).
+/// Create Sale — Spec Ch. 11.2.
+///
+/// SIMPLIFICATION vs. Phase 4: cart quantity limits are still checked
+/// client-side against the last-loaded product list for immediate UI
+/// feedback (no point letting someone tap +50 in the cart when they can
+/// see only 5 are in stock) — but the AUTHORITATIVE check is now the
+/// real server-side transaction (Phase 5, verified: rejects with
+/// INSUFFICIENT_STOCK and rolls back cleanly). If stock changed between
+/// opening this screen and confirming (e.g. someone else sold the last
+/// unit), the server call will still catch it and this screen surfaces
+/// that ApiException — the client-side check is a UX nicety, not the
+/// source of truth.
 class CreateSaleScreen extends ConsumerStatefulWidget {
   const CreateSaleScreen({super.key});
 
@@ -29,13 +38,18 @@ class _CartLine {
 class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
   final List<_CartLine> _cart = [];
   final _discountController = TextEditingController(text: '0');
+  bool _isSubmitting = false;
 
   double get _subtotal => _cart.fold(0, (sum, line) => sum + line.lineTotal);
   double get _discount => double.tryParse(_discountController.text) ?? 0;
   double get _total => (_subtotal - _discount).clamp(0, double.infinity);
 
   void _openProductPicker() async {
-    final products = ref.read(productsRepositoryProvider);
+    final products = ref.read(productsRepositoryProvider).valueOrNull ?? [];
+    if (products.isEmpty) {
+      _showSnack('No products loaded yet — check your connection and try again');
+      return;
+    }
     final selected = await showModalBottomSheet<Product>(
       context: context,
       isScrollControlled: true,
@@ -50,11 +64,10 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
       final existingIndex = _cart.indexWhere((l) => l.product.id == product.id);
       if (existingIndex >= 0) {
         final current = _cart[existingIndex];
-        final maxQty = product.quantity;
-        if (current.quantity < maxQty) {
+        if (current.quantity < product.quantity) {
           current.quantity += 1;
         } else {
-          _showSnack('Only $maxQty in stock for ${product.name}');
+          _showSnack('Only ${product.quantity} in stock for ${product.name}');
         }
       } else {
         if (product.quantity <= 0) {
@@ -72,8 +85,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
       if (newQty <= 0) {
         _cart.remove(line);
       } else if (newQty > line.product.quantity) {
-        _showSnack(
-            'Only ${line.product.quantity} in stock for ${line.product.name}');
+        _showSnack('Only ${line.product.quantity} in stock for ${line.product.name}');
       } else {
         line.quantity = newQty;
       }
@@ -81,41 +93,42 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _confirmSale() {
+  Future<void> _confirmSale() async {
     if (_cart.isEmpty) {
       _showSnack('Add at least one product to the cart');
       return;
     }
-    final saleItems = _cart
-        .map((line) => SaleItem(
+    setState(() => _isSubmitting = true);
+    final items = _cart
+        .map((line) => SaleItemInput(
               productId: line.product.id,
               productName: line.product.name,
               quantity: line.quantity,
-              unitPrice: line.product.sellingPrice,
-              unitCost: line.product.purchasePrice,
             ))
         .toList();
 
     try {
-      final sale = ref.read(salesRepositoryProvider.notifier).createSale(
-            cartItems: saleItems,
+      await ref.read(salesRepositoryProvider.notifier).createSale(
+            items: items,
             discount: _discount,
             paymentStatus: PaymentStatus.paid,
           );
-      final invoice =
-          ref.read(invoicesRepositoryProvider.notifier).forSale(sale.id);
       if (mounted) {
         Navigator.of(context).pop();
-        _showSnack('Sale recorded — ${invoice?.invoiceNumber ?? sale.id}');
+        _showSnack('Sale recorded successfully');
       }
-    } on InsufficientStockException catch (e) {
-      // Mirrors the required ROLLBACK behavior: nothing was written,
-      // cart state is untouched, user can fix quantities and retry.
-      _showSnack('Could not complete sale: $e');
+    } on ApiException catch (e) {
+      // Real server rejection (e.g. INSUFFICIENT_STOCK) — nothing was
+      // written server-side, cart stays exactly as the user left it so
+      // they can adjust quantities and retry.
+      if (mounted) _showSnack('Could not complete sale: ${e.message}');
+    } catch (e) {
+      if (mounted) _showSnack('Could not reach the server — check your connection');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -141,24 +154,19 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
           ),
           Expanded(
             child: _cart.isEmpty
-                ? const Center(
-                    child: Text('Cart is empty — add a product above'))
+                ? const Center(child: Text('Cart is empty — add a product above'))
                 : ListView.separated(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                     itemCount: _cart.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.xs),
+                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
                     itemBuilder: (context, i) {
                       final line = _cart[i];
                       return Container(
                         padding: const EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.surface,
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusCard),
-                          border:
-                              Border.all(color: Theme.of(context).dividerColor),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                          border: Border.all(color: Theme.of(context).dividerColor),
                         ),
                         child: Row(
                           children: [
@@ -212,8 +220,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text('Total', style: Theme.of(context).textTheme.titleMedium),
                     Text(
                       '${_total.toStringAsFixed(0)} DZD',
                       style: Theme.of(context)
@@ -225,8 +232,14 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 ElevatedButton(
-                  onPressed: _confirmSale,
-                  child: const Text('Confirm Sale'),
+                  onPressed: _isSubmitting ? null : _confirmSale,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Confirm Sale'),
                 ),
               ],
             ),

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../data/auth_repository.dart';
 
 /// Login Screen — Spec Ch. 8.3
-/// Email + password, Remember Me toggle, Forgot Password link.
-/// Inline validation only in this Phase — no network calls yet
-/// (auth service/repository comes in Phase 4/5).
-class LoginScreen extends StatefulWidget {
+/// Now wired to the real backend (Phase 5): calls POST /auth/login via
+/// AuthRepository, shows a loading state, and surfaces backend errors
+/// (e.g. wrong password) as a snackbar instead of always succeeding.
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({
     super.key,
     required this.onLoginSuccess,
@@ -17,15 +20,16 @@ class LoginScreen extends StatefulWidget {
   final VoidCallback onGoToRegister;
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscure = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -45,6 +49,30 @@ class _LoginScreenState extends State<LoginScreen> {
     if (value == null || value.isEmpty) return 'Password is required';
     if (value.length < 6) return 'Minimum 6 characters';
     return null;
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(authRepositoryProvider).login(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+      if (mounted) widget.onLoginSuccess();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not reach the server — check your connection')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -104,12 +132,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      widget.onLoginSuccess();
-                    }
-                  },
-                  child: const Text('Login'),
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Login'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Center(
@@ -126,3 +156,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

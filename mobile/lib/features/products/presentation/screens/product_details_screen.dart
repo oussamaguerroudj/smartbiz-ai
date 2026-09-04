@@ -17,19 +17,34 @@ class ProductDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final products = ref.watch(productsRepositoryProvider);
-    Product? product;
-    for (final p in products) {
-      if (p.id == productId) {
-        product = p;
-        break;
-      }
-    }
+    final productsAsync = ref.watch(productsRepositoryProvider);
 
-    if (product == null) {
-      return const Scaffold(body: Center(child: Text('Product not found')));
-    }
+    return productsAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, st) => Scaffold(body: Center(child: Text('Error: $err'))),
+      data: (products) {
+        Product? product;
+        for (final p in products) {
+          if (p.id == productId) {
+            product = p;
+            break;
+          }
+        }
+        if (product == null) {
+          return const Scaffold(body: Center(child: Text('Product not found')));
+        }
+        return _ProductDetailsView(product: product);
+      },
+    );
+  }
+}
 
+class _ProductDetailsView extends StatelessWidget {
+  const _ProductDetailsView({required this.product});
+  final Product product;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(product.name)),
       body: ListView(
@@ -65,13 +80,10 @@ class ProductDetailsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Pricing',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text('Pricing', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(
-                      'Purchase: ${product.purchasePrice.toStringAsFixed(0)} DZD'),
-                  Text(
-                      'Selling: ${product.sellingPrice.toStringAsFixed(0)} DZD'),
+                  Text('Purchase: ${product.purchasePrice.toStringAsFixed(0)} DZD'),
+                  Text('Selling: ${product.sellingPrice.toStringAsFixed(0)} DZD'),
                   Text(
                     'Profit/unit: ${(product.sellingPrice - product.purchasePrice).toStringAsFixed(0)} DZD',
                   ),
@@ -86,8 +98,7 @@ class ProductDetailsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Category',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text('Category', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Text(product.category),
                 ],
@@ -101,8 +112,7 @@ class ProductDetailsScreen extends ConsumerWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard(
-      {required this.label, required this.value, required this.color});
+  const _StatCard({required this.label, required this.value, required this.color});
   final String label;
   final String value;
   final Color color;
@@ -120,11 +130,7 @@ class _StatCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          Text(value,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(color: color)),
+          Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color)),
         ],
       ),
     );

@@ -45,12 +45,9 @@ class _MainShellState extends State<MainShell> {
         currentIndex: _tabIndex,
         onTap: (i) => setState(() => _tabIndex = i),
         items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.point_of_sale_outlined), label: 'Sales'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2_outlined), label: 'Inventory'),
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.point_of_sale_outlined), label: 'Sales'),
+          BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Inventory'),
           BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
         ],
       ),
@@ -75,30 +72,18 @@ class _MoreMenu extends StatelessWidget {
   // Application per the Ch. 6 sitemap but need a reachable entry point
   // too — added here pragmatically rather than leaving them unreachable.
   static final _items = [
-    _MoreMenuItemData('IN', 'Invoices', Icons.receipt_long_outlined,
-        (_) => const InvoicesScreen()),
-    _MoreMenuItemData('EX', 'Expenses', Icons.payments_outlined,
-        (_) => const ExpensesScreen()),
-    _MoreMenuItemData('EM', 'Employees', Icons.badge_outlined,
-        (_) => const EmployeesScreen()),
-    _MoreMenuItemData('AP', 'Appointments', Icons.event_outlined,
-        (_) => const AppointmentsScreen()),
-    _MoreMenuItemData('CU', 'Customers', Icons.people_outline,
-        (_) => const CustomersScreen()),
-    _MoreMenuItemData('SU', 'Suppliers', Icons.local_shipping_outlined,
-        (_) => const SuppliersScreen()),
-    _MoreMenuItemData('RP', 'Reports', Icons.bar_chart_outlined,
-        (_) => const ReportsScreen()),
-    _MoreMenuItemData('SC', 'AI Invoice Scanner',
-        Icons.document_scanner_outlined, (_) => const AiScannerScreen()),
-    _MoreMenuItemData('AI', 'AI Assistant', Icons.auto_awesome_outlined,
-        (_) => const AiAssistantScreen()),
-    _MoreMenuItemData('IS', 'AI Insights', Icons.insights_outlined,
-        (_) => const AiInsightsScreen()),
-    _MoreMenuItemData('NT', 'Notifications', Icons.notifications_outlined,
-        (_) => const NotificationsScreen()),
-    _MoreMenuItemData('ST', 'Settings', Icons.settings_outlined,
-        (_) => const SettingsScreen()),
+    _MoreMenuItemData('IN', 'Invoices', Icons.receipt_long_outlined, (_) => const InvoicesScreen()),
+    _MoreMenuItemData('EX', 'Expenses', Icons.payments_outlined, (_) => const ExpensesScreen()),
+    _MoreMenuItemData('EM', 'Employees', Icons.badge_outlined, (_) => const EmployeesScreen()),
+    _MoreMenuItemData('AP', 'Appointments', Icons.event_outlined, (_) => const AppointmentsScreen()),
+    _MoreMenuItemData('CU', 'Customers', Icons.people_outline, (_) => const CustomersScreen()),
+    _MoreMenuItemData('SU', 'Suppliers', Icons.local_shipping_outlined, (_) => const SuppliersScreen()),
+    _MoreMenuItemData('RP', 'Reports', Icons.bar_chart_outlined, (_) => const ReportsScreen()),
+    _MoreMenuItemData('SC', 'AI Invoice Scanner', Icons.document_scanner_outlined, (_) => const AiScannerScreen()),
+    _MoreMenuItemData('AI', 'AI Assistant', Icons.auto_awesome_outlined, (_) => const AiAssistantScreen()),
+    _MoreMenuItemData('IS', 'AI Insights', Icons.insights_outlined, (_) => const AiInsightsScreen()),
+    _MoreMenuItemData('NT', 'Notifications', Icons.notifications_outlined, (_) => const NotificationsScreen()),
+    _MoreMenuItemData('ST', 'Settings', Icons.settings_outlined, (_) => const SettingsScreen()),
   ];
 
   @override
@@ -125,8 +110,7 @@ class _MoreMenu extends StatelessWidget {
               ),
               title: Text(item.label),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: item.builder)),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: item.builder)),
             ),
           );
         },
@@ -134,3 +118,4 @@ class _MoreMenu extends StatelessWidget {
     );
   }
 }
+

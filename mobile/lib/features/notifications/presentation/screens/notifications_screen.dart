@@ -2,113 +2,104 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../products/data/products_repository.dart';
-import '../../../sales/data/sales_repository.dart';
-import '../../../sales/domain/sale.dart';
+import '../../../../core/network/api_client.dart';
 
-enum NotifKind { lowStock, unpaidInvoice, appointment, salary, expiration }
-
-class _NotifItem {
-  _NotifItem(this.kind, this.title, this.subtitle);
-  final NotifKind kind;
+class NotificationItem {
+  NotificationItem({required this.type, required this.title, this.body});
+  final String type;
   final String title;
-  final String subtitle;
+  final String? body;
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) => NotificationItem(
+        type: json['type'] as String,
+        title: json['title'] as String,
+        body: json['body'] as String?,
+      );
 }
 
-/// Notifications — Spec Ch. 19. Deliberately DERIVED from real repository
-/// state (low stock, unpaid invoices) rather than a separately-seeded
-/// mock list — this keeps every notification tied to something actually
-/// true in the app right now, consistent with the "never invent numbers"
-/// principle applied elsewhere. Appointment/salary reminder triggers
-/// need a scheduler (Phase 5/6 backend job), so those categories are
-/// wired but won't populate until that exists.
+/// GET /notifications — real API-backed (Phase 5 wiring). Mirrors the
+/// same "derive from real data, never fabricate" principle as before,
+/// now genuinely computed server-side from live low-stock/unpaid-invoice
+/// queries (notifications.routes.js), verified in Phase 5 testing.
+/// autoDispose: refetches fresh every time this screen opens.
+final notificationsProvider = FutureProvider.autoDispose<List<NotificationItem>>((ref) async {
+  final client = ref.read(apiClientProvider);
+  final response = await client.get('/notifications');
+  return (response['data'] as List)
+      .map((json) => NotificationItem.fromJson(json as Map<String, dynamic>))
+      .toList();
+});
+
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
-  IconData _iconFor(NotifKind k) => switch (k) {
-        NotifKind.lowStock => Icons.inventory_2_outlined,
-        NotifKind.unpaidInvoice => Icons.receipt_long_outlined,
-        NotifKind.appointment => Icons.event_outlined,
-        NotifKind.salary => Icons.payments_outlined,
-        NotifKind.expiration => Icons.event_busy_outlined,
+  IconData _iconFor(String type) => switch (type) {
+        'low_stock' => Icons.inventory_2_outlined,
+        'unpaid_invoice' => Icons.receipt_long_outlined,
+        'appointment_reminder' => Icons.event_outlined,
+        'salary_reminder' => Icons.payments_outlined,
+        _ => Icons.event_busy_outlined, // expiration_warning
       };
 
-  Color _colorFor(NotifKind k) => switch (k) {
-        NotifKind.lowStock => AppColors.warning,
-        NotifKind.unpaidInvoice => AppColors.danger,
-        NotifKind.appointment => AppColors.info,
-        NotifKind.salary => AppColors.primary,
-        NotifKind.expiration => AppColors.warning,
+  Color _colorFor(String type) => switch (type) {
+        'low_stock' => AppColors.warning,
+        'unpaid_invoice' => AppColors.danger,
+        'appointment_reminder' => AppColors.info,
+        'salary_reminder' => AppColors.primary,
+        _ => AppColors.warning,
       };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final products = ref.watch(productsRepositoryProvider);
-    final invoices = ref.watch(invoicesRepositoryProvider);
-
-    final items = <_NotifItem>[
-      ...products.where((p) => p.isLowStock || p.isOutOfStock).map(
-            (p) => _NotifItem(
-              NotifKind.lowStock,
-              p.isOutOfStock
-                  ? 'Out of stock: ${p.name}'
-                  : 'Low stock: ${p.name}',
-              '${p.quantity} units remaining',
-            ),
-          ),
-      ...invoices.where((i) => i.status == PaymentStatus.unpaid).map(
-            (i) => _NotifItem(
-              NotifKind.unpaidInvoice,
-              'Invoice ${i.invoiceNumber} still unpaid',
-              'Tap to view details',
-            ),
-          ),
-    ];
+    final notificationsAsync = ref.watch(notificationsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
-      body: items.isEmpty
-          ? const Center(
-              child: Text('No notifications — everything looks good'))
-          : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              itemCount: items.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.xs),
-              itemBuilder: (context, i) {
-                final item = items[i];
-                return Container(
+      body: notificationsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, st) => Center(child: Text('Error: $err')),
+        data: (items) => items.isEmpty
+            ? const Center(child: Text('No notifications — everything looks good'))
+            : RefreshIndicator(
+                onRefresh: () async => ref.invalidate(notificationsProvider),
+                child: ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor:
-                            _colorFor(item.kind).withValues(alpha: 0.15),
-                        foregroundColor: _colorFor(item.kind),
-                        child: Icon(_iconFor(item.kind), size: 18),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                  itemBuilder: (context, i) {
+                    final item = items[i];
+                    return Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                        border: Border.all(color: Theme.of(context).dividerColor),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.title,
-                                style: Theme.of(context).textTheme.titleMedium),
-                            Text(item.subtitle,
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: _colorFor(item.type).withValues(alpha: 0.15),
+                            foregroundColor: _colorFor(item.type),
+                            child: Icon(_iconFor(item.type), size: 18),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.title, style: Theme.of(context).textTheme.titleMedium),
+                                if (item.body != null)
+                                  Text(item.body!, style: Theme.of(context).textTheme.bodyMedium),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              ),
+      ),
     );
   }
 }

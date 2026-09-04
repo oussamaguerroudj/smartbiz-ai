@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../data/auth_repository.dart';
 
 /// Register Screen — Spec Ch. 8.3
-/// Name, email, password, password confirmation with inline validation.
-class RegisterScreen extends StatefulWidget {
+/// Now calls POST /auth/register for real (Phase 5 wiring).
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({
     super.key,
     required this.onRegisterSuccess,
@@ -15,15 +18,16 @@ class RegisterScreen extends StatefulWidget {
   final VoidCallback onGoToLogin;
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -54,6 +58,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _validateConfirm(String? v) {
     if (v != _passwordController.text) return 'Passwords do not match';
     return null;
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(authRepositoryProvider).register(
+            name: _nameController.text.trim(),
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+      if (mounted) widget.onRegisterSuccess();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not reach the server — check your connection')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -100,12 +129,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      widget.onRegisterSuccess();
-                    }
-                  },
-                  child: const Text('Create Account'),
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Create Account'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Center(
@@ -122,3 +153,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+

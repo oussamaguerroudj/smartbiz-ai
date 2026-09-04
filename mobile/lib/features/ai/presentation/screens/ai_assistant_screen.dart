@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../products/data/products_repository.dart';
 import '../../../sales/data/sales_repository.dart';
 import '../../../expenses/data/expenses_repository.dart';
+import '../../../reports/presentation/screens/reports_screen.dart';
 
 /// AI Assistant — Spec Ch. 16.1.
 ///
@@ -33,45 +34,32 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   String _answer(String question) {
     final q = question.toLowerCase();
-    final sales = ref.read(salesRepositoryProvider);
-    final products = ref.read(productsRepositoryProvider);
-    final expenses = ref.read(expensesRepositoryProvider);
+    final sales = ref.read(salesRepositoryProvider).valueOrNull ?? [];
+    final products = ref.read(productsRepositoryProvider).valueOrNull ?? [];
+    final expensesState = ref.read(expensesRepositoryProvider).valueOrNull;
+    final monthExpensesTotal = expensesState?.thisMonthTotal ?? 0;
 
     final now = DateTime.now();
-    final monthSales = sales
-        .where((s) => s.soldAt.year == now.year && s.soldAt.month == now.month);
+    final monthSales = sales.where((s) => s.soldAt.year == now.year && s.soldAt.month == now.month);
     final monthRevenue = monthSales.fold<double>(0, (sum, s) => sum + s.total);
-    final monthProfit =
-        monthSales.fold<double>(0, (sum, s) => sum + s.grossProfit);
 
     if (q.contains('earn') || q.contains('revenue') || q.contains('profit')) {
       return 'So far this month you\'ve earned ${monthRevenue.toStringAsFixed(0)} DZD in revenue '
-          'with a gross profit of ${monthProfit.toStringAsFixed(0)} DZD.';
+          '(${monthSales.length} sale(s)). Ask the Reports screen for exact gross-profit figures.';
     }
     if (q.contains('low') || q.contains('stock')) {
-      final low =
-          products.where((p) => p.isLowStock || p.isOutOfStock).toList();
+      final low = products.where((p) => p.isLowStock || p.isOutOfStock).toList();
       if (low.isEmpty) return 'No products are currently low in stock.';
       return '${low.length} product(s) are below their minimum stock: '
           '${low.map((p) => p.name).join(", ")}.';
     }
     if (q.contains('best') || q.contains('selling')) {
-      if (sales.isEmpty) {
-        return 'No sales recorded yet, so I can\'t determine a best-seller.';
-      }
-      final counts = <String, int>{};
-      for (final s in sales) {
-        for (final item in s.items) {
-          counts[item.productName] =
-              (counts[item.productName] ?? 0) + item.quantity;
-        }
-      }
-      final top = counts.entries.reduce((a, b) => a.value > b.value ? a : b);
-      return 'Your best-selling product is ${top.key}, with ${top.value} units sold.';
+      if (sales.isEmpty) return 'No sales recorded yet, so I can\'t determine a best-seller.';
+      return 'Best-seller ranking needs per-item sales history — open the Reports screen '
+          'for the real "Top Products" breakdown computed server-side.';
     }
     if (q.contains('spend') || q.contains('expense')) {
-      final total = expenses.fold<double>(0, (sum, e) => sum + e.amount);
-      return 'Total recorded expenses so far: ${total.toStringAsFixed(0)} DZD.';
+      return 'Total expenses recorded this month: ${monthExpensesTotal.toStringAsFixed(0)} DZD.';
     }
     return 'I don\'t have enough recorded data to answer that confidently yet — '
         'try asking about revenue, profit, low stock, best-sellers, or expenses.';
@@ -111,9 +99,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                     itemBuilder: (context, i) {
                       final msg = _messages[i];
                       return Align(
-                        alignment: msg.isUser
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
+                        alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           padding: const EdgeInsets.all(AppSpacing.sm),
@@ -122,17 +108,14 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                             color: msg.isUser
                                 ? AppColors.primary
                                 : Theme.of(context).colorScheme.surface,
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.radiusCard),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
                             border: msg.isUser
                                 ? null
-                                : Border.all(
-                                    color: Theme.of(context).dividerColor),
+                                : Border.all(color: Theme.of(context).dividerColor),
                           ),
                           child: Text(
                             msg.text,
-                            style: TextStyle(
-                                color: msg.isUser ? Colors.white : null),
+                            style: TextStyle(color: msg.isUser ? Colors.white : null),
                           ),
                         ),
                       );
@@ -146,8 +129,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
-                        hintText: 'Ask about your business...'),
+                    decoration: const InputDecoration(hintText: 'Ask about your business...'),
                     onSubmitted: (_) => _send(),
                   ),
                 ),
@@ -174,7 +156,7 @@ class _Insight {
 }
 
 /// AI Insights — Spec Ch. 16.2. Every insight below is derived from a
-/// real aggregate query over the local repositories, kept deliberately
+/// real backend query (GET /reports, GET /products) — kept deliberately
 /// simple per the spec's own MVP guidance ("avoid overstating AI
 /// capability").
 class AiInsightsScreen extends ConsumerWidget {
@@ -188,64 +170,60 @@ class AiInsightsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final products = ref.watch(productsRepositoryProvider);
-    final sales = ref.watch(salesRepositoryProvider);
-    final expenses = ref.watch(expensesRepositoryProvider);
+    final productsAsync = ref.watch(productsRepositoryProvider);
+    final expensesAsync = ref.watch(expensesRepositoryProvider);
+    final reportAsync = ref.watch(reportProvider('monthly'));
 
     final insights = <_Insight>[];
 
-    if (sales.isNotEmpty) {
-      final counts = <String, int>{};
-      for (final s in sales) {
-        for (final item in s.items) {
-          counts[item.productName] =
-              (counts[item.productName] ?? 0) + item.quantity;
-        }
+    reportAsync.whenData((report) {
+      if (report.topProducts.isNotEmpty) {
+        final top = report.topProducts.first;
+        insights.add(_Insight(
+          'Best seller this month',
+          '${top.name} — ${top.unitsSold} units sold',
+          InsightSeverity.info,
+        ));
       }
-      final top = counts.entries.reduce((a, b) => a.value > b.value ? a : b);
-      insights.add(_Insight(
-        'Best seller',
-        '${top.key} — ${top.value} units sold',
-        InsightSeverity.info,
-      ));
-    }
+    });
 
-    final outOfStock = products.where((p) => p.isOutOfStock).toList();
-    if (outOfStock.isNotEmpty) {
-      insights.add(_Insight(
-        'Stock warning',
-        '${outOfStock.map((p) => p.name).join(", ")} out of stock',
-        InsightSeverity.alert,
-      ));
-    }
-    final lowStock = products.where((p) => p.isLowStock).toList();
-    if (lowStock.isNotEmpty) {
-      insights.add(_Insight(
-        'Low stock',
-        '${lowStock.length} product(s) below minimum threshold',
-        InsightSeverity.watch,
-      ));
-    }
+    productsAsync.whenData((products) {
+      final outOfStock = products.where((p) => p.isOutOfStock).toList();
+      if (outOfStock.isNotEmpty) {
+        insights.add(_Insight(
+          'Stock warning',
+          '${outOfStock.map((p) => p.name).join(", ")} out of stock',
+          InsightSeverity.alert,
+        ));
+      }
+      final lowStock = products.where((p) => p.isLowStock).toList();
+      if (lowStock.isNotEmpty) {
+        insights.add(_Insight(
+          'Low stock',
+          '${lowStock.length} product(s) below minimum threshold',
+          InsightSeverity.watch,
+        ));
+      }
+    });
 
-    if (expenses.isNotEmpty) {
-      final total = expenses.fold<double>(0, (sum, e) => sum + e.amount);
-      insights.add(_Insight(
-        'Expenses',
-        'Total recorded: ${total.toStringAsFixed(0)} DZD',
-        InsightSeverity.info,
-      ));
-    }
+    expensesAsync.whenData((state) {
+      if (state.expenses.isNotEmpty) {
+        insights.add(_Insight(
+          'Expenses',
+          'Total this month: ${state.thisMonthTotal.toStringAsFixed(0)} DZD',
+          InsightSeverity.info,
+        ));
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('AI Insights')),
       body: insights.isEmpty
-          ? const Center(
-              child: Text('Not enough data yet to generate insights'))
+          ? const Center(child: Text('Not enough data yet to generate insights'))
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.sm),
               itemCount: insights.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.xs),
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
               itemBuilder: (context, i) {
                 final insight = insights[i];
                 return Container(
@@ -261,18 +239,15 @@ class AiInsightsScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(insight.title,
-                                style: Theme.of(context).textTheme.titleMedium),
+                            Text(insight.title, style: Theme.of(context).textTheme.titleMedium),
                             Text(insight.detail),
                           ],
                         ),
                       ),
                       Chip(
                         label: Text(insight.severity.name),
-                        backgroundColor:
-                            _colorFor(insight.severity).withValues(alpha: 0.12),
-                        labelStyle:
-                            TextStyle(color: _colorFor(insight.severity)),
+                        backgroundColor: _colorFor(insight.severity).withValues(alpha: 0.12),
+                        labelStyle: TextStyle(color: _colorFor(insight.severity)),
                       ),
                     ],
                   ),

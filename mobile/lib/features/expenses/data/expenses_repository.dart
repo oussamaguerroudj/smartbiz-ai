@@ -1,52 +1,53 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_client.dart';
 import '../domain/expense.dart';
+import '../../dashboard/data/dashboard_repository.dart';
 
-class ExpensesRepository extends StateNotifier<List<Expense>> {
-  ExpensesRepository()
-      : super([
-          Expense(
-            id: 'e1',
-            category: 'Electricity',
-            amount: 12000,
-            date: DateTime.now().subtract(const Duration(days: 2)),
-          ),
-          Expense(
-            id: 'e2',
-            category: 'Rent',
-            amount: 60000,
-            date: DateTime.now().subtract(const Duration(days: 30)),
-          ),
-        ]);
+class ExpensesState {
+  ExpensesState({required this.expenses, required this.thisMonthTotal});
+  final List<Expense> expenses;
+  final double thisMonthTotal;
+}
 
-  int _nextId = 3;
-
-  void addExpense({
-    required String category,
-    required double amount,
-    required DateTime date,
-    String? description,
-  }) {
-    state = [
-      Expense(
-        id: 'e${_nextId++}',
-        category: category,
-        amount: amount,
-        date: date,
-        description: description,
-      ),
-      ...state,
-    ];
+class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
+  ExpensesRepository(this._ref) : super(const AsyncValue.loading()) {
+    load();
   }
 
-  double get thisMonthTotal {
-    final now = DateTime.now();
-    return state
-        .where((e) => e.date.year == now.year && e.date.month == now.month)
-        .fold(0, (sum, e) => sum + e.amount);
+  final Ref _ref;
+
+  Future<void> load() async {
+    state = const AsyncValue.loading();
+    try {
+      final client = _ref.read(apiClientProvider);
+      final response = await client.get('/expenses');
+      final expenses = (response['data'] as List)
+          .map((json) => Expense.fromJson(json as Map<String, dynamic>))
+          .toList();
+      final total = (response['thisMonthTotal'] as num).toDouble();
+      state = AsyncValue.data(ExpensesState(expenses: expenses, thisMonthTotal: total));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> addExpense({
+    required String category,
+    required double amount,
+    String? description,
+  }) async {
+    final client = _ref.read(apiClientProvider);
+    await client.post('/expenses', body: {
+      'category': category,
+      'amount': amount,
+      if (description != null && description.isNotEmpty) 'description': description,
+    });
+    await load();
+    await _ref.read(dashboardRepositoryProvider.notifier).load(); // today's expenses KPI changed
   }
 }
 
 final expensesRepositoryProvider =
-    StateNotifierProvider<ExpensesRepository, List<Expense>>(
-  (ref) => ExpensesRepository(),
+    StateNotifierProvider<ExpensesRepository, AsyncValue<ExpensesState>>(
+  (ref) => ExpensesRepository(ref),
 );

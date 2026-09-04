@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../data/products_repository.dart';
-import '../../domain/product.dart';
 
-/// Add Product — Spec Ch. 10.2. Validates per the field table in the spec
-/// and writes a real Product into [productsRepositoryProvider] on save.
+/// Add Product — Spec Ch. 10.2. Now calls POST /products for real
+/// (Phase 5 wiring) instead of writing straight into local state.
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
 
@@ -53,21 +53,35 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     return selling < purchase;
   }
 
-  void _save() {
+  bool _isLoading = false;
+
+  void _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final repo = ref.read(productsRepositoryProvider.notifier);
-    final product = Product(
-      id: repo.generateId(),
-      name: _nameController.text.trim(),
-      category: _categoryController.text.trim().isEmpty
-          ? 'Uncategorized'
-          : _categoryController.text.trim(),
-      purchasePrice: double.parse(_purchasePriceController.text),
-      sellingPrice: double.parse(_sellingPriceController.text),
-      quantity: int.parse(_quantityController.text),
-    );
-    repo.addProduct(product);
-    Navigator.of(context).pop();
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(productsRepositoryProvider.notifier).addProduct(
+            name: _nameController.text.trim(),
+            category: _categoryController.text.trim().isEmpty
+                ? 'Uncategorized'
+                : _categoryController.text.trim(),
+            purchasePrice: double.parse(_purchasePriceController.text),
+            sellingPrice: double.parse(_sellingPriceController.text),
+            quantity: int.parse(_quantityController.text),
+          );
+      if (mounted) Navigator.of(context).pop();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not reach the server — check your connection')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -117,9 +131,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       '⚠ Selling price is below purchase price',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 12),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
                     ),
                   ),
                 const SizedBox(height: AppSpacing.sm),
@@ -137,8 +149,14 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
-                  onPressed: _save,
-                  child: const Text('Save Product'),
+                  onPressed: _isLoading ? null : _save,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Save Product'),
                 ),
               ],
             ),
