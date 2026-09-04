@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
 
 /// SmartBiz AI — Design System — Typography Scale
 /// Single sans-serif family (Inter). Scale per spec Ch. 30.

@@ -86,14 +86,16 @@ class _BusinessTypeScreenState extends State<BusinessTypeScreen> {
               padding: EdgeInsets.all(AppSpacing.sm),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Choose the option that best matches your business'),
+                child:
+                    Text('Choose the option that best matches your business'),
               ),
             ),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                 itemCount: BusinessType.values.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.xs),
                 itemBuilder: (context, i) {
                   final type = BusinessType.values[i];
                   final isSelected = _selected == type;
@@ -143,9 +145,8 @@ class _BusinessTypeTile extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
           border: Border.all(
-            color: selected
-                ? AppColors.primary
-                : Theme.of(context).dividerColor,
+            color:
+                selected ? AppColors.primary : Theme.of(context).dividerColor,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -161,8 +162,10 @@ class _BusinessTypeTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(type.label, style: Theme.of(context).textTheme.titleMedium),
-                  Text(type.description, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(type.label,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(type.description,
+                      style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ),
             ),

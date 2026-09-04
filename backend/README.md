@@ -19,46 +19,17 @@
 
 ---
 
-## ✅ Phase 5 مكتملة — كل وحدة اختُبرت فعليًا بنفس الصرامة
+## ما تم بناؤه في هذه الدفعة
 
-بالإضافة لاختبارات Auth/Products/Sales (الدفعة السابقة)، اختبرت في هذه الدفعة كل وحدة جديدة حقيقيًا على نفس قاعدة بيانات PostgreSQL:
+- **البنية التحتية**: اتصال PostgreSQL (`config/db.js` مع `query()` و`withTransaction()`)، معالجة أخطاء موحّدة (`{error, message, code}`)، JWT auth middleware يستخرج `company_id` **حصريًا** من الـ token الموقّع (لا يُقبل أبدًا من الطلب نفسه — طبقة الحماية الأولى من 3 طبقات Multi-tenancy المخطط لها في Phase 1)
+- **Auth module كامل**: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh` — bcrypt للتشفير، JWT access+refresh
+- **Products module كامل**: CRUD مع Soft Delete، كل استعلام مُصفّى بـ `company_id`
+- **Sales module — الأهم في هذه الدفعة**: `POST /sales` ينفّذ تسلسل Ch. 11 **حرفيًا** داخل PostgreSQL transaction حقيقية:
+  Validate products → Check stock (مع `SELECT ... FOR UPDATE` لقفل الصفوف ومنع oversell عند طلبين متزامنين) → Calculate total (من السيرفر، لا يُوثق بالسعر القادم من العميل) → Create Sale → Create SaleItems (مع snapshot لسعري الشراء/البيع) → Update inventory → Create Invoice → **COMMIT**، أو **ROLLBACK** كامل عند أي خطأ (نفاد مخزون، منتج غير موجود، إلخ)
 
-| الوحدة | الاختبار | النتيجة |
-|---|---|---|
-| Invoices | إنشاء بيع → فاتورة INV-1 تلقائيًا → عرض القائمة والتفاصيل | ✅ يعمل، البنود والمجموع صحيحان |
-| Expenses | إضافة مصروف 12000 → `thisMonthTotal` | ✅ يعمل، المجموع صحيح |
-| Employees | راتب أساسي 35000 + بونص 2000 → صافي الراتب | ✅ **37000 بالضبط** (صيغة Ch. 17.3 صحيحة) |
-| Attendance | تسجيل حضور → ظهوره في تفاصيل الموظف | ✅ يعمل |
-| Appointments | إنشاء موعد → ظهوره في القائمة | ✅ يعمل |
-| Customers / Suppliers | إنشاء كل منهما | ✅ يعملان |
-| **Dashboard** | منتج مخزونه منخفض (3/5) + بيع بقيمة 980 غير مدفوع + مصروف 60000 | ✅ `todayRevenue: 980`, `todayExpenses: 60000`, `todayProfit: -59020`, `lowStockCount: 1`, `unpaidInvoicesCount: 1` — **كل رقم مطابق تمامًا للمتوقع** |
-| **Reports** | نفس السيناريو، فترة شهرية | ✅ نفس الأرقام + `grossProfit: 230` (980-750) + `topProducts` صحيح |
-| **Notifications** | نفس السيناريو | ✅ عرض "Low stock: Olive Oil 1L — 2 units remaining" (3 ناقص 1 المُباع) و"Invoice INV-1 still unpaid" — **مُشتقة من البيانات الحقيقية بدقة** |
+## لم يُبنَ بعد (الدفعة التالية)
 
-كل الوحدات الآن حقيقية ومُتحقَّق من سلوكها، وليست كودًا مكتوبًا نظريًا فقط.
-
----
-
-## ما تم بناؤه (الآن مكتمل بالكامل باستثناء AI)
-
-- **البنية التحتية**: اتصال PostgreSQL (`config/db.js` مع `query()` و`withTransaction()`)، معالجة أخطاء موحّدة، JWT auth middleware
-- **Auth**: register/login/refresh
-- **Products**: CRUD كامل
-- **Sales**: الـ transaction الكاملة (Ch. 11) مع row-locking و ROLLBACK
-- **Invoices**: قائمة + تفاصيل + mark-paid (PDF export مؤجل عمدًا — يحتاج مكتبة PDF منفصلة)
-- **Expenses**: قائمة + إضافة + حذف، مع مجموع الشهر الحالي
-- **Employees**: قائمة + إضافة + تفاصيل (تتضمن الحضور والراتب الصافي) + تسجيل حضور + إضافة بونص/خصم
-- **Appointments**: قائمة + إضافة + تحديث الحالة
-- **Customers / Suppliers**: قائمة + إضافة لكل منهما
-- **Reports**: تجميع حقيقي (Daily/Weekly/Monthly/Yearly) — Revenue, Expenses, Net Profit, Gross Profit, Top Products
-- **Dashboard**: كل الـ KPIs المطلوبة في Ch. 9.1 حرفيًا
-- **Notifications**: مُشتقة حيًا من low-stock وunpaid-invoices (نفس مبدأ Flutter في Phase 4)
-
-## لم يُبنَ بعد
-
-- **AI proxy endpoints** (`/ai/invoices/scan`, `/ai/chat`, `/ai/insights`) — تحتاج مفتاح OpenAI API وOCR pipeline، وهذا **Phase 6** بالتحديد حسب الـ roadmap المعتمد
-- **PDF/Excel export** الفعلي للفواتير والتقارير (Ch. 14, 22) — يحتاج مكتبات إضافية (`pdfkit`, `exceljs`)، مؤجل كدفعة منفصلة لاحقًا إن رغبت
-- Refresh token revocation (قائمة سوداء عند logout) — Phase 7 hardening
+Invoices (تفاصيل + PDF)، Expenses، Employees/Attendance/Salaries، Appointments، Customers، Suppliers، Reports، Notifications، Dashboard aggregation، AI proxy endpoints (Phase 6). كل وحدة ستتبع نفس النمط المُثبَت هنا بالضبط (routes/controller/service/repository).
 
 ## ⚠️ ما لم أختبره: التثبيت من الصفر على جهازك
 
@@ -188,4 +159,4 @@ backend/
 
 ## الخطوة التالية
 
-كل ما تبقى من الـ roadmap الأصلي قبل **Phase 6 (AI)** هو ربط تطبيق Flutter الحقيقي بهذا الـ API بدل الـ Local/Data Layer الحالي — أي استبدال كل repository محلي في Flutter (`ProductsRepository`, `SalesRepository`, إلخ من Phase 4) بمكالمات HTTP حقيقية عبر `dio` أو `http` تتحدث مع هذه الـ endpoints. هل تريد ذلك كخطوة أخيرة ضمن Phase 5 قبل الانتقال لـ Phase 6، أم ننتقل مباشرة لـ AI (Phase 6) ونؤجل ربط Flutter لاحقًا؟
+بعد تأكيدك أن كل ما سبق يعمل: إكمال باقي وحدات الـ Backend (Invoices, Expenses, Employees, Appointments, Customers, Suppliers, Reports, Notifications, Dashboard) بنفس النمط، ثم ربط تطبيق Flutter الحقيقي بهذا الـ API بدل الـ Local/Data Layer الحالي (استبدال الـ repositories المحلية بمكالمات HTTP حقيقية عبر `dio` أو `http`).
