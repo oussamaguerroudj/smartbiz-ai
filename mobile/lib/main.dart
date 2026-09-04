@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
+import 'core/network/session.dart';
+import 'features/settings/data/settings_providers.dart';
 import 'features/onboarding/presentation/screens/splash_screen.dart';
 import 'features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
@@ -9,118 +13,137 @@ import 'features/auth/presentation/screens/business_setup_screen.dart';
 import 'features/shell/presentation/main_shell.dart';
 
 void main() {
-  runApp(const SmartBizApp());
+  // ProviderScope is Riverpod's root — required for every provider used
+  // throughout the app (ProductsRepository, SalesRepository, etc. —
+  // introduced in Phase 4 as the Local/Data Layer).
+  runApp(const ProviderScope(child: SmartBizApp()));
 }
 
-/// Root widget.
-///
-/// NOTE on scope (Phase 2, first batch):
-/// - Navigation here is a simple Navigator.push chain to demonstrate
-///   the full onboarding → auth → shell flow end to end.
-/// - It will be replaced by a proper router (go_router) with route
-///   guards (auth state, business-type persisted, etc.) once the
-///   data layer exists (Phase 4/5) — noted in core/routing/ as a stub.
-/// - flutter_localizations / intl codegen (for the .arb files already
-///   created under core/localization/) will be wired in the next
-///   Phase-2 batch together with RTL verification screens.
-/// - Theme follows system brightness by default; a manual toggle will
-///   be added with the Settings screen (later Phase-2 batch).
-class SmartBizApp extends StatelessWidget {
+class SmartBizApp extends ConsumerWidget {
   const SmartBizApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
+
     return MaterialApp(
       title: 'SmartBiz AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
+      locale: locale,
+      supportedLocales: supportedLocales,
+      // NOTE: this enables real RTL layout mirroring (Directionality
+      // flows from the active Locale via GlobalWidgetsLocalizations) —
+      // switching to Arabic in Settings will visibly mirror the whole
+      // app. Actual string TRANSLATION (AppLocalizations.of(context))
+      // is a separate, larger follow-up: the .arb files under
+      // core/localization/ are ready, but wiring flutter gen-l10n and
+      // replacing every hardcoded string across ~20 screens needs its
+      // own reviewable batch — flagged in README, not done here.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const _AppFlow(),
     );
   }
 }
 
-class _AppFlow extends StatefulWidget {
+/// FIX (reported bug): the previous version pushed each screen via
+/// Navigator.push using a BuildContext captured once in initState and
+/// re-used across every nested callback. That pattern is fragile — the
+/// "Get Started" transition (and, latently, several after it) could fail
+/// to navigate because the captured context stopped resolving to the
+/// active Navigator reliably.
+///
+/// Replaced with a single explicit state enum + switch in build(). Each
+/// screen's callback just calls setState to move to the next phase — no
+/// BuildContext reuse, no ambiguity about which Navigator is being used.
+/// This will be replaced by go_router with real route guards once the
+/// data/auth layer exists (Phase 4/5), as already noted in core/routing/.
+enum _AppPhase {
+  splash,
+  onboarding,
+  login,
+  register,
+  businessType,
+  businessSetup,
+  main,
+}
+
+class _AppFlow extends ConsumerStatefulWidget {
   const _AppFlow();
 
   @override
-  State<_AppFlow> createState() => _AppFlowState();
+  ConsumerState<_AppFlow> createState() => _AppFlowState();
 }
 
-class _AppFlowState extends State<_AppFlow> {
+class _AppFlowState extends ConsumerState<_AppFlow> {
+  _AppPhase _phase = _AppPhase.splash;
+  BusinessType? _selectedBusinessType;
+
   @override
   void initState() {
     super.initState();
-    // Simulate splash init delay, then move to onboarding.
     Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => _buildOnboarding(context)),
-        );
-      }
+      if (mounted) setState(() => _phase = _AppPhase.onboarding);
     });
-  }
-
-  Widget _buildOnboarding(BuildContext context) {
-    return OnboardingScreen(
-      onFinished: () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => _buildLogin(context)),
-        );
-      },
-    );
-  }
-
-  Widget _buildLogin(BuildContext context) {
-    return LoginScreen(
-      onLoginSuccess: () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainShell()),
-        );
-      },
-      onGoToRegister: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => _buildRegister(context)),
-        );
-      },
-    );
-  }
-
-  Widget _buildRegister(BuildContext context) {
-    return RegisterScreen(
-      onRegisterSuccess: () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => _buildBusinessType(context)),
-        );
-      },
-      onGoToLogin: () => Navigator.of(context).pop(),
-    );
-  }
-
-  Widget _buildBusinessType(BuildContext context) {
-    return BusinessTypeScreen(
-      onContinue: (type) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => _buildBusinessSetup(context, type)),
-        );
-      },
-    );
-  }
-
-  Widget _buildBusinessSetup(BuildContext context, BusinessType type) {
-    return BusinessSetupScreen(
-      businessType: type,
-      onFinish: () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainShell()),
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const SplashScreen();
+    // Logout support: Settings screen calls authRepository.logout()
+    // (clears sessionProvider) then pops back to this base route. Once
+    // popped, this rebuilds — if we're still holding onto _phase.main
+    // from before, fall back to login instead of showing MainShell with
+    // no valid session/token.
+    final session = ref.watch(sessionProvider);
+    if (_phase == _AppPhase.main && !session.isLoggedIn) {
+      _phase = _AppPhase.login;
+    }
+
+    switch (_phase) {
+      case _AppPhase.splash:
+        return const SplashScreen();
+
+      case _AppPhase.onboarding:
+        return OnboardingScreen(
+          onFinished: () => setState(() => _phase = _AppPhase.login),
+        );
+
+      case _AppPhase.login:
+        return LoginScreen(
+          onLoginSuccess: () => setState(() => _phase = _AppPhase.main),
+          onGoToRegister: () => setState(() => _phase = _AppPhase.register),
+        );
+
+      case _AppPhase.register:
+        return RegisterScreen(
+          onRegisterSuccess: () =>
+              setState(() => _phase = _AppPhase.businessType),
+          onGoToLogin: () => setState(() => _phase = _AppPhase.login),
+        );
+
+      case _AppPhase.businessType:
+        return BusinessTypeScreen(
+          onContinue: (type) => setState(() {
+            _selectedBusinessType = type;
+            _phase = _AppPhase.businessSetup;
+          }),
+        );
+
+      case _AppPhase.businessSetup:
+        return BusinessSetupScreen(
+          businessType: _selectedBusinessType ?? BusinessType.company,
+          onFinish: () => setState(() => _phase = _AppPhase.main),
+        );
+
+      case _AppPhase.main:
+        return const MainShell();
+    }
   }
 }

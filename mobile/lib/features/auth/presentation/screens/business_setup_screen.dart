@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../data/companies_repository.dart';
 import 'business_type_screen.dart';
 
 /// Business Setup — Spec Ch. 8.4
-/// Business name, business type (pre-filled), phone, address, currency.
-class BusinessSetupScreen extends StatefulWidget {
+/// Now persists to the real backend via PUT /companies/me (Phase 5
+/// wiring), filling in the placeholder company auth.service.js created
+/// at registration time.
+class BusinessSetupScreen extends ConsumerStatefulWidget {
   const BusinessSetupScreen({
     super.key,
     required this.businessType,
@@ -16,15 +21,16 @@ class BusinessSetupScreen extends StatefulWidget {
   final VoidCallback onFinish;
 
   @override
-  State<BusinessSetupScreen> createState() => _BusinessSetupScreenState();
+  ConsumerState<BusinessSetupScreen> createState() => _BusinessSetupScreenState();
 }
 
-class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
+class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _currencyController = TextEditingController(text: 'DZD');
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,6 +39,33 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
     _addressController.dispose();
     _currencyController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(companiesRepositoryProvider).updateMe(
+            name: _nameController.text.trim(),
+            businessType: widget.businessType.name, // enum names match backend's VALID_TYPES exactly
+            currency: _currencyController.text.trim(),
+            phone: _phoneController.text.trim(),
+            address: _addressController.text.trim(),
+          );
+      if (mounted) widget.onFinish();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not reach the server — check your connection')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -81,12 +114,14 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      widget.onFinish();
-                    }
-                  },
-                  child: const Text('Finish Setup'),
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Finish Setup'),
                 ),
               ],
             ),
@@ -96,3 +131,4 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
     );
   }
 }
+
