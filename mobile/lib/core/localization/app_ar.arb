@@ -1,0 +1,440 @@
+{
+  "@@locale": "ar",
+  "appName": "Modiri AI",
+  "onboardingTitle1": "أدر عملك بسهولة",
+  "onboardingDesc1": "تابع المبيعات والمخزون والأرباح من مكان واحد، من هاتفك.",
+  "onboardingTitle2": "تتبّع مخزونك",
+  "onboardingDesc2": "لا تنفد كميتك أبدًا — احصل على تنبيهات قبل نفاد المنتجات.",
+  "onboardingTitle3": "اعمل بذكاء مع الذكاء الاصطناعي",
+  "onboardingDesc3": "امسح فواتير الموردين واسأل مساعدك الذكي عن نشاطك التجاري.",
+  "skip": "تخطي",
+  "next": "التالي",
+  "getStarted": "ابدأ الآن",
+  "loginTitle": "مرحبًا بعودتك",
+  "email": "البريد الإلكتروني",
+  "password": "كلمة المرور",
+  "rememberMe": "تذكرني",
+  "forgotPassword": "نسيت كلمة المرور؟",
+  "login": "تسجيل الدخول",
+  "noAccount": "ليس لديك حساب؟ سجّل الآن",
+  "registerTitle": "إنشاء حساب",
+  "fullName": "الاسم الكامل",
+  "confirmPassword": "تأكيد كلمة المرور",
+  "createAccount": "إنشاء الحساب",
+  "haveAccount": "لديك حساب بالفعل؟ سجّل الدخول",
+  "selectBusinessType": "اختر نوع النشاط",
+  "stepOf": "الخطوة {current} من {total}",
+  "@stepOf": {
+    "placeholders": {
+      "current": {},
+      "total": {}
+    }
+  },
+  "chooseBusinessTypeHint": "اختر الخيار الأنسب لنشاطك التجاري",
+  "businessTypeClothing": "متجر ملابس",
+  "businessTypeClothingDesc": "مقاسات، ألوان، باركود",
+  "businessTypeGrocery": "متجر بقالة",
+  "businessTypeGroceryDesc": "تواريخ الصلاحية، الموردون",
+  "businessTypePharmacy": "صيدلية",
+  "businessTypePharmacyDesc": "المخزون، تنبيهات الصلاحية",
+  "businessTypeClinic": "عيادة / طبيب",
+  "businessTypeClinicDesc": "المرضى، المواعيد",
+  "businessTypeRestaurant": "مطعم",
+  "businessTypeRestaurantDesc": "قائمة الطعام، المكوّنات",
+  "businessTypeCompany": "شركة",
+  "businessTypeCompanyDesc": "الموظفون، الفواتير",
+  "businessTypeWorkshop": "ورشة / حرفي",
+  "businessTypeWorkshopDesc": "الطلبات، الخدمات",
+  "continueLabel": "متابعة",
+  "businessSetupTitle": "إعداد النشاط التجاري",
+  "businessName": "اسم النشاط التجاري",
+  "businessNameHint": "مثال: بقالة أمين",
+  "businessTypeLabel": "نوع النشاط",
+  "phoneNumber": "رقم الهاتف",
+  "address": "العنوان",
+  "addressHint": "المدينة، الشارع",
+  "currency": "العملة",
+  "finishSetup": "إنهاء الإعداد",
+  "navDashboard": "الرئيسية",
+  "navSales": "المبيعات",
+  "navInventory": "المخزون",
+  "navMore": "المزيد",
+  "moreInvoices": "الفواتير",
+  "moreExpenses": "المصاريف",
+  "moreEmployees": "الموظفون",
+  "moreAppointments": "المواعيد",
+  "moreReports": "التقارير",
+  "moreAiAssistant": "المساعد الذكي",
+  "moreNotifications": "الإشعارات",
+  "moreSettings": "الإعدادات",
+  "goodMorning": "صباح الخير",
+  "dashboardRevenue": "الإيرادات",
+  "dashboardProfit": "الربح",
+  "dashboardLowStock": "مخزون منخفض",
+  "dashboardTodayCurrency": "اليوم · {currency}",
+  "@dashboardTodayCurrency": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "dashboardToday": "اليوم",
+  "dashboardNeedsReview": "يحتاج مراجعة",
+  "dashboardAllGood": "الوضع جيد",
+  "salesTrend": "اتجاه المبيعات",
+  "rangeWeek": "أسبوع",
+  "rangeMonth": "شهر",
+  "rangeYear": "سنة",
+  "newSale": "بيع جديد",
+  "scanInvoice": "مسح فاتورة",
+  "lowStockMessage": "{count} منتج منخفض المخزون",
+  "@lowStockMessage": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noSalesInPeriod": "لا توجد مبيعات مسجلة في هذه الفترة بعد",
+  "verifyAccountTitle": "تحقق من حسابك",
+  "verifyAccountSubtitle": "أرسلنا رمزًا مكونًا من 6 أرقام إلى {email}",
+  "@verifyAccountSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "verifyCodeLabel": "رمز التحقق",
+  "verifyEnterFullCode": "أدخل الرمز المكون من 6 أرقام",
+  "verifyResendCode": "إعادة إرسال الرمز",
+  "verifyResendIn": "إعادة الإرسال خلال {seconds} ثانية",
+  "@verifyResendIn": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
+  "verifyCodeResent": "تم إرسال الرمز",
+  "verifyAccountButton": "تحقق",
+  "backToLogin": "العودة لتسجيل الدخول",
+  "networkError": "تعذر الوصول إلى الخادم — تحقق من اتصالك",
+  "forgotPasswordTitle": "نسيت كلمة المرور",
+  "forgotPasswordSubtitle": "أدخل بريدك الإلكتروني وسنرسل لك رمز إعادة التعيين",
+  "sendResetCode": "إرسال رمز إعادة التعيين",
+  "resetPasswordSubtitle": "أدخل الرمز المرسل إلى {email} واختر كلمة مرور جديدة",
+  "@resetPasswordSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "newPassword": "كلمة المرور الجديدة",
+  "resetPasswordButton": "إعادة تعيين كلمة المرور",
+  "useAnotherEmail": "استخدام بريد إلكتروني آخر",
+  "passwordResetSuccess": "تمت إعادة تعيين كلمة المرور — الرجاء تسجيل الدخول",
+  "emailRequired": "البريد الإلكتروني مطلوب",
+  "emailInvalid": "أدخل بريدًا إلكترونيًا صالحًا",
+  "passwordRequired": "كلمة المرور مطلوبة",
+  "passwordTooShort": "الحد الأدنى 6 أحرف",
+  "nameRequired": "أدخل اسمك الكامل",
+  "passwordsDoNotMatch": "كلمتا المرور غير متطابقتين",
+  "loginSubtitle": "سجل الدخول إلى لوحة تحكم عملك",
+  "yourNameHint": "اسمك",
+  "moreTitle": "المزيد",
+  "moreCustomers": "العملاء",
+  "moreSuppliers": "الموردون",
+  "moreAiScanner": "ماسح الفواتير الذكي",
+  "moreAiInsights": "رؤى الذكاء الاصطناعي",
+  "errorPrefix": "خطأ: {error}",
+  "@errorPrefix": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "retry": "إعادة المحاولة",
+  "salesEmptyState": "لا توجد مبيعات بعد — اضغط + لتسجيل واحدة",
+  "saleNumberFallback": "بيع رقم {id}",
+  "@saleNumberFallback": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "walkInCustomer": "زبون عابر",
+  "saleRowSubtitle": "{customer} · {count} عنصر",
+  "@saleRowSubtitle": {
+    "placeholders": {
+      "customer": {},
+      "count": {}
+    }
+  },
+  "requiredField": "مطلوب",
+  "enterValidAmount": "أدخل مبلغًا صالحًا",
+  "employeesTitle": "الموظفون",
+  "addEmployee": "إضافة موظف",
+  "saveEmployee": "حفظ الموظف",
+  "positionLabel": "المنصب",
+  "baseSalaryLabel": "الراتب الأساسي (دج)",
+  "staffDefault": "موظف",
+  "employeeFallback": "موظف",
+  "attendancePresent": "حاضر",
+  "attendanceAbsent": "غائب",
+  "attendanceLate": "متأخر",
+  "salaryThisMonth": "راتب هذا الشهر",
+  "baseSalaryValue": "الأساسي: {amount}",
+  "@baseSalaryValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "markPresent": "تسجيل حضور",
+  "markAbsent": "تسجيل غياب",
+  "invoicesTitle": "الفواتير",
+  "noInvoicesYet": "لا توجد فواتير بعد",
+  "statusUnpaid": "غير مدفوعة",
+  "statusPaid": "مدفوعة",
+  "invoiceFallback": "فاتورة",
+  "billTo": "يُفوتر إلى",
+  "itemsLabel": "العناصر",
+  "totalLabel": "المجموع",
+  "lineItemLabel": "{name} × {qty}",
+  "@lineItemLabel": {
+    "placeholders": {
+      "name": {},
+      "qty": {}
+    }
+  },
+  "pdfExportNotImplemented": "تصدير PDF: نقطة النهاية موجودة لكن لم تُنفَّذ بعد",
+  "shareViaWhatsapp": "مشاركة عبر واتساب",
+  "balanceDue": "مستحق {amount} دج",
+  "@balanceDue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "noBalanceDue": "لا يوجد مستحق",
+  "addCustomer": "إضافة عميل",
+  "saveCustomer": "حفظ العميل",
+  "nameLabel": "الاسم",
+  "phoneLabel": "الهاتف",
+  "productsSuppliedCount": "يورّد {count} منتج",
+  "@productsSuppliedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "addSupplier": "إضافة مورد",
+  "saveSupplier": "حفظ المورد",
+  "expensesTitle": "المصروفات",
+  "thisMonthTotal": "إجمالي هذا الشهر",
+  "noExpensesYet": "لم يتم تسجيل أي مصروفات بعد",
+  "addExpense": "إضافة مصروف",
+  "saveExpense": "حفظ المصروف",
+  "categoryLabel": "الفئة",
+  "descriptionLabel": "الوصف",
+  "optionalNoteHint": "ملاحظة اختيارية",
+  "amountDzdLabel": "المبلغ (دج)",
+  "noNotifications": "لا توجد إشعارات — كل شيء على ما يرام",
+  "settingsTitle": "الإعدادات",
+  "businessProfileTitle": "ملف الشركة",
+  "businessProfileSubtitle": "التعديل من الإعدادات غير متاح بعد",
+  "businessProfileSnack": "يتم تعيين ملف الشركة أثناء الإعداد الأولي — ستتوفر شاشة للتعديل لاحقًا",
+  "currencyTitle": "العملة",
+  "themeTitle": "المظهر",
+  "themeLight": "فاتح",
+  "themeDark": "داكن",
+  "themeSystem": "النظام",
+  "languageTitle": "اللغة",
+  "aiSettingsTitle": "إعدادات الذكاء الاصطناعي",
+  "aiSettingsSubtitle": "حدود الاستخدام — المرحلة 6",
+  "logoutTitle": "تسجيل الخروج",
+  "logoutConfirm": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+  "cancel": "إلغاء",
+  "setupSaveFailedTitle": "تعذر حفظ الإعداد",
+  "ok": "موافق",
+  "productsTitleCount": "المنتجات · {count}",
+  "@productsTitleCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "productsTitle": "المنتجات",
+  "searchProductsHint": "ابحث عن المنتجات...",
+  "noProductsFound": "لم يتم العثور على منتجات",
+  "qtyOutOfStock": "الكمية: 0 — نفد المخزون",
+  "qtyLowStock": "الكمية: {qty} — مخزون منخفض",
+  "@qtyLowStock": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "qtyOnly": "الكمية: {qty}",
+  "@qtyOnly": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "productNotFound": "المنتج غير موجود",
+  "inStockLabel": "متوفر بالمخزون",
+  "marginLabel": "هامش الربح",
+  "pricingLabel": "التسعير",
+  "purchasePriceValue": "الشراء: {amount} دج",
+  "@purchasePriceValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "sellingPriceValue": "البيع: {amount} دج",
+  "@sellingPriceValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "profitPerUnitValue": "الربح/الوحدة: {amount} دج",
+  "@profitPerUnitValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "categoryLabelTitle": "الفئة",
+  "enterValidNumber": "أدخل رقمًا صالحًا",
+  "mustBeNonNegative": "يجب أن يكون ≥ 0",
+  "uncategorized": "غير مصنف",
+  "addProductTitle": "إضافة منتج",
+  "productNameLabel": "اسم المنتج",
+  "productNameHint": "مثال: حليب كامل الدسم 1 لتر",
+  "categoryHint": "الألبان",
+  "purchasePriceLabel": "سعر الشراء (دج)",
+  "sellingPriceLabel": "سعر البيع (دج)",
+  "sellingBelowPurchaseWarning": "⚠ سعر البيع أقل من سعر الشراء",
+  "quantityLabel": "الكمية",
+  "enterValidInteger": "أدخل عددًا صحيحًا صالحًا ≥ 0",
+  "saveProduct": "حفظ المنتج",
+  "appointmentsTitle": "المواعيد",
+  "noAppointmentsScheduled": "لا توجد مواعيد مجدولة",
+  "markCompleted": "وضع علامة مكتمل",
+  "cancelAppointment": "إلغاء",
+  "appointmentTimeName": "{time} — {name}",
+  "@appointmentTimeName": {
+    "placeholders": {
+      "time": {},
+      "name": {}
+    }
+  },
+  "newAppointmentTitle": "موعد جديد",
+  "patientCustomerLabel": "المريض / العميل",
+  "timeLabel": "الوقت: {time}",
+  "@timeLabel": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "notesLabel": "ملاحظات",
+  "optionalHint": "اختياري",
+  "saveAppointment": "حفظ الموعد",
+  "reportsTitle": "التقارير",
+  "periodDaily": "يومي",
+  "periodWeekly": "أسبوعي",
+  "periodMonthly": "شهري",
+  "periodYearly": "سنوي",
+  "exportAsPdf": "تصدير كملف PDF",
+  "exportAsExcel": "تصدير كملف إكسل",
+  "exportComingSoon": "تصدير PDF/إكسل سيتوفر في تحديث قادم",
+  "aiInsightsTitle": "رؤى الذكاء الاصطناعي",
+  "notEnoughDataForInsights": "لا توجد بيانات كافية لتوليد رؤى بعد",
+  "scanInvoiceTitle": "مسح الفاتورة",
+  "pointCameraAtInvoice": "وجّه الكاميرا نحو الفاتورة",
+  "keepInvoiceFlatWellLit": "حافظ على استواء الفاتورة وإضاءتها جيدًا",
+  "cameraButton": "الكاميرا",
+  "chooseFromGallery": "اختر من المعرض",
+  "tryDemoInvoice": "▶ جرّب فاتورة تجريبية",
+  "analyzingInvoice": "جارٍ تحليل الفاتورة...",
+  "readingTextDetecting": "قراءة النص، اكتشاف المنتجات والكميات",
+  "detectedItemsTitle": "العناصر المكتشفة",
+  "qtyValue": "الكمية: {qty}",
+  "@qtyValue": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "reviewAndEdit": "مراجعة وتعديل",
+  "reviewItemsTitle": "مراجعة العناصر",
+  "productNameFieldLabel": "اسم المنتج",
+  "quantityFieldLabel": "الكمية",
+  "purchasePriceFieldLabel": "سعر الشراء",
+  "confirmAddToInventory": "تأكيد والإضافة إلى المخزون",
+  "productsAddedToInventory": "تمت إضافة {count} منتج إلى المخزون",
+  "@productsAddedToInventory": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noProductsLoadedYet": "لم يتم تحميل أي منتجات بعد — تحقق من اتصالك وأعد المحاولة",
+  "onlyNInStock": "يوجد {qty} فقط في المخزون لـ {name}",
+  "@onlyNInStock": {
+    "placeholders": {
+      "qty": {},
+      "name": {}
+    }
+  },
+  "outOfStockFor": "{name} نفد من المخزون",
+  "@outOfStockFor": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "addAtLeastOneProduct": "أضف منتجًا واحدًا على الأقل إلى السلة",
+  "saleRecordedSuccessfully": "تم تسجيل البيع بنجاح",
+  "couldNotCompleteSale": "تعذر إتمام البيع: {error}",
+  "@couldNotCompleteSale": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "newSaleTitle": "بيع جديد",
+  "searchProductOrScan": "ابحث عن منتج أو امسح الباركود",
+  "scanInvoiceChooserTitle": "أي فاتورة تريد مسحها؟",
+  "scanSalesInvoiceOption": "فاتورة بيع",
+  "scanSalesInvoiceSubtitle": "تسجيل عملية بيع من إيصال العميل",
+  "scanStockInvoiceOption": "فاتورة مخزون",
+  "scanStockInvoiceSubtitle": "إضافة العناصر المشتراة إلى المخزون",
+  "scanBarcodeTooltip": "مسح الباركود",
+  "barcodeScannerTitle": "مسح الباركود",
+  "barcodeScannerHint": "ضع الباركود داخل الإطار",
+  "enterCodeManually": "إدخال الرمز يدويًا",
+  "manualBarcodeEntryTitle": "إدخال الباركود",
+  "barcodeNotFoundMessage": "لا يوجد منتج مطابق للباركود {code}",
+  "@barcodeNotFoundMessage": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      }
+    }
+  },
+  "addAsNewProductAction": "إضافة كمنتج جديد",
+  "scannedProductAddedToCart": "تمت إضافة {name} إلى السلة",
+  "@scannedProductAddedToCart": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "matchProductLabel": "المنتج المطابق",
+  "selectProductHint": "اختر منتجًا",
+  "salesInvoiceReviewTitle": "مراجعة عناصر البيع",
+  "confirmRecordSale": "تأكيد وتسجيل البيع",
+  "saleRecordedFromScan": "تم تسجيل البيع من الفاتورة الممسوحة",
+  "pleaseMatchAllItems": "قم بمطابقة كل عنصر مع منتج قبل المتابعة",
+  "cameraPermissionRequired": "إذن الكاميرا مطلوب للمسح",
+  "noMatchFound": "لا توجد مطابقة — اختر يدويًا",
+  "unitPriceLabel": "سعر الوحدة",
+  "removeItemLabel": "إزالة",
+  "barcodeFieldLabel": "الباركود (اختياري)",
+  "barcodeFieldHint": "امسح أو أدخل يدويًا",
+  "cartEmpty": "السلة فارغة — أضف منتجًا أعلاه",
+  "cartLineLabel": "{name} × {qty}",
+  "@cartLineLabel": {
+    "placeholders": {
+      "name": {},
+      "qty": {}
+    }
+  },
+  "discountDzdLabel": "الخصم (دج)",
+  "confirmSaleButton": "تأكيد البيع",
+  "searchProductDots": "ابحث عن منتج...",
+  "outOfStockLabel": "نفد من المخزون"
+}

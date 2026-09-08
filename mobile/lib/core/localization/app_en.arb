@@ -1,0 +1,440 @@
+{
+  "@@locale": "en",
+  "appName": "Modiri AI",
+  "onboardingTitle1": "Manage Your Business",
+  "onboardingDesc1": "Track sales, stock and profit in one place, from your phone.",
+  "onboardingTitle2": "Track Your Inventory",
+  "onboardingDesc2": "Never run out of stock — get alerts before products sell out.",
+  "onboardingTitle3": "Work Smarter with AI",
+  "onboardingDesc3": "Scan supplier invoices and ask your AI assistant about your business.",
+  "skip": "Skip",
+  "next": "Next",
+  "getStarted": "Get Started",
+  "loginTitle": "Welcome Back",
+  "email": "Email",
+  "password": "Password",
+  "rememberMe": "Remember me",
+  "forgotPassword": "Forgot password?",
+  "login": "Login",
+  "noAccount": "Don't have an account? Register",
+  "registerTitle": "Create Account",
+  "fullName": "Full name",
+  "confirmPassword": "Confirm password",
+  "createAccount": "Create Account",
+  "haveAccount": "Already have an account? Login",
+  "selectBusinessType": "Select Business Type",
+  "stepOf": "Step {current} of {total}",
+  "@stepOf": {
+    "placeholders": {
+      "current": {},
+      "total": {}
+    }
+  },
+  "chooseBusinessTypeHint": "Choose the option that best matches your business",
+  "businessTypeClothing": "Clothing Store",
+  "businessTypeClothingDesc": "Sizes, colors, barcode",
+  "businessTypeGrocery": "Grocery Store",
+  "businessTypeGroceryDesc": "Expiration, suppliers",
+  "businessTypePharmacy": "Pharmacy",
+  "businessTypePharmacyDesc": "Stock, expiration alerts",
+  "businessTypeClinic": "Clinic / Doctor",
+  "businessTypeClinicDesc": "Patients, appointments",
+  "businessTypeRestaurant": "Restaurant",
+  "businessTypeRestaurantDesc": "Menu, ingredients",
+  "businessTypeCompany": "Company",
+  "businessTypeCompanyDesc": "Employees, invoices",
+  "businessTypeWorkshop": "Workshop / Artisan",
+  "businessTypeWorkshopDesc": "Orders, services",
+  "continueLabel": "Continue",
+  "businessSetupTitle": "Business Setup",
+  "businessName": "Business name",
+  "businessNameHint": "e.g. Amine Grocery",
+  "businessTypeLabel": "Business type",
+  "phoneNumber": "Phone number",
+  "address": "Address",
+  "addressHint": "City, street",
+  "currency": "Currency",
+  "finishSetup": "Finish Setup",
+  "navDashboard": "Dashboard",
+  "navSales": "Sales",
+  "navInventory": "Inventory",
+  "navMore": "More",
+  "moreInvoices": "Invoices",
+  "moreExpenses": "Expenses",
+  "moreEmployees": "Employees",
+  "moreAppointments": "Appointments",
+  "moreReports": "Reports",
+  "moreAiAssistant": "AI Assistant",
+  "moreNotifications": "Notifications",
+  "moreSettings": "Settings",
+  "goodMorning": "Good morning",
+  "dashboardRevenue": "Revenue",
+  "dashboardProfit": "Profit",
+  "dashboardLowStock": "Low Stock",
+  "dashboardTodayCurrency": "Today · {currency}",
+  "@dashboardTodayCurrency": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "dashboardToday": "Today",
+  "dashboardNeedsReview": "Needs review",
+  "dashboardAllGood": "All good",
+  "salesTrend": "Sales trend",
+  "rangeWeek": "Week",
+  "rangeMonth": "Month",
+  "rangeYear": "Year",
+  "newSale": "New Sale",
+  "scanInvoice": "Scan Invoice",
+  "lowStockMessage": "{count} product(s) are running low",
+  "@lowStockMessage": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noSalesInPeriod": "No sales recorded in this period yet",
+  "verifyAccountTitle": "Verify Your Account",
+  "verifyAccountSubtitle": "We sent a 6-digit code to {email}",
+  "@verifyAccountSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "verifyCodeLabel": "Verification code",
+  "verifyEnterFullCode": "Enter the 6-digit code",
+  "verifyResendCode": "Resend code",
+  "verifyResendIn": "Resend in {seconds}s",
+  "@verifyResendIn": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
+  "verifyCodeResent": "Code sent",
+  "verifyAccountButton": "Verify",
+  "backToLogin": "Back to login",
+  "networkError": "Could not reach the server — check your connection",
+  "forgotPasswordTitle": "Forgot Password",
+  "forgotPasswordSubtitle": "Enter your email and we'll send you a reset code",
+  "sendResetCode": "Send reset code",
+  "resetPasswordSubtitle": "Enter the code sent to {email} and choose a new password",
+  "@resetPasswordSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "newPassword": "New password",
+  "resetPasswordButton": "Reset Password",
+  "useAnotherEmail": "Use a different email",
+  "passwordResetSuccess": "Password reset — please log in",
+  "emailRequired": "Email is required",
+  "emailInvalid": "Enter a valid email",
+  "passwordRequired": "Password is required",
+  "passwordTooShort": "Minimum 6 characters",
+  "nameRequired": "Enter your full name",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "loginSubtitle": "Log in to your business dashboard",
+  "yourNameHint": "Your name",
+  "moreTitle": "More",
+  "moreCustomers": "Customers",
+  "moreSuppliers": "Suppliers",
+  "moreAiScanner": "AI Invoice Scanner",
+  "moreAiInsights": "AI Insights",
+  "errorPrefix": "Error: {error}",
+  "@errorPrefix": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "retry": "Retry",
+  "salesEmptyState": "No sales yet — tap + to record one",
+  "saleNumberFallback": "Sale #{id}",
+  "@saleNumberFallback": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "walkInCustomer": "Walk-in",
+  "saleRowSubtitle": "{customer} · {count} item(s)",
+  "@saleRowSubtitle": {
+    "placeholders": {
+      "customer": {},
+      "count": {}
+    }
+  },
+  "requiredField": "Required",
+  "enterValidAmount": "Enter a valid amount",
+  "employeesTitle": "Employees",
+  "addEmployee": "Add Employee",
+  "saveEmployee": "Save Employee",
+  "positionLabel": "Position",
+  "baseSalaryLabel": "Base salary (DZD)",
+  "staffDefault": "Staff",
+  "employeeFallback": "Employee",
+  "attendancePresent": "Present",
+  "attendanceAbsent": "Absent",
+  "attendanceLate": "Late",
+  "salaryThisMonth": "Salary this month",
+  "baseSalaryValue": "Base: {amount}",
+  "@baseSalaryValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "markPresent": "Mark Present",
+  "markAbsent": "Mark Absent",
+  "invoicesTitle": "Invoices",
+  "noInvoicesYet": "No invoices yet",
+  "statusUnpaid": "Unpaid",
+  "statusPaid": "Paid",
+  "invoiceFallback": "Invoice",
+  "billTo": "Bill To",
+  "itemsLabel": "Items",
+  "totalLabel": "Total",
+  "lineItemLabel": "{name} × {qty}",
+  "@lineItemLabel": {
+    "placeholders": {
+      "name": {},
+      "qty": {}
+    }
+  },
+  "pdfExportNotImplemented": "PDF export: backend endpoint exists but is not implemented yet",
+  "shareViaWhatsapp": "Share via WhatsApp",
+  "balanceDue": "{amount} DZD due",
+  "@balanceDue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "noBalanceDue": "0 DZD due",
+  "addCustomer": "Add Customer",
+  "saveCustomer": "Save Customer",
+  "nameLabel": "Name",
+  "phoneLabel": "Phone",
+  "productsSuppliedCount": "{count} products supplied",
+  "@productsSuppliedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "addSupplier": "Add Supplier",
+  "saveSupplier": "Save Supplier",
+  "expensesTitle": "Expenses",
+  "thisMonthTotal": "This month's total",
+  "noExpensesYet": "No expenses recorded yet",
+  "addExpense": "Add Expense",
+  "saveExpense": "Save Expense",
+  "categoryLabel": "Category",
+  "descriptionLabel": "Description",
+  "optionalNoteHint": "Optional note",
+  "amountDzdLabel": "Amount (DZD)",
+  "noNotifications": "No notifications — everything looks good",
+  "settingsTitle": "Settings",
+  "businessProfileTitle": "Business Profile",
+  "businessProfileSubtitle": "Edit-from-Settings UI not wired yet",
+  "businessProfileSnack": "Business profile is set during onboarding — an edit screen is a follow-up",
+  "currencyTitle": "Currency",
+  "themeTitle": "Theme",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "languageTitle": "Language",
+  "aiSettingsTitle": "AI Settings",
+  "aiSettingsSubtitle": "Rate limits, usage — Phase 6",
+  "logoutTitle": "Logout",
+  "logoutConfirm": "Are you sure you want to log out?",
+  "cancel": "Cancel",
+  "setupSaveFailedTitle": "Setup could not be saved",
+  "ok": "OK",
+  "productsTitleCount": "Products · {count}",
+  "@productsTitleCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "productsTitle": "Products",
+  "searchProductsHint": "Search products...",
+  "noProductsFound": "No products found",
+  "qtyOutOfStock": "Qty: 0 — Out of stock",
+  "qtyLowStock": "Qty: {qty} — Low stock",
+  "@qtyLowStock": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "qtyOnly": "Qty: {qty}",
+  "@qtyOnly": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "productNotFound": "Product not found",
+  "inStockLabel": "In Stock",
+  "marginLabel": "Margin",
+  "pricingLabel": "Pricing",
+  "purchasePriceValue": "Purchase: {amount} DZD",
+  "@purchasePriceValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "sellingPriceValue": "Selling: {amount} DZD",
+  "@sellingPriceValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "profitPerUnitValue": "Profit/unit: {amount} DZD",
+  "@profitPerUnitValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "categoryLabelTitle": "Category",
+  "enterValidNumber": "Enter a valid number",
+  "mustBeNonNegative": "Must be ≥ 0",
+  "uncategorized": "Uncategorized",
+  "addProductTitle": "Add Product",
+  "productNameLabel": "Product name",
+  "productNameHint": "e.g. Whole Milk 1L",
+  "categoryHint": "Dairy",
+  "purchasePriceLabel": "Purchase price (DZD)",
+  "sellingPriceLabel": "Selling price (DZD)",
+  "sellingBelowPurchaseWarning": "⚠ Selling price is below purchase price",
+  "quantityLabel": "Quantity",
+  "enterValidInteger": "Enter a valid integer ≥ 0",
+  "saveProduct": "Save Product",
+  "appointmentsTitle": "Appointments",
+  "noAppointmentsScheduled": "No appointments scheduled",
+  "markCompleted": "Mark Completed",
+  "cancelAppointment": "Cancel",
+  "appointmentTimeName": "{time} — {name}",
+  "@appointmentTimeName": {
+    "placeholders": {
+      "time": {},
+      "name": {}
+    }
+  },
+  "newAppointmentTitle": "New Appointment",
+  "patientCustomerLabel": "Patient / Customer",
+  "timeLabel": "Time: {time}",
+  "@timeLabel": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "notesLabel": "Notes",
+  "optionalHint": "Optional",
+  "saveAppointment": "Save Appointment",
+  "reportsTitle": "Reports",
+  "periodDaily": "Daily",
+  "periodWeekly": "Weekly",
+  "periodMonthly": "Monthly",
+  "periodYearly": "Yearly",
+  "exportAsPdf": "Export as PDF",
+  "exportAsExcel": "Export as Excel",
+  "exportComingSoon": "PDF/Excel export lands in a future batch",
+  "aiInsightsTitle": "AI Insights",
+  "notEnoughDataForInsights": "Not enough data yet to generate insights",
+  "scanInvoiceTitle": "Scan Invoice",
+  "pointCameraAtInvoice": "Point camera at invoice",
+  "keepInvoiceFlatWellLit": "Keep the invoice flat and well lit",
+  "cameraButton": "Camera",
+  "chooseFromGallery": "Choose from Gallery",
+  "tryDemoInvoice": "▶ Try Demo Invoice",
+  "analyzingInvoice": "Analyzing invoice...",
+  "readingTextDetecting": "Reading text, detecting products and quantities",
+  "detectedItemsTitle": "Detected Items",
+  "qtyValue": "Qty: {qty}",
+  "@qtyValue": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "reviewAndEdit": "Review & Edit",
+  "reviewItemsTitle": "Review Items",
+  "productNameFieldLabel": "Product name",
+  "quantityFieldLabel": "Quantity",
+  "purchasePriceFieldLabel": "Purchase price",
+  "confirmAddToInventory": "Confirm & Add to Inventory",
+  "productsAddedToInventory": "{count} product(s) added to inventory",
+  "@productsAddedToInventory": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noProductsLoadedYet": "No products loaded yet — check your connection and try again",
+  "onlyNInStock": "Only {qty} in stock for {name}",
+  "@onlyNInStock": {
+    "placeholders": {
+      "qty": {},
+      "name": {}
+    }
+  },
+  "outOfStockFor": "{name} is out of stock",
+  "@outOfStockFor": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "addAtLeastOneProduct": "Add at least one product to the cart",
+  "saleRecordedSuccessfully": "Sale recorded successfully",
+  "couldNotCompleteSale": "Could not complete sale: {error}",
+  "@couldNotCompleteSale": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "newSaleTitle": "New Sale",
+  "searchProductOrScan": "Search product or scan barcode",
+  "scanInvoiceChooserTitle": "Which invoice do you want to scan?",
+  "scanSalesInvoiceOption": "Sales Invoice",
+  "scanSalesInvoiceSubtitle": "Record a sale from a customer receipt",
+  "scanStockInvoiceOption": "Stock Invoice",
+  "scanStockInvoiceSubtitle": "Add purchased items to inventory",
+  "scanBarcodeTooltip": "Scan barcode",
+  "barcodeScannerTitle": "Scan Barcode",
+  "barcodeScannerHint": "Align the barcode within the frame",
+  "enterCodeManually": "Enter code manually",
+  "manualBarcodeEntryTitle": "Enter Barcode",
+  "barcodeNotFoundMessage": "No product matches barcode {code}",
+  "@barcodeNotFoundMessage": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      }
+    }
+  },
+  "addAsNewProductAction": "Add as new product",
+  "scannedProductAddedToCart": "{name} added to the cart",
+  "@scannedProductAddedToCart": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "matchProductLabel": "Matched product",
+  "selectProductHint": "Select a product",
+  "salesInvoiceReviewTitle": "Review Sale Items",
+  "confirmRecordSale": "Confirm & Record Sale",
+  "saleRecordedFromScan": "Sale recorded from scanned invoice",
+  "pleaseMatchAllItems": "Match every item to a product before continuing",
+  "cameraPermissionRequired": "Camera permission is required to scan",
+  "noMatchFound": "No match found — select manually",
+  "unitPriceLabel": "Unit price",
+  "removeItemLabel": "Remove",
+  "barcodeFieldLabel": "Barcode (optional)",
+  "barcodeFieldHint": "Scan or type manually",
+  "cartEmpty": "Cart is empty — add a product above",
+  "cartLineLabel": "{name} × {qty}",
+  "@cartLineLabel": {
+    "placeholders": {
+      "name": {},
+      "qty": {}
+    }
+  },
+  "discountDzdLabel": "Discount (DZD)",
+  "confirmSaleButton": "Confirm Sale",
+  "searchProductDots": "Search product...",
+  "outOfStockLabel": "Out of stock"
+}

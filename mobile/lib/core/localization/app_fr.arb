@@ -1,0 +1,440 @@
+{
+  "@@locale": "fr",
+  "appName": "Modiri AI",
+  "onboardingTitle1": "Gérez votre activité",
+  "onboardingDesc1": "Suivez ventes, stock et bénéfices en un seul endroit, depuis votre téléphone.",
+  "onboardingTitle2": "Suivez votre inventaire",
+  "onboardingDesc2": "Ne manquez plus jamais de stock — recevez des alertes avant la rupture.",
+  "onboardingTitle3": "Travaillez plus intelligemment avec l'IA",
+  "onboardingDesc3": "Scannez les factures fournisseurs et interrogez votre assistant IA.",
+  "skip": "Passer",
+  "next": "Suivant",
+  "getStarted": "Commencer",
+  "loginTitle": "Content de vous revoir",
+  "email": "E-mail",
+  "password": "Mot de passe",
+  "rememberMe": "Se souvenir de moi",
+  "forgotPassword": "Mot de passe oublié ?",
+  "login": "Connexion",
+  "noAccount": "Pas de compte ? Inscrivez-vous",
+  "registerTitle": "Créer un compte",
+  "fullName": "Nom complet",
+  "confirmPassword": "Confirmer le mot de passe",
+  "createAccount": "Créer le compte",
+  "haveAccount": "Déjà un compte ? Connexion",
+  "selectBusinessType": "Sélectionnez le type d'activité",
+  "stepOf": "Étape {current} sur {total}",
+  "@stepOf": {
+    "placeholders": {
+      "current": {},
+      "total": {}
+    }
+  },
+  "chooseBusinessTypeHint": "Choisissez l'option qui correspond le mieux à votre activité",
+  "businessTypeClothing": "Boutique de vêtements",
+  "businessTypeClothingDesc": "Tailles, couleurs, code-barres",
+  "businessTypeGrocery": "Épicerie",
+  "businessTypeGroceryDesc": "Péremption, fournisseurs",
+  "businessTypePharmacy": "Pharmacie",
+  "businessTypePharmacyDesc": "Stock, alertes de péremption",
+  "businessTypeClinic": "Clinique / Médecin",
+  "businessTypeClinicDesc": "Patients, rendez-vous",
+  "businessTypeRestaurant": "Restaurant",
+  "businessTypeRestaurantDesc": "Menu, ingrédients",
+  "businessTypeCompany": "Entreprise",
+  "businessTypeCompanyDesc": "Employés, factures",
+  "businessTypeWorkshop": "Atelier / Artisan",
+  "businessTypeWorkshopDesc": "Commandes, services",
+  "continueLabel": "Continuer",
+  "businessSetupTitle": "Configuration de l'activité",
+  "businessName": "Nom de l'activité",
+  "businessNameHint": "ex. Épicerie Amine",
+  "businessTypeLabel": "Type d'activité",
+  "phoneNumber": "Numéro de téléphone",
+  "address": "Adresse",
+  "addressHint": "Ville, rue",
+  "currency": "Devise",
+  "finishSetup": "Terminer la configuration",
+  "navDashboard": "Tableau de bord",
+  "navSales": "Ventes",
+  "navInventory": "Inventaire",
+  "navMore": "Plus",
+  "moreInvoices": "Factures",
+  "moreExpenses": "Dépenses",
+  "moreEmployees": "Employés",
+  "moreAppointments": "Rendez-vous",
+  "moreReports": "Rapports",
+  "moreAiAssistant": "Assistant IA",
+  "moreNotifications": "Notifications",
+  "moreSettings": "Paramètres",
+  "goodMorning": "Bonjour",
+  "dashboardRevenue": "Revenu",
+  "dashboardProfit": "Bénéfice",
+  "dashboardLowStock": "Stock faible",
+  "dashboardTodayCurrency": "Aujourd'hui · {currency}",
+  "@dashboardTodayCurrency": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "dashboardToday": "Aujourd'hui",
+  "dashboardNeedsReview": "À vérifier",
+  "dashboardAllGood": "Tout va bien",
+  "salesTrend": "Tendance des ventes",
+  "rangeWeek": "Semaine",
+  "rangeMonth": "Mois",
+  "rangeYear": "Année",
+  "newSale": "Nouvelle vente",
+  "scanInvoice": "Scanner une facture",
+  "lowStockMessage": "{count} produit(s) en stock faible",
+  "@lowStockMessage": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noSalesInPeriod": "Aucune vente enregistrée pour cette période",
+  "verifyAccountTitle": "Vérifiez votre compte",
+  "verifyAccountSubtitle": "Nous avons envoyé un code à 6 chiffres à {email}",
+  "@verifyAccountSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "verifyCodeLabel": "Code de vérification",
+  "verifyEnterFullCode": "Saisissez le code à 6 chiffres",
+  "verifyResendCode": "Renvoyer le code",
+  "verifyResendIn": "Renvoyer dans {seconds}s",
+  "@verifyResendIn": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
+  "verifyCodeResent": "Code envoyé",
+  "verifyAccountButton": "Vérifier",
+  "backToLogin": "Retour à la connexion",
+  "networkError": "Impossible de joindre le serveur — vérifiez votre connexion",
+  "forgotPasswordTitle": "Mot de passe oublié",
+  "forgotPasswordSubtitle": "Saisissez votre email et nous vous enverrons un code de réinitialisation",
+  "sendResetCode": "Envoyer le code",
+  "resetPasswordSubtitle": "Saisissez le code envoyé à {email} et choisissez un nouveau mot de passe",
+  "@resetPasswordSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "newPassword": "Nouveau mot de passe",
+  "resetPasswordButton": "Réinitialiser le mot de passe",
+  "useAnotherEmail": "Utiliser un autre email",
+  "passwordResetSuccess": "Mot de passe réinitialisé — veuillez vous connecter",
+  "emailRequired": "L'email est requis",
+  "emailInvalid": "Saisissez un email valide",
+  "passwordRequired": "Le mot de passe est requis",
+  "passwordTooShort": "Minimum 6 caractères",
+  "nameRequired": "Saisissez votre nom complet",
+  "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+  "loginSubtitle": "Connectez-vous à votre tableau de bord",
+  "yourNameHint": "Votre nom",
+  "moreTitle": "Plus",
+  "moreCustomers": "Clients",
+  "moreSuppliers": "Fournisseurs",
+  "moreAiScanner": "Scanner de factures IA",
+  "moreAiInsights": "Analyses IA",
+  "errorPrefix": "Erreur : {error}",
+  "@errorPrefix": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "retry": "Réessayer",
+  "salesEmptyState": "Aucune vente pour le moment — appuyez sur + pour en enregistrer une",
+  "saleNumberFallback": "Vente n° {id}",
+  "@saleNumberFallback": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "walkInCustomer": "Client de passage",
+  "saleRowSubtitle": "{customer} · {count} article(s)",
+  "@saleRowSubtitle": {
+    "placeholders": {
+      "customer": {},
+      "count": {}
+    }
+  },
+  "requiredField": "Requis",
+  "enterValidAmount": "Saisissez un montant valide",
+  "employeesTitle": "Employés",
+  "addEmployee": "Ajouter un employé",
+  "saveEmployee": "Enregistrer l'employé",
+  "positionLabel": "Poste",
+  "baseSalaryLabel": "Salaire de base (DZD)",
+  "staffDefault": "Personnel",
+  "employeeFallback": "Employé",
+  "attendancePresent": "Présent",
+  "attendanceAbsent": "Absent",
+  "attendanceLate": "En retard",
+  "salaryThisMonth": "Salaire ce mois-ci",
+  "baseSalaryValue": "Base : {amount}",
+  "@baseSalaryValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "markPresent": "Marquer présent",
+  "markAbsent": "Marquer absent",
+  "invoicesTitle": "Factures",
+  "noInvoicesYet": "Pas encore de factures",
+  "statusUnpaid": "Impayée",
+  "statusPaid": "Payée",
+  "invoiceFallback": "Facture",
+  "billTo": "Facturé à",
+  "itemsLabel": "Articles",
+  "totalLabel": "Total",
+  "lineItemLabel": "{name} × {qty}",
+  "@lineItemLabel": {
+    "placeholders": {
+      "name": {},
+      "qty": {}
+    }
+  },
+  "pdfExportNotImplemented": "Export PDF : l'endpoint existe mais n'est pas encore implémenté",
+  "shareViaWhatsapp": "Partager via WhatsApp",
+  "balanceDue": "{amount} DZD dû",
+  "@balanceDue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "noBalanceDue": "0 DZD dû",
+  "addCustomer": "Ajouter un client",
+  "saveCustomer": "Enregistrer le client",
+  "nameLabel": "Nom",
+  "phoneLabel": "Téléphone",
+  "productsSuppliedCount": "{count} produits fournis",
+  "@productsSuppliedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "addSupplier": "Ajouter un fournisseur",
+  "saveSupplier": "Enregistrer le fournisseur",
+  "expensesTitle": "Dépenses",
+  "thisMonthTotal": "Total de ce mois",
+  "noExpensesYet": "Aucune dépense enregistrée pour l'instant",
+  "addExpense": "Ajouter une dépense",
+  "saveExpense": "Enregistrer la dépense",
+  "categoryLabel": "Catégorie",
+  "descriptionLabel": "Description",
+  "optionalNoteHint": "Note facultative",
+  "amountDzdLabel": "Montant (DZD)",
+  "noNotifications": "Aucune notification — tout va bien",
+  "settingsTitle": "Paramètres",
+  "businessProfileTitle": "Profil de l'entreprise",
+  "businessProfileSubtitle": "Modification depuis les paramètres pas encore disponible",
+  "businessProfileSnack": "Le profil de l'entreprise est défini lors de l'inscription — un écran de modification suivra",
+  "currencyTitle": "Devise",
+  "themeTitle": "Thème",
+  "themeLight": "Clair",
+  "themeDark": "Sombre",
+  "themeSystem": "Système",
+  "languageTitle": "Langue",
+  "aiSettingsTitle": "Paramètres IA",
+  "aiSettingsSubtitle": "Limites d'utilisation — Phase 6",
+  "logoutTitle": "Déconnexion",
+  "logoutConfirm": "Voulez-vous vraiment vous déconnecter ?",
+  "cancel": "Annuler",
+  "setupSaveFailedTitle": "L'installation n'a pas pu être enregistrée",
+  "ok": "OK",
+  "productsTitleCount": "Produits · {count}",
+  "@productsTitleCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "productsTitle": "Produits",
+  "searchProductsHint": "Rechercher des produits...",
+  "noProductsFound": "Aucun produit trouvé",
+  "qtyOutOfStock": "Qté : 0 — Rupture de stock",
+  "qtyLowStock": "Qté : {qty} — Stock faible",
+  "@qtyLowStock": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "qtyOnly": "Qté : {qty}",
+  "@qtyOnly": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "productNotFound": "Produit introuvable",
+  "inStockLabel": "En stock",
+  "marginLabel": "Marge",
+  "pricingLabel": "Tarification",
+  "purchasePriceValue": "Achat : {amount} DZD",
+  "@purchasePriceValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "sellingPriceValue": "Vente : {amount} DZD",
+  "@sellingPriceValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "profitPerUnitValue": "Profit/unité : {amount} DZD",
+  "@profitPerUnitValue": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "categoryLabelTitle": "Catégorie",
+  "enterValidNumber": "Saisissez un nombre valide",
+  "mustBeNonNegative": "Doit être ≥ 0",
+  "uncategorized": "Non catégorisé",
+  "addProductTitle": "Ajouter un produit",
+  "productNameLabel": "Nom du produit",
+  "productNameHint": "ex. Lait entier 1L",
+  "categoryHint": "Produits laitiers",
+  "purchasePriceLabel": "Prix d'achat (DZD)",
+  "sellingPriceLabel": "Prix de vente (DZD)",
+  "sellingBelowPurchaseWarning": "⚠ Le prix de vente est inférieur au prix d'achat",
+  "quantityLabel": "Quantité",
+  "enterValidInteger": "Saisissez un entier valide ≥ 0",
+  "saveProduct": "Enregistrer le produit",
+  "appointmentsTitle": "Rendez-vous",
+  "noAppointmentsScheduled": "Aucun rendez-vous prévu",
+  "markCompleted": "Marquer terminé",
+  "cancelAppointment": "Annuler",
+  "appointmentTimeName": "{time} — {name}",
+  "@appointmentTimeName": {
+    "placeholders": {
+      "time": {},
+      "name": {}
+    }
+  },
+  "newAppointmentTitle": "Nouveau rendez-vous",
+  "patientCustomerLabel": "Patient / Client",
+  "timeLabel": "Heure : {time}",
+  "@timeLabel": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "notesLabel": "Notes",
+  "optionalHint": "Facultatif",
+  "saveAppointment": "Enregistrer le rendez-vous",
+  "reportsTitle": "Rapports",
+  "periodDaily": "Quotidien",
+  "periodWeekly": "Hebdomadaire",
+  "periodMonthly": "Mensuel",
+  "periodYearly": "Annuel",
+  "exportAsPdf": "Exporter en PDF",
+  "exportAsExcel": "Exporter en Excel",
+  "exportComingSoon": "L'export PDF/Excel arrive dans une prochaine mise à jour",
+  "aiInsightsTitle": "Analyses IA",
+  "notEnoughDataForInsights": "Pas encore assez de données pour générer des analyses",
+  "scanInvoiceTitle": "Scanner une facture",
+  "pointCameraAtInvoice": "Pointez la caméra vers la facture",
+  "keepInvoiceFlatWellLit": "Gardez la facture à plat et bien éclairée",
+  "cameraButton": "Caméra",
+  "chooseFromGallery": "Choisir depuis la galerie",
+  "tryDemoInvoice": "▶ Essayer une facture d'exemple",
+  "analyzingInvoice": "Analyse de la facture...",
+  "readingTextDetecting": "Lecture du texte, détection des produits et quantités",
+  "detectedItemsTitle": "Articles détectés",
+  "qtyValue": "Qté : {qty}",
+  "@qtyValue": {
+    "placeholders": {
+      "qty": {}
+    }
+  },
+  "reviewAndEdit": "Vérifier et modifier",
+  "reviewItemsTitle": "Vérifier les articles",
+  "productNameFieldLabel": "Nom du produit",
+  "quantityFieldLabel": "Quantité",
+  "purchasePriceFieldLabel": "Prix d'achat",
+  "confirmAddToInventory": "Confirmer et ajouter à l'inventaire",
+  "productsAddedToInventory": "{count} produit(s) ajouté(s) à l'inventaire",
+  "@productsAddedToInventory": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noProductsLoadedYet": "Aucun produit chargé pour l'instant — vérifiez votre connexion et réessayez",
+  "onlyNInStock": "Seulement {qty} en stock pour {name}",
+  "@onlyNInStock": {
+    "placeholders": {
+      "qty": {},
+      "name": {}
+    }
+  },
+  "outOfStockFor": "{name} est en rupture de stock",
+  "@outOfStockFor": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "addAtLeastOneProduct": "Ajoutez au moins un produit au panier",
+  "saleRecordedSuccessfully": "Vente enregistrée avec succès",
+  "couldNotCompleteSale": "Impossible de finaliser la vente : {error}",
+  "@couldNotCompleteSale": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "newSaleTitle": "Nouvelle vente",
+  "searchProductOrScan": "Rechercher un produit ou scanner un code-barres",
+  "scanInvoiceChooserTitle": "Quelle facture voulez-vous scanner ?",
+  "scanSalesInvoiceOption": "Facture de vente",
+  "scanSalesInvoiceSubtitle": "Enregistrer une vente à partir d'un reçu client",
+  "scanStockInvoiceOption": "Facture de stock",
+  "scanStockInvoiceSubtitle": "Ajouter des articles achetés à l'inventaire",
+  "scanBarcodeTooltip": "Scanner le code-barres",
+  "barcodeScannerTitle": "Scanner un code-barres",
+  "barcodeScannerHint": "Alignez le code-barres dans le cadre",
+  "enterCodeManually": "Saisir le code manuellement",
+  "manualBarcodeEntryTitle": "Saisir le code-barres",
+  "barcodeNotFoundMessage": "Aucun produit ne correspond au code {code}",
+  "@barcodeNotFoundMessage": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      }
+    }
+  },
+  "addAsNewProductAction": "Ajouter comme nouveau produit",
+  "scannedProductAddedToCart": "{name} ajouté au panier",
+  "@scannedProductAddedToCart": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "matchProductLabel": "Produit correspondant",
+  "selectProductHint": "Sélectionner un produit",
+  "salesInvoiceReviewTitle": "Vérifier les articles vendus",
+  "confirmRecordSale": "Confirmer et enregistrer la vente",
+  "saleRecordedFromScan": "Vente enregistrée à partir de la facture scannée",
+  "pleaseMatchAllItems": "Associez chaque article à un produit avant de continuer",
+  "cameraPermissionRequired": "L'autorisation de la caméra est requise pour scanner",
+  "noMatchFound": "Aucune correspondance — sélectionnez manuellement",
+  "unitPriceLabel": "Prix unitaire",
+  "removeItemLabel": "Supprimer",
+  "barcodeFieldLabel": "Code-barres (optionnel)",
+  "barcodeFieldHint": "Scanner ou saisir manuellement",
+  "cartEmpty": "Le panier est vide — ajoutez un produit ci-dessus",
+  "cartLineLabel": "{name} × {qty}",
+  "@cartLineLabel": {
+    "placeholders": {
+      "name": {},
+      "qty": {}
+    }
+  },
+  "discountDzdLabel": "Remise (DZD)",
+  "confirmSaleButton": "Confirmer la vente",
+  "searchProductDots": "Rechercher un produit...",
+  "outOfStockLabel": "Rupture de stock"
+}

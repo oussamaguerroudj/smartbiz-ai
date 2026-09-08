@@ -1,0 +1,58 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Node
+node_modules/
+**/node_modules/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+build/
+**/build/
+.flutter_tool/
+.packages
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Android / Gradle generated files
+.gradle/
+**/.gradle/
+android/.gradle/
+android/local.properties
+
+# iOS generated files
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+
+# macOS generated files
+macos/Pods/
+macos/.symlinks/
+
+# Windows generated files
+windows/flutter/ephemeral/
+
+# Linux generated files
+linux/flutter/ephemeral/
+
+# Flutter generated ephemeral files
+**/ephemeral/
+**/_ephemeral_pub_cache_pointers/

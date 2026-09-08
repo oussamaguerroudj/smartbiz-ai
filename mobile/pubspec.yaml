@@ -1,0 +1,73 @@
+name: modiri_ai
+description: Modiri AI — AI-powered small business management app.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  flutter_riverpod: ^2.5.1
+  http: ^1.2.1
+  google_fonts: ^6.2.1
+  video_player: ^2.9.2
+  intl: 0.20.2
+  # Real barcode camera scanning (Sales/Stock "scan barcode" buttons) —
+  # actively maintained, works on Android + iOS without extra native
+  # setup beyond the camera permission strings already required.
+  mobile_scanner: ^6.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_native_splash: ^2.4.6
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/video/splash.mp4
+    - assets/images/logo_splash.png
+    - assets/images/app_icon.png
+
+# New app icon (see assets/images/app_icon.png). This regenerates the real,
+# per-platform icon files — including Android's mipmap-*/ic_launcher set,
+# which isn't hand-edited here — from that single source image. Run:
+#   flutter pub get
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+  macos:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+
+  # Design System v2 ("Modiri AI — Indigo" redesign): typography now
+  # renders for real via the google_fonts package — Plus Jakarta Sans for
+  # UI text, Space Grotesk for display/headline text — instead of the
+  # placeholder 'Inter' fontFamily string that silently fell back to the
+  # platform default. See core/theme/app_typography.dart.
+
+flutter_native_splash:
+  # Matches the new logo artwork's own background exactly.
+  color: "#000000"
+  image: assets/images/logo_splash.png
+  android: true
+  ios: true
+  web: false
