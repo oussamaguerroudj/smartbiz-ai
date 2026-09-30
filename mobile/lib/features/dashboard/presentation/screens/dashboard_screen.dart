@@ -209,32 +209,34 @@ Future<void> showScanInvoiceChooser(BuildContext context) async {
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusCard)),
     ),
     builder: (sheetContext) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.scanInvoiceChooserTitle,
-              style: Theme.of(sheetContext).textTheme.titleMedium,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _ScanChoiceTile(
-              icon: Icons.point_of_sale_rounded,
-              title: l10n.scanSalesInvoiceOption,
-              subtitle: l10n.scanSalesInvoiceSubtitle,
-              onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.sales),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            _ScanChoiceTile(
-              icon: Icons.inventory_2_rounded,
-              title: l10n.scanStockInvoiceOption,
-              subtitle: l10n.scanStockInvoiceSubtitle,
-              onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.stock),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-          ],
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.scanInvoiceChooserTitle,
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ScanChoiceTile(
+                icon: Icons.point_of_sale_rounded,
+                title: l10n.scanSalesInvoiceOption,
+                subtitle: l10n.scanSalesInvoiceSubtitle,
+                onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.sales),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _ScanChoiceTile(
+                icon: Icons.inventory_2_rounded,
+                title: l10n.scanStockInvoiceOption,
+                subtitle: l10n.scanStockInvoiceSubtitle,
+                onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.stock),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+          ),
         ),
       ),
     ),
@@ -373,7 +375,7 @@ class _DashboardHeader extends StatelessWidget {
                       Icons.bar_chart_rounded,
                       color: Colors.white,
                     ),
-                    tooltip: 'Reports',
+                    tooltip: l10n.moreReports,
                     onPressed: onOpenReports,
                   ),
 
@@ -383,7 +385,7 @@ class _DashboardHeader extends StatelessWidget {
                       Icons.smart_toy_outlined,
                       color: Colors.white,
                     ),
-                    tooltip: 'AI Assistant',
+                    tooltip: l10n.moreAiAssistant,
                     onPressed: onOpenAiAssistant,
                   ),
 
@@ -393,7 +395,7 @@ class _DashboardHeader extends StatelessWidget {
                       Icons.notifications_outlined,
                       color: Colors.white,
                     ),
-                    tooltip: 'Notifications',
+                    tooltip: l10n.moreNotifications,
                     onPressed: onOpenNotifications,
                   ),
                 ],
@@ -589,7 +591,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
               height: 60,
               child: Center(
                 child: Text(
-                  'Could not load sales trend',
+                  l10n.couldNotLoadSalesTrend,
                   style: AppTypography.body(
                     Theme.of(context)
                         .colorScheme

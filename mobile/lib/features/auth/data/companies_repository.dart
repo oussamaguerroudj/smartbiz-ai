@@ -19,7 +19,7 @@ class CompaniesRepository {
     return CompanyInfo.fromJson(response['data'] as Map<String, dynamic>);
   }
 
-  Future<void> updateMe({
+  Future<CompanyInfo> updateMe({
     required String name,
     required String businessType,
     String? currency,
@@ -27,24 +27,38 @@ class CompaniesRepository {
     String? address,
   }) async {
     final client = _ref.read(apiClientProvider);
-    await client.put('/companies/me', body: {
+    final response = await client.put('/companies/me', body: {
       'name': name,
       'businessType': businessType,
       if (currency != null) 'currency': currency,
       if (phone != null && phone.isNotEmpty) 'phone': phone,
       if (address != null && address.isNotEmpty) 'address': address,
     });
+    _ref.invalidate(companyInfoProvider);
+    return CompanyInfo.fromJson(response['data'] as Map<String, dynamic>);
   }
 }
 
 class CompanyInfo {
-  CompanyInfo({required this.name, required this.businessType});
+  CompanyInfo({
+    required this.name,
+    required this.businessType,
+    this.currency = 'DZD',
+    this.phone,
+    this.address,
+  });
   final String name;
   final String businessType;
+  final String currency;
+  final String? phone;
+  final String? address;
 
   factory CompanyInfo.fromJson(Map<String, dynamic> json) => CompanyInfo(
         name: (json['name'] as String?) ?? '',
         businessType: (json['businessType'] as String?) ?? (json['business_type'] as String?) ?? '',
+        currency: (json['currency'] as String?) ?? 'DZD',
+        phone: json['phone'] as String?,
+        address: json['address'] as String?,
       );
 }
 
@@ -54,7 +68,21 @@ final companiesRepositoryProvider = Provider<CompaniesRepository>((ref) => Compa
 /// tolerant of failure (endpoint might 404 on older backends) — Dashboard
 /// falls back to just the user's name with no business-type suffix
 /// rather than crashing or showing fake text.
-final companyInfoProvider = FutureProvider<CompanyInfo?>((ref) async {
+///
+/// FIX (multi-user data isolation bug): this used to be a plain
+/// FutureProvider, which Riverpod never disposes on its own. It fetched
+/// once for whichever account was logged in first and then kept that
+/// value cached for the lifetime of the app process — so logging out
+/// and logging back in as a *different* account on the same device (no
+/// full app restart) could show the *previous* user's business type on
+/// the Dashboard/MainShell header. autoDispose ties this provider's
+/// lifetime to whether anything is actually watching it: MainShell only
+/// exists while `_AppPhase.main` is active, so logging out tears the
+/// whole authenticated subtree down (see main.dart's AnimatedSwitcher +
+/// KeyedSubtree), which disposes this provider; the next login rebuilds
+/// MainShell and this refetches fresh for whichever account is now
+/// signed in.
+final companyInfoProvider = FutureProvider.autoDispose<CompanyInfo?>((ref) async {
   try {
     return await ref.read(companiesRepositoryProvider).getMe();
   } catch (_) {

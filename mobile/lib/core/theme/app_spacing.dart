@@ -18,6 +18,7 @@ class AppSpacing {
   static const double radiusCard = 16;
   static const double radiusInput = 11;
   static const double radiusPill = 999;
+  static const double radiusFull = 999;
 
   static const double touchTargetMin = 44;
 

@@ -7,7 +7,9 @@ import '../../../../core/widgets/app_fab.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/sales_repository.dart';
 import '../../domain/sale.dart';
-import 'create_sale_screen.dart';
+import '../screens/create_sale_screen.dart';
+import '../../../invoices/presentation/screens/invoices_screen.dart';
+import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 
 /// Sales List — Spec Ch. 11.1. Real API-backed (Phase 5 wiring):
 /// GET /sales, including item_count and invoice_number directly on
@@ -22,7 +24,20 @@ class SalesListScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navSales)),
+      appBar: AppBar(
+        title: Text(l10n.navSales),
+        actions: [
+          IconButton(
+            tooltip: l10n.scanInvoice,
+            icon: const Icon(Icons.document_scanner_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const AiScannerScreen(mode: InvoiceScanMode.sales),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: salesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, st) => Center(
@@ -51,49 +66,63 @@ class SalesListScreen extends ConsumerWidget {
                     final isUnpaid = sale.paymentStatus == PaymentStatus.unpaid;
                     return FadeSlideIn(
                       delay: Duration(milliseconds: 35 * i),
-                      child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
+                      child: InkWell(
+                        onTap: sale.invoiceId != null
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => InvoiceDetailsScreen(invoiceId: sale.invoiceId!),
+                                  ),
+                                )
+                            : null,
                         borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                        boxShadow: AppSpacing.cardElevation,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(11),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.receipt_long_rounded, size: 18, color: AppColors.primary),
+                        child: Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                            boxShadow: AppSpacing.cardElevation,
                           ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  sale.invoiceNumber ?? l10n.saleNumberFallback(sale.id),
-                                  style: Theme.of(context).textTheme.titleMedium,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(11),
                                 ),
-                                Text(
-                                  l10n.saleRowSubtitle(sale.customerName ?? l10n.walkInCustomer, sale.itemCount),
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.receipt_long_rounded, size: 18, color: AppColors.primary),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      sale.invoiceNumber ?? l10n.saleNumberFallback(sale.id),
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    Text(
+                                      l10n.saleRowSubtitle(sale.customerName ?? l10n.walkInCustomer, sale.itemCount),
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              Text(
+                                '${sale.total.toStringAsFixed(0)} DZD',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      color: isUnpaid ? AppColors.danger : AppColors.primary,
+                                    ),
+                              ),
+                              if (sale.invoiceId != null) ...[
+                                const SizedBox(width: 8),
+                                const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey),
                               ],
-                            ),
+                            ],
                           ),
-                          Text(
-                            '${sale.total.toStringAsFixed(0)} DZD',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: isUnpaid ? AppColors.danger : AppColors.primary,
-                                ),
-                          ),
-                        ],
-                      ),
+                        ),
                       ),
                     );
                   },

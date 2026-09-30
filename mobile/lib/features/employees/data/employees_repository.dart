@@ -29,6 +29,18 @@ class EmployeesRepository extends StateNotifier<AsyncValue<List<Employee>>> {
     await load();
   }
 
+  Future<void> updateEmployee(String id, {required String name, required String position, required double baseSalary}) async {
+    final client = _ref.read(apiClientProvider);
+    await client.put('/employees/$id', body: {'name': name, 'position': position, 'baseSalary': baseSalary});
+    await load();
+  }
+
+  Future<void> deleteEmployee(String id) async {
+    final client = _ref.read(apiClientProvider);
+    await client.delete('/employees/$id');
+    await load();
+  }
+
   Future<EmployeeDetails> fetchDetails(String id) async {
     final client = _ref.read(apiClientProvider);
     final response = await client.get('/employees/$id');
@@ -48,10 +60,32 @@ class EmployeesRepository extends StateNotifier<AsyncValue<List<Employee>>> {
       if (note != null) 'note': note,
     });
   }
+
+  Future<void> paySalary({
+    required String employeeId,
+    required double amount,
+    required DateTime paymentDate,
+    required String salaryPeriod,
+    String duration = '1 month',
+    String? note,
+    bool confirmedDuplicate = false,
+  }) async {
+    final client = _ref.read(apiClientProvider);
+    final fmt = (DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    await client.post('/employees/$employeeId/pay-salary', body: {
+      'amount': amount,
+      'paymentDate': fmt(paymentDate),
+      'salaryPeriod': salaryPeriod,
+      'duration': duration,
+      if (note != null && note.isNotEmpty) 'note': note,
+      if (confirmedDuplicate) 'confirmedDuplicate': true,
+    });
+  }
 }
 
 final employeesRepositoryProvider =
-    StateNotifierProvider<EmployeesRepository, AsyncValue<List<Employee>>>(
+    StateNotifierProvider.autoDispose<EmployeesRepository, AsyncValue<List<Employee>>>(
   (ref) => EmployeesRepository(ref),
 );
 

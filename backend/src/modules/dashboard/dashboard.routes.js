@@ -2,97 +2,71 @@ const express = require('express');
 const { query } = require('../../config/db');
 const asyncHandler = require('../../utils/asyncHandler');
 const { authMiddleware } = require('../../middlewares/auth.middleware');
+const clinicRepo = require('../clinic/clinic.repository');
+const restaurantRepo = require('../restaurant/restaurant.repository');
+const { calculateFinancials } = require('../financial/financial.service');
 
 /**
- * Dashboard — all KPIs are calculated server-side from real database data.
+ * Dashboard — Spec Ch. 9.1.
+ * Financial figures are powered directly by calculateFinancials (daily period),
+ * guaranteeing a single source of truth between the Dashboard and Reports.
  */
 const getDashboard = asyncHandler(async (req, res) => {
   const companyId = req.user.companyId;
 
   const [
-    todaySales,
-    todayExpenses,
-    salesCount,
+    financials,
+    clinicOutstanding,
+    restaurantOutstanding,
     lowStock,
     unpaidInvoices,
     upcomingAppointments,
+    outstandingCredit,
   ] = await Promise.all([
-    // Aggregate sales separately from sale_items so revenue is not
-    // multiplied by the number of items in a sale.
+    calculateFinancials(companyId, { period: 'daily' }),
+    clinicRepo.outstandingTotal(companyId),
+    restaurantRepo.outstandingTotal(companyId),
     query(
-      `SELECT
-         COALESCE(SUM(s.total), 0) AS revenue
-       FROM sales s
-       WHERE s.company_id = $1
-         AND s.sold_at::date = CURRENT_DATE`,
+      `SELECT COUNT(*)::int AS count FROM products
+       WHERE company_id = $1 AND deleted_at IS NULL AND quantity <= minimum_stock`,
       [companyId],
     ),
-
     query(
-      `SELECT COALESCE(SUM(amount), 0) AS total
-       FROM expenses
-       WHERE company_id = $1
-         AND deleted_at IS NULL
-         AND expense_date = CURRENT_DATE`,
+      `SELECT COUNT(*)::int AS count FROM invoices WHERE company_id = $1 AND status = 'unpaid'`,
       [companyId],
     ),
-
     query(
-      `SELECT COUNT(*)::int AS count
-       FROM sales
-       WHERE company_id = $1
-         AND sold_at::date = CURRENT_DATE`,
+      `SELECT COUNT(*)::int AS count FROM appointments
+       WHERE company_id = $1 AND status = 'scheduled' AND scheduled_at >= now()`,
       [companyId],
     ),
-
     query(
-      `SELECT COUNT(*)::int AS count
-       FROM products
-       WHERE company_id = $1
-         AND deleted_at IS NULL
-         AND quantity <= minimum_stock`,
+      `SELECT COALESCE(SUM(balance_due), 0) AS total FROM customers WHERE company_id = $1 AND deleted_at IS NULL`,
       [companyId],
-    ),
-
-    query(
-      `SELECT COUNT(*)::int AS count
-       FROM invoices
-       WHERE company_id = $1
-         AND status = 'unpaid'`,
-      [companyId],
-    ),
-
-    query(
-      `SELECT COUNT(*)::int AS count
-       FROM appointments
-       WHERE company_id = $1
-         AND status = 'scheduled'
-         AND scheduled_at >= now()`,
-      [companyId],
-    ),
+    ).catch(() => ({ rows: [{ total: 0 }] })),
   ]);
 
-  const revenue = Number(todaySales.rows[0].revenue);
-  const expenses = Number(todayExpenses.rows[0].total);
-
-  return res.json({
+  res.json({
     data: {
-      todayRevenue: revenue,
-      todayExpenses: expenses,
-      todayProfit: revenue - expenses,
-      salesCount: salesCount.rows[0].count,
+      todayRevenue: financials.revenue,
+      todayExpenses: financials.expenses,
+      todayOperatingExpenses: financials.operatingExpenses,
+      todaySalaryCost: financials.employeeSalaries,
+      todayCostOfGoodsSold: financials.costOfGoodsSold,
+      todayGrossProfit: financials.grossProfit,
+      todayProfit: financials.netProfit,
+      salesCount: financials.salesCount,
       lowStockCount: lowStock.rows[0].count,
       unpaidInvoicesCount: unpaidInvoices.rows[0].count,
-      upcomingAppointmentsCount:
-        upcomingAppointments.rows[0].count,
+      upcomingAppointmentsCount: upcomingAppointments.rows[0].count,
+      totalOutstandingCredit:
+        Number(outstandingCredit.rows[0].total) + clinicOutstanding + restaurantOutstanding,
     },
   });
 });
 
 const router = express.Router();
-
 router.use(authMiddleware);
-
 router.get('/', getDashboard);
 
 module.exports = router;

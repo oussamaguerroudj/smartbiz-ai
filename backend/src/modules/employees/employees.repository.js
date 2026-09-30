@@ -52,6 +52,50 @@ async function create(
   return result.rows[0];
 }
 
+async function update(
+  companyId,
+  id,
+  {
+    name,
+    position,
+    phone,
+    baseSalary,
+  },
+) {
+  const result = await query(
+    `UPDATE employees
+     SET name = COALESCE($3, name),
+         position = COALESCE($4, position),
+         phone = COALESCE($5, phone),
+         base_salary = COALESCE($6, base_salary),
+         updated_at = now()
+     WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL
+     RETURNING *`,
+    [
+      companyId,
+      id,
+      name,
+      position,
+      phone,
+      baseSalary,
+    ],
+  );
+
+  return result.rows[0] || null;
+}
+
+async function softDelete(companyId, id) {
+  const result = await query(
+    `UPDATE employees
+     SET deleted_at = now()
+     WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL
+     RETURNING id`,
+    [companyId, id],
+  );
+
+  return result.rows[0] || null;
+}
+
 async function markAttendance(
   companyId,
   employeeId,
@@ -202,12 +246,47 @@ async function netSalary(
   };
 }
 
+/**
+ * Total employee salary cost from ACTUAL recorded salary transactions within [rangeStart, rangeEnd].
+ * NEVER estimates, divides, or prorates salary across days or weeks.
+ */
+async function totalSalaryCostForRange(companyId, rangeStart, rangeEnd) {
+  const result = await query(
+    `SELECT COALESCE(SUM(amount), 0) AS total
+     FROM expenses
+     WHERE company_id = $1
+       AND deleted_at IS NULL
+       AND (category ILIKE '%salary%' OR category ILIKE '%salair%' OR category ILIKE '%payroll%' OR category ILIKE '%paie%' OR category ILIKE '%wage%' OR employee_id IS NOT NULL)
+       AND expense_date BETWEEN $2::date AND $3::date`,
+    [companyId, rangeStart, rangeEnd],
+  );
+
+  return Number(result.rows[0].total);
+}
+
+async function findSalaryPayments(companyId, employeeId) {
+  const result = await query(
+    `SELECT *
+     FROM expenses
+     WHERE company_id = $1
+       AND employee_id = $2
+       AND deleted_at IS NULL
+     ORDER BY expense_date DESC, created_at DESC`,
+    [companyId, employeeId],
+  );
+  return result.rows;
+}
+
 module.exports = {
   findAll,
   findById,
   create,
+  update,
+  softDelete,
   markAttendance,
   attendanceSummary,
   addSalaryAdjustment,
   netSalary,
+  totalSalaryCostForRange,
+  findSalaryPayments,
 };

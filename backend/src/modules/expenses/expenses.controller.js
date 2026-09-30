@@ -11,8 +11,13 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json({ data: expense });
 });
 
+const update = asyncHandler(async (req, res) => {
+  const expense = await service.updateExpense(req.user.companyId, req.params.id, req.body);
+  res.json({ data: expense });
+});
+
 const remove = asyncHandler(async (req, res) => {
   res.json({ data: await service.deleteExpense(req.user.companyId, req.params.id) });
 });
 
-module.exports = { list, create, remove };
+module.exports = { list, create, update, remove };

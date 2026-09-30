@@ -83,6 +83,6 @@ class AppointmentsRepository extends StateNotifier<AsyncValue<List<Appointment>>
 }
 
 final appointmentsRepositoryProvider =
-    StateNotifierProvider<AppointmentsRepository, AsyncValue<List<Appointment>>>(
+    StateNotifierProvider.autoDispose<AppointmentsRepository, AsyncValue<List<Appointment>>>(
   (ref) => AppointmentsRepository(ref),
 );

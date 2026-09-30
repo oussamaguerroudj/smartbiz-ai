@@ -96,10 +96,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get businessTypeClothingDesc => 'Tailles, couleurs, code-barres';
 
   @override
-  String get businessTypeGrocery => 'Épicerie';
+  String get businessTypeGrocery => 'Marché / Magasin';
 
   @override
-  String get businessTypeGroceryDesc => 'Péremption, fournisseurs';
+  String get businessTypeGroceryDesc =>
+      'Supermarché, mini-marché, épicerie, supérette';
 
   @override
   String get businessTypePharmacy => 'Pharmacie';
@@ -108,19 +109,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get businessTypePharmacyDesc => 'Stock, alertes de péremption';
 
   @override
-  String get businessTypeClinic => 'Clinique / Médecin';
+  String get businessTypeClinic => 'Clinique / Médical';
 
   @override
-  String get businessTypeClinicDesc => 'Patients, rendez-vous';
+  String get businessTypeClinicDesc =>
+      'Patients, rendez-vous — médical et dentaire';
 
   @override
-  String get businessTypeRestaurant => 'Restaurant';
+  String get businessTypeRestaurant => 'Restaurant / Café';
 
   @override
-  String get businessTypeRestaurantDesc => 'Menu, ingrédients';
+  String get businessTypeRestaurantDesc =>
+      'Menu, commandes, tables — restaurants et cafés';
 
   @override
-  String get businessTypeCompany => 'Entreprise';
+  String get businessTypeCompany => 'Entreprise / Société';
 
   @override
   String get businessTypeCompanyDesc => 'Employés, factures';
@@ -395,7 +398,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get positionLabel => 'Poste';
 
   @override
-  String get baseSalaryLabel => 'Salaire de base (DZD)';
+  String get baseSalaryLabel => 'Salaire de base';
 
   @override
   String get staffDefault => 'Personnel';
@@ -531,7 +534,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get businessProfileSubtitle =>
-      'Modification depuis les paramètres pas encore disponible';
+      'Gérer les informations personnelles et de l\'entreprise';
 
   @override
   String get businessProfileSnack =>
@@ -715,16 +718,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportsTitle => 'Rapports';
 
   @override
-  String get periodDaily => 'Quotidien';
+  String get periodDaily => 'Journalière';
 
   @override
   String get periodWeekly => 'Hebdomadaire';
 
   @override
-  String get periodMonthly => 'Mensuel';
+  String get periodMonthly => 'Mensuelle';
 
   @override
-  String get periodYearly => 'Annuel';
+  String get periodYearly => 'Annuelle';
 
   @override
   String get exportAsPdf => 'Exporter en PDF';
@@ -918,6 +921,499 @@ class AppLocalizationsFr extends AppLocalizations {
   String get barcodeFieldHint => 'Scanner ou saisir manuellement';
 
   @override
+  String get noItemsDetected =>
+      'Aucun article détecté sur cette photo — réessayez avec un meilleur éclairage.';
+
+  @override
+  String get expensePeriodTypeLabel => 'Type de période';
+
+  @override
+  String get periodOneTime => 'Ponctuelle';
+
+  @override
+  String get periodCustom => 'Personnalisée';
+
+  @override
+  String get periodStartLabel => 'Du';
+
+  @override
+  String get periodEndLabel => 'Au';
+
+  @override
+  String expenseCoversDays(Object days) {
+    return 'Couvre $days jour(s)';
+  }
+
+  @override
+  String get selectPeriodEndDate =>
+      'Veuillez choisir une date de fin pour cette période personnalisée';
+
+  @override
+  String get selectCustomerFirst => 'Veuillez sélectionner un client d\'abord';
+
+  @override
+  String get noCustomersYet =>
+      'Aucun client pour le moment — ajoutez-en un d\'abord';
+
+  @override
+  String get amountExceedsTotal =>
+      'Le montant à payer ne peut pas dépasser le total';
+
+  @override
+  String get creditSaleTitle => 'Nouvelle vente à crédit';
+
+  @override
+  String get selectCustomerHint => 'Sélectionner un client';
+
+  @override
+  String get amountToPayNowLabel => 'Montant à payer maintenant (DZD)';
+
+  @override
+  String get remainingCreditLabel => 'Crédit restant';
+
+  @override
+  String get confirmCreditSaleButton => 'Confirmer la vente à crédit';
+
+  @override
+  String get creditSaleRecorded => 'Vente à crédit enregistrée';
+
+  @override
+  String get creditPageTitle => 'Crédit';
+
+  @override
+  String get newCreditSaleAction => 'Nouvelle vente à crédit';
+
+  @override
+  String get customersWithCreditTitle => 'Clients avec crédit en cours';
+
+  @override
+  String get noOutstandingCredit =>
+      'Aucun client ne doit d\'argent actuellement';
+
+  @override
+  String get totalCreditLabel => 'Crédit total';
+
+  @override
+  String get totalPaidLabel => 'Payé';
+
+  @override
+  String get noOutstandingBalanceForCustomer =>
+      'Ce client n\'a aucun solde impayé';
+
+  @override
+  String get recordPaymentTitle => 'Enregistrer un paiement';
+
+  @override
+  String currentBalanceHelper(Object balance) {
+    return 'Solde actuel : $balance DZD';
+  }
+
+  @override
+  String get paymentRecorded => 'Paiement enregistré';
+
+  @override
+  String get noTransactionsYet => 'Aucune transaction pour le moment';
+
+  @override
+  String get creditPurchaseLabel => 'Achat à crédit';
+
+  @override
+  String get paymentLabel => 'Paiement';
+
+  @override
+  String balanceAfterLabel(Object balance) {
+    return 'Solde après : $balance DZD';
+  }
+
+  @override
+  String get clinicDashboardTitle => 'Tableau de bord clinique';
+
+  @override
+  String get patientsTodayLabel => 'Patients aujourd\'hui';
+
+  @override
+  String get appointmentsTodayLabel => 'Rendez-vous aujourd\'hui';
+
+  @override
+  String get waitingLabel => 'En attente';
+
+  @override
+  String get completedTodayLabel => 'Terminés aujourd\'hui';
+
+  @override
+  String get noShowTodayLabel => 'Absences aujourd\'hui';
+
+  @override
+  String get newPatientsTodayLabel => 'Nouveaux patients aujourd\'hui';
+
+  @override
+  String get doctorsLabel => 'Médecins';
+
+  @override
+  String get clinicQueueTitle => 'Salle d\'attente';
+
+  @override
+  String get callNextPatientButton => 'Appeler le patient suivant';
+
+  @override
+  String nextPatientLabel(Object name) {
+    return 'Patient suivant : $name';
+  }
+
+  @override
+  String get noOneWaitingMessage => 'Personne n\'attend actuellement';
+
+  @override
+  String get completeConsultationButton => 'Terminer la consultation';
+
+  @override
+  String get clinicPatientsTitle => 'Patients';
+
+  @override
+  String get addPatientTitle => 'Ajouter un patient';
+
+  @override
+  String get fullNameLabel => 'Nom complet';
+
+  @override
+  String get genderLabel => 'Genre';
+
+  @override
+  String get dateOfBirthLabel => 'Date de naissance';
+
+  @override
+  String get savePatient => 'Enregistrer le patient';
+
+  @override
+  String get patientProfileTitle => 'Profil du patient';
+
+  @override
+  String get visitHistoryTitle => 'Historique des visites';
+
+  @override
+  String get noVisitsYetMessage => 'Aucune visite enregistrée pour le moment';
+
+  @override
+  String get diagnosisLabel => 'Diagnostic';
+
+  @override
+  String get treatmentLabel => 'Traitement';
+
+  @override
+  String get prescriptionLabel => 'Ordonnance';
+
+  @override
+  String get followUpDateLabel => 'Date de suivi';
+
+  @override
+  String get addToQueueAction => 'Ajouter à la file d\'attente';
+
+  @override
+  String get selectPatientTitle => 'Sélectionner un patient';
+
+  @override
+  String get searchPatientsHint => 'Rechercher des patients...';
+
+  @override
+  String get noPatientsFoundMessage => 'Aucun patient trouvé';
+
+  @override
+  String get delete => 'Supprimer';
+
+  @override
+  String get documentsTitle => 'Documents médicaux';
+
+  @override
+  String get addDocumentAction => 'Ajouter un document';
+
+  @override
+  String get documentNameLabel => 'Nom du document';
+
+  @override
+  String get documentTypeLabel => 'Type de document';
+
+  @override
+  String get fileUrlLabel => 'URL du fichier';
+
+  @override
+  String get noDocumentsYetMessage => 'Aucun document pour le moment';
+
+  @override
+  String get confirmDeleteDocumentMessage => 'Supprimer ce document ?';
+
+  @override
+  String get documentDeletedMessage => 'Document supprimé';
+
+  @override
+  String get documentAddedMessage => 'Document ajouté';
+
+  @override
+  String get prescriptionsTitle => 'Ordonnances';
+
+  @override
+  String get newPrescriptionAction => 'Nouvelle ordonnance';
+
+  @override
+  String get noPrescriptionsYetMessage => 'Aucune ordonnance pour le moment';
+
+  @override
+  String get medicationNameLabel => 'Nom du médicament';
+
+  @override
+  String get dosageLabel => 'Posologie';
+
+  @override
+  String get frequencyLabel => 'Fréquence';
+
+  @override
+  String get durationLabel => 'Durée';
+
+  @override
+  String get instructionsLabel => 'Instructions';
+
+  @override
+  String get addMedicationAction => 'Ajouter un médicament';
+
+  @override
+  String get savePrescriptionAction => 'Enregistrer l\'ordonnance';
+
+  @override
+  String get prescriptionSavedMessage => 'Ordonnance enregistrée';
+
+  @override
+  String get prescriptionNumberLabel => 'N° d\'ordonnance';
+
+  @override
+  String get medicationRequiredMessage => 'Au moins un médicament est requis';
+
+  @override
+  String get patientAddedMessage => 'Patient ajouté';
+
+  @override
+  String get queueEmptyMessage => 'La salle d\'attente est vide';
+
+  @override
+  String get consultationPriceLabel => 'Prix de la consultation';
+
+  @override
+  String get amountPaidLabel => 'Montant payé';
+
+  @override
+  String get markFullyPaidLabel => 'Marquer comme payé intégralement';
+
+  @override
+  String get remainingLabel => 'Reste à payer';
+
+  @override
+  String get invoiceTitle => 'Facture';
+
+  @override
+  String get paymentStatusLabel => 'Statut de paiement';
+
+  @override
+  String get orderDetailsTitle => 'Détails de la commande';
+
+  @override
+  String get paidAmountShortLabel => 'Payé';
+
+  @override
+  String get updateStatusLabel => 'Mettre à jour le statut';
+
+  @override
+  String get restaurantRecordPaymentAction => 'Enregistrer le paiement';
+
+  @override
+  String get paymentRecordedMessage => 'Paiement enregistré';
+
+  @override
+  String get enterValidAmountMessage => 'Entrez un montant valide';
+
+  @override
+  String get confirmAction => 'Confirmer';
+
+  @override
+  String get addInventoryItemTitle => 'Ajouter un article d\'inventaire';
+
+  @override
+  String get applyAction => 'Appliquer';
+
+  @override
+  String get minStockLabel => 'Stock min.';
+
+  @override
+  String get noInventoryItemsMessage => 'Aucun article en inventaire';
+
+  @override
+  String get openingQuantityLabel => 'Quantité initiale';
+
+  @override
+  String get removeAction => 'Supprimer';
+
+  @override
+  String get searchInventoryHint => 'Rechercher dans l\'inventaire...';
+
+  @override
+  String get supplierLabel => 'Fournisseur';
+
+  @override
+  String get unitLabel => 'Unité';
+
+  @override
+  String get lowStockLabel => 'Stock faible';
+
+  @override
+  String get enterNonZeroAmountMessage => 'Entrez un montant non nul';
+
+  @override
+  String get manualAdjustmentLabel => 'Ajustement manuel';
+
+  @override
+  String get inventoryTitle => 'Inventaire';
+
+  @override
+  String get saveRecipeAction => 'Enregistrer la recette';
+
+  @override
+  String get addAction => 'Ajouter';
+
+  @override
+  String get ordersTitle => 'Commandes';
+
+  @override
+  String get noActiveOrdersMessage => 'Aucune commande active pour le moment';
+
+  @override
+  String get moveToNextStageTooltip => 'Passer à l\'étape suivante';
+
+  @override
+  String get cancelOrderTooltip => 'Annuler la commande';
+
+  @override
+  String get takeawayLabel => 'À emporter';
+
+  @override
+  String get newOrderTitle => 'Nouvelle commande';
+
+  @override
+  String get tableOptionalLabel => 'Table (facultatif — à emporter si vide)';
+
+  @override
+  String get takeawayNoTableOption => 'À emporter / sans table';
+
+  @override
+  String get noMenuItemsYetMessage =>
+      'Aucun article au menu — ajoutez-en depuis l\'écran Menu';
+
+  @override
+  String get addAtLeastOneItemMessage => 'Ajoutez au moins un article';
+
+  @override
+  String get orderCreatedMessage => 'Commande créée';
+
+  @override
+  String get createOrderAction => 'Créer la commande';
+
+  @override
+  String get tablesTitle => 'Tables';
+
+  @override
+  String get addTableTitle => 'Ajouter une table';
+
+  @override
+  String get tableNameFieldLabel => 'Nom / numéro de table';
+
+  @override
+  String get seatsLabel => 'Places';
+
+  @override
+  String get noTablesYetMessage => 'Aucune table pour le moment';
+
+  @override
+  String get saveAction => 'Enregistrer';
+
+  @override
+  String get reservationsTitle => 'Réservations';
+
+  @override
+  String get newReservationTitle => 'Nouvelle réservation';
+
+  @override
+  String get customerNameLabel => 'Nom du client';
+
+  @override
+  String get partySizeLabel => 'Nombre de convives';
+
+  @override
+  String get noReservationsYetMessage => 'Aucune réservation pour le moment';
+
+  @override
+  String get seatAction => 'Installer';
+
+  @override
+  String get menuTitle => 'Menu';
+
+  @override
+  String get addMenuItemTitle => 'Ajouter un plat';
+
+  @override
+  String get dishNameLabel => 'Nom du plat';
+
+  @override
+  String get categoryOptionalLabel => 'Catégorie (facultatif)';
+
+  @override
+  String get priceDzdLabel => 'Prix (DZD)';
+
+  @override
+  String get enterValidPriceMessage => 'Entrez un prix valide';
+
+  @override
+  String get recipeIngredientsTooltip => 'Recette (ingrédients)';
+
+  @override
+  String get noShowLabel => 'Absence';
+
+  @override
+  String get dateTimeLabel => 'Date et heure';
+
+  @override
+  String get guestsLabel => 'convives';
+
+  @override
+  String adjustItemTitle(Object itemName) {
+    return 'Ajuster $itemName';
+  }
+
+  @override
+  String adjustQuantityHint(Object unit) {
+    return 'Changement ($unit) — négatif pour retirer';
+  }
+
+  @override
+  String get todayRevenueLabel => 'Recette du jour';
+
+  @override
+  String get todayProfitLabel => 'Bénéfice du jour';
+
+  @override
+  String get outstandingPaymentsLabel => 'Paiements en attente';
+
+  @override
+  String get paymentStatusPaidLabel => 'Payé';
+
+  @override
+  String get paymentStatusPartialLabel => 'Payé partiellement';
+
+  @override
+  String get paymentStatusUnpaidLabel => 'Non payé';
+
+  @override
+  String get paymentStatusRefundedLabel => 'Remboursé';
+
+  @override
+  String get clinicRecordPaymentAction => 'Enregistrer un paiement';
+
+  @override
   String get cartEmpty => 'Le panier est vide — ajoutez un produit ci-dessus';
 
   @override
@@ -936,4 +1432,679 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get outOfStockLabel => 'Rupture de stock';
+
+  @override
+  String get storeDashboardTitle => 'Tableau de bord du magasin';
+
+  @override
+  String get pharmacyDashboardTitle => 'Tableau de bord de la pharmacie';
+
+  @override
+  String get customerDebtLabel => 'Dette clients';
+
+  @override
+  String get stockValueLabel => 'Valeur du stock';
+
+  @override
+  String get expiringSoonLabel => 'Expire bientôt';
+
+  @override
+  String get inventoryValueLabel => 'Valeur de l\'inventaire';
+
+  @override
+  String get kpiSubtitleDzdToday => 'DZD aujourd\'hui';
+
+  @override
+  String get kpiSubtitleNetToday => 'Net, aujourd\'hui';
+
+  @override
+  String get transactionsLabel => 'Transactions';
+
+  @override
+  String get stockAlertsTitle => 'Alertes de stock';
+
+  @override
+  String get noStockAlertsMessage => 'Aucune alerte de stock pour le moment';
+
+  @override
+  String get noStockOrExpiryAlertsMessage =>
+      'Aucune alerte de stock ou d\'expiration pour le moment';
+
+  @override
+  String get customerDebtTitle => 'Dette clients';
+
+  @override
+  String get noOutstandingDebtMessage => 'Aucune dette client en cours';
+
+  @override
+  String get stockByCategoryTitle => 'Stock par catégorie';
+
+  @override
+  String get noProductsYetMessage => 'Aucun produit pour le moment';
+
+  @override
+  String get expirationDateLabel => 'Date d\'expiration';
+
+  @override
+  String get selectDateHint => 'Sélectionner une date';
+
+  @override
+  String get clearDateAction => 'Effacer';
+
+  @override
+  String get sizeLabel => 'Taille';
+
+  @override
+  String get colorLabel => 'Couleur';
+
+  @override
+  String get brandLabel => 'Marque';
+
+  @override
+  String get editProductTitle => 'Modifier le produit';
+
+  @override
+  String get editAction => 'Modifier';
+
+  @override
+  String get saveChangesAction => 'Enregistrer les modifications';
+
+  @override
+  String get productUpdatedMessage => 'Produit mis à jour';
+
+  @override
+  String get goodDay => 'Bonne journée';
+
+  @override
+  String get companyDashboardTitle => 'Tableau de bord entreprise';
+
+  @override
+  String get openProjectsLabel => 'Projets en cours';
+
+  @override
+  String get dzdThisMonthLabel => 'DZD ce mois-ci';
+
+  @override
+  String get thisMonthLabel => 'Ce mois-ci';
+
+  @override
+  String get netProfitLabel => 'Bénéfice net';
+
+  @override
+  String get salariesLabel => 'Salaires';
+
+  @override
+  String todayRevenueProfit(Object revenue, Object profit) {
+    return 'Aujourd\'hui : $revenue revenu · $profit bénéfice';
+  }
+
+  @override
+  String get projectsTitle => 'Projets';
+
+  @override
+  String get noOpenProjectsMessage => 'Aucun projet en cours';
+
+  @override
+  String overdueCount(Object count) {
+    return '$count en retard';
+  }
+
+  @override
+  String get unpaidInvoicesTitle => 'Factures impayées';
+
+  @override
+  String get noUnpaidInvoicesMessage => 'Aucune facture impayée';
+
+  @override
+  String clientCreditBalancesMessage(Object amount) {
+    return 'Soldes créditeurs clients : $amount';
+  }
+
+  @override
+  String get noProjectsYetMessage => 'Aucun projet pour l\'instant';
+
+  @override
+  String get dueDateBeforeStartDateError =>
+      'La date d\'échéance ne peut pas être antérieure à la date de début';
+
+  @override
+  String get newProjectTitle => 'Nouveau projet';
+
+  @override
+  String get projectNameLabel => 'Nom du projet';
+
+  @override
+  String get clientOptionalLabel => 'Client (facultatif)';
+
+  @override
+  String get noClientOption => 'Aucun client';
+
+  @override
+  String get budgetDzdOptionalLabel => 'Budget (DZD, facultatif)';
+
+  @override
+  String get descriptionOptionalLabel => 'Description (facultatif)';
+
+  @override
+  String get startDateLabel => 'Date de début';
+
+  @override
+  String get dueDateLabel => 'Date d\'échéance';
+
+  @override
+  String get restaurantDashboardTitle => 'Tableau de bord restaurant';
+
+  @override
+  String get tablesOccupiedLabel => 'Tables occupées';
+
+  @override
+  String get reservationsTodayLabel => 'Réservations aujourd\'hui';
+
+  @override
+  String get todaysOrdersLabel => 'Commandes d\'aujourd\'hui';
+
+  @override
+  String get activeOrdersLabel => 'Commandes actives';
+
+  @override
+  String get inProgressLabel => 'En cours';
+
+  @override
+  String pendingCount(Object count) {
+    return '$count en attente';
+  }
+
+  @override
+  String preparingCount(Object count) {
+    return '$count en préparation';
+  }
+
+  @override
+  String readyCount(Object count) {
+    return '$count prêt(s)';
+  }
+
+  @override
+  String get clothingProductsTitle => 'Produits de vêtements';
+
+  @override
+  String get viewAllAction => 'Tout voir';
+
+  @override
+  String get noClothingProductsMessage =>
+      'Aucun produit de vêtements ajouté pour l\'instant';
+
+  @override
+  String expiresOnLabel(Object date) {
+    return 'expire le $date';
+  }
+
+  @override
+  String deleteConfirmTitle(Object item) {
+    return 'Supprimer $item';
+  }
+
+  @override
+  String deleteConfirmMessage(Object item) {
+    return 'Voulez-vous vraiment supprimer cet élément ($item) ?';
+  }
+
+  @override
+  String get serverSettingsTitle => 'Paramètres du serveur';
+
+  @override
+  String get serverBaseUrlLabel => 'URL de base du serveur';
+
+  @override
+  String get testConnectionAction => 'Tester la connexion';
+
+  @override
+  String get editExpenseTitle => 'Modifier la dépense';
+
+  @override
+  String get updateExpenseAction => 'Mettre à jour la dépense';
+
+  @override
+  String get editMenuItemTitle => 'Modifier le plat';
+
+  @override
+  String recipeTitle(Object name) {
+    return 'Recette — $name';
+  }
+
+  @override
+  String quantityRequiredUnit(Object unit) {
+    return 'Quantité requise ($unit)';
+  }
+
+  @override
+  String enterValidQuantityFor(Object name) {
+    return 'Saisissez une quantité valide pour $name';
+  }
+
+  @override
+  String get noPastOrdersFoundMessage => 'Aucune ancienne commande trouvée';
+
+  @override
+  String get deleteMenuItemTitle => 'Supprimer le plat';
+
+  @override
+  String get deleteSupplierTitle => 'Supprimer le fournisseur';
+
+  @override
+  String get deleteCustomerTitle => 'Supprimer le client';
+
+  @override
+  String get deleteEmployeeTitle => 'Supprimer l\'employé';
+
+  @override
+  String get deleteExpenseTitle => 'Supprimer la dépense';
+
+  @override
+  String get deleteProductTitle => 'Supprimer le produit';
+
+  @override
+  String get supplierFallback => 'Fournisseur';
+
+  @override
+  String get customerFallback => 'Client';
+
+  @override
+  String get expenseFallback => 'Dépense';
+
+  @override
+  String get personalProfileTitle => 'Profil personnel';
+
+  @override
+  String get saveProfile => 'Enregistrer le profil';
+
+  @override
+  String get profileUpdatedSuccess => 'Profil mis à jour avec succès';
+
+  @override
+  String errorUpdatingProfile(Object error) {
+    return 'Erreur lors de la mise à jour du profil : $error';
+  }
+
+  @override
+  String get businessInfoTitle => 'Informations de l\'entreprise';
+
+  @override
+  String get updateBusinessInfo => 'Mettre à jour les informations';
+
+  @override
+  String get businessInfoUpdatedSuccess =>
+      'Informations de l\'entreprise mises à jour avec succès';
+
+  @override
+  String errorUpdatingBusiness(Object error) {
+    return 'Erreur lors de la mise à jour de l\'entreprise : $error';
+  }
+
+  @override
+  String get changePasswordTitle => 'Changer le mot de passe';
+
+  @override
+  String get currentPassword => 'Mot de passe actuel';
+
+  @override
+  String get enterCurrentPassword => 'Entrez le mot de passe actuel';
+
+  @override
+  String get confirmNewPassword => 'Confirmer le nouveau mot de passe';
+
+  @override
+  String get confirmYourNewPassword => 'Confirmez votre nouveau mot de passe';
+
+  @override
+  String get updatePasswordAction => 'Mettre à jour le mot de passe';
+
+  @override
+  String get passwordChangedSuccess => 'Mot de passe modifié avec succès';
+
+  @override
+  String errorChangingPassword(Object error) {
+    return 'Erreur lors de la modification du mot de passe : $error';
+  }
+
+  @override
+  String get dangerZoneTitle => 'Zone dangereuse';
+
+  @override
+  String get deleteAccountPermanently => 'Supprimer définitivement le compte';
+
+  @override
+  String get deleteAccountWarning =>
+      'La suppression de votre compte supprimera définitivement votre profil, vos paramètres, produits, ventes et factures. Cette action est irréversible.';
+
+  @override
+  String get enterPasswordToConfirm =>
+      'Entrez votre mot de passe pour confirmer';
+
+  @override
+  String get deletePermanentlyAction => 'Supprimer définitivement';
+
+  @override
+  String accountDeletionFailed(Object error) {
+    return 'Échec de la suppression du compte : $error';
+  }
+
+  @override
+  String failedToPickImage(Object error) {
+    return 'Échec de sélection de l\'image : $error';
+  }
+
+  @override
+  String get businessPhoneLabel => 'Téléphone professionnel';
+
+  @override
+  String get businessAddressLabel => 'Adresse professionnelle';
+
+  @override
+  String get businessNameRequired => 'Le nom de l\'entreprise est requis';
+
+  @override
+  String get reportRevenueLabel => 'Revenus';
+
+  @override
+  String get reportExpensesLabel => 'Dépenses';
+
+  @override
+  String get reportNetProfitLabel => 'Bénéfice net';
+
+  @override
+  String get salesCountLabel => 'Nombre de ventes';
+
+  @override
+  String salesCountInPeriod(Object count) {
+    return '$count vente(s) sur cette période';
+  }
+
+  @override
+  String get topProductsTitle => 'Meilleurs produits';
+
+  @override
+  String unitsSoldLabel(Object count) {
+    return '$count vendu(s)';
+  }
+
+  @override
+  String get noActivityInPeriod =>
+      'Aucune activité enregistrée pour cette période';
+
+  @override
+  String get aiActiveSnack => 'Assistant IA et scanner OCR actifs';
+
+  @override
+  String get businessTypeRetail => 'Commerce de détail général';
+
+  @override
+  String get financialOverview => 'Aperçu Financier';
+
+  @override
+  String get revenueBreakdownTitle => 'Détails des Revenus';
+
+  @override
+  String get expensesBreakdownTitle => 'Détails des Dépenses';
+
+  @override
+  String get operatingExpensesLabel => 'Dépenses d\'exploitation';
+
+  @override
+  String get employeeSalariesLabel => 'Salaires des Employés';
+
+  @override
+  String get totalExpensesLabel => 'Total des Dépenses';
+
+  @override
+  String get profitCalculationTitle => 'Calcul du Bénéfice';
+
+  @override
+  String get profitMarginLabel => 'Marge Bénéficiaire';
+
+  @override
+  String get netLossLabel => 'Perte Nette';
+
+  @override
+  String get activitySummaryTitle => 'Résumé d\'Activité';
+
+  @override
+  String get invoicesCountLabel => 'Factures';
+
+  @override
+  String get expensesCountLabel => 'Dépenses';
+
+  @override
+  String get employeesCountLabel => 'Employés';
+
+  @override
+  String get recentTransactionsTitle => 'Transactions Récentes';
+
+  @override
+  String get noTransactionsInPeriod => 'Aucune transaction sur cette période';
+
+  @override
+  String get coreSalesLabel => 'Ventes Directes';
+
+  @override
+  String get creditPaymentsLabel => 'Règlements Crédit';
+
+  @override
+  String get categoryBreakdownTitle => 'Dépenses par Catégorie';
+
+  @override
+  String get employeeBreakdownTitle => 'Salaires par Employé';
+
+  @override
+  String get noEmployeesFound => 'Aucun employé enregistré';
+
+  @override
+  String get noExpensesFound => 'Aucune dépense enregistrée';
+
+  @override
+  String get profitFormulaExplanation =>
+      'Bénéfice Net = Revenus - Total des Dépenses';
+
+  @override
+  String get dateRangeLabel => 'Période';
+
+  @override
+  String get scanStageUploading => 'Envoi de l\'image de la facture...';
+
+  @override
+  String get scanStageOcr => 'Reconnaissance de texte OCR en cours...';
+
+  @override
+  String get scanStageExtracting => 'Extraction des produits et des prix...';
+
+  @override
+  String get scanStageFinalizing =>
+      'Finalisation des articles de la facture...';
+
+  @override
+  String get scanTimeoutMessage =>
+      'Délai d\'analyse dépassé. Veuillez réessayer ou vérifier la connexion IA.';
+
+  @override
+  String get scanCancelledMessage => 'L\'analyse de la facture a été annulée.';
+
+  @override
+  String get retryScanAction => 'Réessayer l\'analyse';
+
+  @override
+  String get aiServiceDisabledMessage =>
+      'Les services IA sont désactivés. Veuillez les activer dans les Paramètres.';
+
+  @override
+  String get aiServiceUnavailableMessage =>
+      'Le serveur IA est inaccessible. Vérifiez la connexion dans les Paramètres.';
+
+  @override
+  String get scanFailedTitle => 'Échec de l\'analyse';
+
+  @override
+  String get scanSuccessTitle => 'Facture analysée avec succès';
+
+  @override
+  String get cancelScanAction => 'Annuler l\'analyse';
+
+  @override
+  String get aiStatusOnline => 'En ligne';
+
+  @override
+  String get aiStatusDegraded => 'Dégradé (Modèles manquants)';
+
+  @override
+  String get aiStatusOffline => 'Hors ligne';
+
+  @override
+  String get aiStatusDisabled => 'Désactivé';
+
+  @override
+  String get aiEnabledLabel => 'Activer les fonctionnalités IA';
+
+  @override
+  String get aiEnabledDescription =>
+      'Utiliser l\'IA locale pour la numérisation des factures, l\'OCR et les analyses';
+
+  @override
+  String get aiServerUrlLabel => 'URL du serveur IA';
+
+  @override
+  String get aiServerUrlHint => 'ex. http://10.0.2.2:11434/v1';
+
+  @override
+  String get aiOcrModelLabel => 'Modèle OCR';
+
+  @override
+  String get aiVisionModelLabel => 'Modèle Vision';
+
+  @override
+  String get aiChatModelLabel => 'Modèle Assistant / Chat';
+
+  @override
+  String get testAiConnectionAction => 'Tester la connexion IA';
+
+  @override
+  String get aiConnectionSuccessMessage => 'Connexion au serveur IA réussie';
+
+  @override
+  String aiConnectionFailedMessage(Object error) {
+    return 'Échec de connexion : $error';
+  }
+
+  @override
+  String get availableModelsLabel => 'Modèles disponibles sur le serveur';
+
+  @override
+  String get missingModelsLabel => 'Modèles manquants';
+
+  @override
+  String get saveAiSettingsAction => 'Enregistrer les paramètres IA';
+
+  @override
+  String get aiSettingsSavedSuccess => 'Paramètres IA enregistrés avec succès';
+
+  @override
+  String get couldNotLoadSalesTrend =>
+      'Impossible de charger la tendance des ventes';
+
+  @override
+  String get askAboutYourBusiness => 'Posez une question sur votre entreprise';
+
+  @override
+  String get aiAnswersComputedLive =>
+      'Les réponses sont calculées en direct depuis vos données';
+
+  @override
+  String get changeStatusTitle => 'Changer le statut';
+
+  @override
+  String get deleteProductTooltip => 'Supprimer le produit';
+
+  @override
+  String get projectStatusPlanned => 'Planifié';
+
+  @override
+  String get projectStatusInProgress => 'En cours';
+
+  @override
+  String get projectStatusOnHold => 'En attente';
+
+  @override
+  String get projectStatusCompleted => 'Terminé';
+
+  @override
+  String get projectStatusCancelled => 'Annulé';
+
+  @override
+  String get projectStatusOverdue => 'En retard';
+
+  @override
+  String get globalNetProfitTitle => 'Bénéfice net global';
+
+  @override
+  String get allRevenueLabel => 'Tous les revenus';
+
+  @override
+  String get allExpensesLabel => 'Toutes les dépenses';
+
+  @override
+  String get globalBalanceLabel => 'Solde global';
+
+  @override
+  String get selectDate => 'Sélectionner une date';
+
+  @override
+  String get selectMonth => 'Sélectionner un mois';
+
+  @override
+  String get selectYear => 'Sélectionner une année';
+
+  @override
+  String get salaryPeriodLabel => 'Période de salaire';
+
+  @override
+  String get paymentDateLabel => 'Date de paiement';
+
+  @override
+  String get paySalary => 'Payer le salaire';
+
+  @override
+  String get recordSalaryPayment => 'Enregistrer un paiement de salaire';
+
+  @override
+  String get duplicateSalaryWarningTitle => 'Salaire déjà payé';
+
+  @override
+  String get duplicateSalaryWarningMessage =>
+      'Un paiement de salaire pour cet employé pour cette période existe déjà. Êtes-vous sûr de vouloir enregistrer un autre paiement ?';
+
+  @override
+  String get monthlyBreakdownTitle => 'Répartition mensuelle';
+
+  @override
+  String get noTransactionsForPeriod =>
+      'Aucune transaction enregistrée pour cette période';
+
+  @override
+  String get salaryExpenseLabel => 'Dépenses salariales';
+
+  @override
+  String get otherExpensesLabel => 'Autres dépenses';
+
+  @override
+  String get chooseEmployee => 'Choisir un employé';
+
+  @override
+  String get salaryPaidSuccess => 'Paiement de salaire enregistré avec succès';
+
+  @override
+  String get dailyReportTitle => 'Rapport journalier';
+
+  @override
+  String get monthlyReportTitle => 'Rapport mensuel';
+
+  @override
+  String get yearlyReportTitle => 'Rapport annuel';
 }

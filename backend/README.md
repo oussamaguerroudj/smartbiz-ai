@@ -1,4 +1,30 @@
-# SmartBiz AI — Backend (Node.js + Express) — Phase 5, Batch 1
+# SmartBiz AI — Backend (Node.js + Express) — Phase 6 underway
+
+## 🚧 Phase 6 ("OpenAI + OCR + AI Assistant + AI Insights + Invoice Scanner")
+
+Added on top of the Phase 5 base below:
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/ai/invoices/scan` | Send a base64 photo (`imageBase64`, `mimeType`) — OpenAI vision extracts `{name, quantity, unitPrice}` line items. Nothing is written to `products`/`sales`; the client reviews and submits through the normal endpoints, exactly like the pre-Phase-6 mocked flow did. |
+| `POST /api/ai/invoices/scan/:id/confirm` | Marks that scan's `ai_logs` row `confirmed = true`, once the client has actually created the products/sale from it. |
+| `POST /api/ai/chat` | `{message, history}` → `{reply}`. The model is handed a live snapshot of the company's real numbers (today/month revenue & expenses, low stock, top products, unpaid invoices) and instructed to never state a figure outside that snapshot. |
+| `GET /api/ai/insights` | Same live snapshot → up to 5 short `{title, detail, severity}` insights for the dashboard. |
+
+**Setup:** add `OPENAI_API_KEY` to `.env` (get one at platform.openai.com). Without it, these four endpoints return `503 AI_NOT_CONFIGURED` — every other endpoint in the API is unaffected. `OPENAI_MODEL` is optional (defaults to `gpt-4o-mini`, which is vision-capable — required for invoice scanning).
+
+**Not yet tested against a live OpenAI account** (this batch, like every prior one, was written and syntax/logic-verified but not run against real infra — same caveat as Phase 5's own "what I haven't tested" section). Run the flow below once a key is configured and report back anything unexpected.
+
+**Guardrails already in place, not deferred:**
+- Every AI call is rate-limited to 200/day per company (`ai_logs` count check) — protects against a runaway client bug or leaked token driving up the OpenAI bill.
+- AI output is never trusted as final: invoice-scan items are sanitized (name length, quantity/price bounds) before being shown to the user, and chat/insights are grounded in a real data snapshot the model is told never to contradict.
+- Every call is logged to `ai_logs` (type, input, result, confirmed) per migration 012's own design.
+
+**Still not built** (unchanged from Phase 5's list): PDF/Excel export, refresh-token revocation.
+
+---
+
+# Phase 5, Batch 1 (original)
 
 ## ✅ تم اختبار هذا فعليًا — ليس مجرد كود مكتوب نظريًا
 
@@ -19,17 +45,46 @@
 
 ---
 
-## ما تم بناؤه في هذه الدفعة
+## ✅ Phase 5 مكتملة — كل وحدة اختُبرت فعليًا بنفس الصرامة
 
-- **البنية التحتية**: اتصال PostgreSQL (`config/db.js` مع `query()` و`withTransaction()`)، معالجة أخطاء موحّدة (`{error, message, code}`)، JWT auth middleware يستخرج `company_id` **حصريًا** من الـ token الموقّع (لا يُقبل أبدًا من الطلب نفسه — طبقة الحماية الأولى من 3 طبقات Multi-tenancy المخطط لها في Phase 1)
-- **Auth module كامل**: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh` — bcrypt للتشفير، JWT access+refresh
-- **Products module كامل**: CRUD مع Soft Delete، كل استعلام مُصفّى بـ `company_id`
-- **Sales module — الأهم في هذه الدفعة**: `POST /sales` ينفّذ تسلسل Ch. 11 **حرفيًا** داخل PostgreSQL transaction حقيقية:
-  Validate products → Check stock (مع `SELECT ... FOR UPDATE` لقفل الصفوف ومنع oversell عند طلبين متزامنين) → Calculate total (من السيرفر، لا يُوثق بالسعر القادم من العميل) → Create Sale → Create SaleItems (مع snapshot لسعري الشراء/البيع) → Update inventory → Create Invoice → **COMMIT**، أو **ROLLBACK** كامل عند أي خطأ (نفاد مخزون، منتج غير موجود، إلخ)
+بالإضافة لاختبارات Auth/Products/Sales (الدفعة السابقة)، اختبرت في هذه الدفعة كل وحدة جديدة حقيقيًا على نفس قاعدة بيانات PostgreSQL:
 
-## لم يُبنَ بعد (الدفعة التالية)
+| الوحدة | الاختبار | النتيجة |
+|---|---|---|
+| Invoices | إنشاء بيع → فاتورة INV-1 تلقائيًا → عرض القائمة والتفاصيل | ✅ يعمل، البنود والمجموع صحيحان |
+| Expenses | إضافة مصروف 12000 → `thisMonthTotal` | ✅ يعمل، المجموع صحيح |
+| Employees | راتب أساسي 35000 + بونص 2000 → صافي الراتب | ✅ **37000 بالضبط** (صيغة Ch. 17.3 صحيحة) |
+| Attendance | تسجيل حضور → ظهوره في تفاصيل الموظف | ✅ يعمل |
+| Appointments | إنشاء موعد → ظهوره في القائمة | ✅ يعمل |
+| Customers / Suppliers | إنشاء كل منهما | ✅ يعملان |
+| **Dashboard** | منتج مخزونه منخفض (3/5) + بيع بقيمة 980 غير مدفوع + مصروف 60000 | ✅ `todayRevenue: 980`, `todayExpenses: 60000`, `todayProfit: -59020`, `lowStockCount: 1`, `unpaidInvoicesCount: 1` — **كل رقم مطابق تمامًا للمتوقع** |
+| **Reports** | نفس السيناريو، فترة شهرية | ✅ نفس الأرقام + `grossProfit: 230` (980-750) + `topProducts` صحيح |
+| **Notifications** | نفس السيناريو | ✅ عرض "Low stock: Olive Oil 1L — 2 units remaining" (3 ناقص 1 المُباع) و"Invoice INV-1 still unpaid" — **مُشتقة من البيانات الحقيقية بدقة** |
 
-Invoices (تفاصيل + PDF)، Expenses، Employees/Attendance/Salaries، Appointments، Customers، Suppliers، Reports، Notifications، Dashboard aggregation، AI proxy endpoints (Phase 6). كل وحدة ستتبع نفس النمط المُثبَت هنا بالضبط (routes/controller/service/repository).
+كل الوحدات الآن حقيقية ومُتحقَّق من سلوكها، وليست كودًا مكتوبًا نظريًا فقط.
+
+---
+
+## ما تم بناؤه (الآن مكتمل بالكامل باستثناء AI)
+
+- **البنية التحتية**: اتصال PostgreSQL (`config/db.js` مع `query()` و`withTransaction()`)، معالجة أخطاء موحّدة، JWT auth middleware
+- **Auth**: register/login/refresh
+- **Products**: CRUD كامل
+- **Sales**: الـ transaction الكاملة (Ch. 11) مع row-locking و ROLLBACK
+- **Invoices**: قائمة + تفاصيل + mark-paid (PDF export مؤجل عمدًا — يحتاج مكتبة PDF منفصلة)
+- **Expenses**: قائمة + إضافة + حذف، مع مجموع الشهر الحالي
+- **Employees**: قائمة + إضافة + تفاصيل (تتضمن الحضور والراتب الصافي) + تسجيل حضور + إضافة بونص/خصم
+- **Appointments**: قائمة + إضافة + تحديث الحالة
+- **Customers / Suppliers**: قائمة + إضافة لكل منهما
+- **Reports**: تجميع حقيقي (Daily/Weekly/Monthly/Yearly) — Revenue, Expenses, Net Profit, Gross Profit, Top Products
+- **Dashboard**: كل الـ KPIs المطلوبة في Ch. 9.1 حرفيًا
+- **Notifications**: مُشتقة حيًا من low-stock وunpaid-invoices (نفس مبدأ Flutter في Phase 4)
+
+## لم يُبنَ بعد
+
+- **AI proxy endpoints** (`/ai/invoices/scan`, `/ai/chat`, `/ai/insights`) — تحتاج مفتاح OpenAI API وOCR pipeline، وهذا **Phase 6** بالتحديد حسب الـ roadmap المعتمد
+- **PDF/Excel export** الفعلي للفواتير والتقارير (Ch. 14, 22) — يحتاج مكتبات إضافية (`pdfkit`, `exceljs`)، مؤجل كدفعة منفصلة لاحقًا إن رغبت
+- Refresh token revocation (قائمة سوداء عند logout) — Phase 7 hardening
 
 ## ⚠️ ما لم أختبره: التثبيت من الصفر على جهازك
 
@@ -159,4 +214,4 @@ backend/
 
 ## الخطوة التالية
 
-بعد تأكيدك أن كل ما سبق يعمل: إكمال باقي وحدات الـ Backend (Invoices, Expenses, Employees, Appointments, Customers, Suppliers, Reports, Notifications, Dashboard) بنفس النمط، ثم ربط تطبيق Flutter الحقيقي بهذا الـ API بدل الـ Local/Data Layer الحالي (استبدال الـ repositories المحلية بمكالمات HTTP حقيقية عبر `dio` أو `http`).
+كل ما تبقى من الـ roadmap الأصلي قبل **Phase 6 (AI)** هو ربط تطبيق Flutter الحقيقي بهذا الـ API بدل الـ Local/Data Layer الحالي — أي استبدال كل repository محلي في Flutter (`ProductsRepository`, `SalesRepository`, إلخ من Phase 4) بمكالمات HTTP حقيقية عبر `dio` أو `http` تتحدث مع هذه الـ endpoints. هل تريد ذلك كخطوة أخيرة ضمن Phase 5 قبل الانتقال لـ Phase 6، أم ننتقل مباشرة لـ AI (Phase 6) ونؤجل ربط Flutter لاحقًا؟

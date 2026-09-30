@@ -10,6 +10,7 @@ import '../../data/products_repository.dart';
 import '../../domain/product.dart';
 import 'add_product_screen.dart';
 import 'product_details_screen.dart';
+import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 
 /// Products List — Spec Ch. 10.1. Now wired to real (local) data via
 /// [productsRepositoryProvider] instead of static mock content.
@@ -78,6 +79,17 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
           data: (products) => Text(l10n.productsTitleCount(products.length)),
           orElse: () => Text(l10n.productsTitle),
         ),
+        actions: [
+          IconButton(
+            tooltip: l10n.scanInvoice,
+            icon: const Icon(Icons.document_scanner_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const AiScannerScreen(mode: InvoiceScanMode.stock),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -108,6 +120,20 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
                     tooltip: l10n.scanBarcodeTooltip,
                     icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
                     onPressed: () => _scanBarcode(context),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Material(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusInput),
+                  child: IconButton(
+                    tooltip: l10n.scanInvoice,
+                    icon: const Icon(Icons.document_scanner_rounded, color: AppColors.primary),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AiScannerScreen(mode: InvoiceScanMode.stock),
+                      ),
+                    ),
                   ),
                 ),
               ],

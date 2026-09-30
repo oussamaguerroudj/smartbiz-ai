@@ -145,42 +145,44 @@ class _AddAppointmentSheetState extends ConsumerState<_AddAppointmentSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.sm,
-        right: AppSpacing.sm,
-        top: AppSpacing.sm,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.sm,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l10n.newAppointmentTitle, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.sm),
-          AppTextField(label: l10n.patientCustomerLabel, controller: _nameController),
-          const SizedBox(height: AppSpacing.sm),
-          OutlinedButton(
-            onPressed: () async {
-              final picked = await showTimePicker(context: context, initialTime: _time);
-              if (picked != null) setState(() => _time = picked);
-            },
-            child: Text(l10n.timeLabel(_time.format(context))),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          AppTextField(label: l10n.notesLabel, hint: l10n.optionalHint, controller: _notesController),
-          const SizedBox(height: AppSpacing.md),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _save,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : Text(l10n.saveAppointment),
-          ),
-        ],
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.sm,
+          right: AppSpacing.sm,
+          top: AppSpacing.sm,
+          bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.sm,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.newAppointmentTitle, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(label: l10n.patientCustomerLabel, controller: _nameController),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton(
+              onPressed: () async {
+                final picked = await showTimePicker(context: context, initialTime: _time);
+                if (picked != null) setState(() => _time = picked);
+              },
+              child: Text(l10n.timeLabel(_time.format(context))),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(label: l10n.notesLabel, hint: l10n.optionalHint, controller: _notesController),
+            const SizedBox(height: AppSpacing.md),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _save,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(l10n.saveAppointment),
+            ),
+          ],
+        ),
       ),
     );
   }

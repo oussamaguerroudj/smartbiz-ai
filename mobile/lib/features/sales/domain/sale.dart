@@ -26,6 +26,7 @@ class Sale {
     required this.itemCount,
     this.customerName,
     this.invoiceNumber,
+    this.invoiceId,
   });
 
   final String id;
@@ -37,6 +38,7 @@ class Sale {
   final int itemCount;
   final String? customerName;
   final String? invoiceNumber;
+  final String? invoiceId;
 
   factory Sale.fromJson(Map<String, dynamic> json) => Sale(
         id: json['id'] as String,
@@ -48,6 +50,7 @@ class Sale {
         itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
         customerName: json['customer_name'] as String?,
         invoiceNumber: json['invoice_number'] as String?,
+        invoiceId: json['invoice_id'] as String?,
       );
 }
 

@@ -6,6 +6,8 @@ import '../../../../core/widgets/fade_slide_in.dart';
 import '../../data/settings_providers.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../../l10n/app_localizations.dart';
+import 'profile_screen.dart';
+import 'ai_settings_screen.dart';
 
 /// Settings — Spec Ch. 23. Business profile / currency editing from
 /// Settings still needs its own dedicated edit screen — PUT /companies/me
@@ -42,13 +44,21 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.storefront_outlined,
             title: l10n.businessProfileTitle,
             subtitle: l10n.businessProfileSubtitle,
-            onTap: () => _snack(context, l10n.businessProfileSnack),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
           ),
           _SettingsTile(
             icon: Icons.payments_outlined,
             title: l10n.currencyTitle,
             subtitle: 'DZD',
-            onTap: () {},
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
           ),
           _SettingsTile(
             icon: Icons.dark_mode_outlined,
@@ -59,14 +69,20 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsTile(
             icon: Icons.language_outlined,
             title: l10n.languageTitle,
-            subtitle: _localeLabel(locale),
-            onTap: () => _showLocalePicker(context, ref, locale),
+            subtitle: _localeLabel(locale ?? Localizations.localeOf(context)),
+            onTap: () => _showLocalePicker(
+              context,
+              ref,
+              locale ?? Localizations.localeOf(context),
+            ),
           ),
           _SettingsTile(
             icon: Icons.auto_awesome_outlined,
             title: l10n.aiSettingsTitle,
             subtitle: l10n.aiSettingsSubtitle,
-            onTap: () {},
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AiSettingsScreen()),
+            ),
           ),
           _SettingsTile(
             icon: Icons.logout_rounded,
@@ -115,7 +131,8 @@ class SettingsScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: ThemeMode.values
               .map((m) => RadioListTile<ThemeMode>(
@@ -129,6 +146,7 @@ class SettingsScreen extends ConsumerWidget {
                   ))
               .toList(),
         ),
+        ),
       ),
     );
   }
@@ -137,7 +155,8 @@ class SettingsScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: supportedLocales
               .map((l) => RadioListTile<Locale>(
@@ -145,11 +164,12 @@ class SettingsScreen extends ConsumerWidget {
                     value: l,
                     groupValue: current,
                     onChanged: (v) {
-                      ref.read(localeProvider.notifier).state = v!;
+                      ref.read(localeProvider.notifier).setLocale(v!);
                       Navigator.of(context).pop();
                     },
                   ))
               .toList(),
+        ),
         ),
       ),
     );
@@ -194,7 +214,11 @@ class _SettingsTile extends StatelessWidget {
         ),
         title: Text(title),
         subtitle: subtitle != null ? Text(subtitle!) : null,
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(
+          Directionality.of(context) == TextDirection.rtl
+              ? Icons.chevron_left
+              : Icons.chevron_right,
+        ),
         onTap: onTap,
       ),
     );

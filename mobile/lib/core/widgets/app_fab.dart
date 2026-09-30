@@ -63,6 +63,12 @@ class _AppFabState extends State<AppFab> with SingleTickerProviderStateMixin {
           boxShadow: AppSpacing.brandGlow,
         ),
         child: FloatingActionButton(
+          // heroTag: null -> no Hero for this FAB. MainShell keeps every tab alive
+          // in an IndexedStack, so two tab Scaffolds (each with a FAB) sit in ONE
+          // route subtree; with Flutter's default shared FAB tag that throws
+          // "There are multiple heroes that share the same tag within a subtree"
+          // on every push/pop (seen repeatedly in flutter_runtime.log).
+          heroTag: null,
           tooltip: widget.tooltip,
           elevation: 0,
           highlightElevation: 0,

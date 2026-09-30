@@ -154,47 +154,49 @@ class _AddEmployeeSheetState extends ConsumerState<_AddEmployeeSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.sm,
-        right: AppSpacing.sm,
-        top: AppSpacing.sm,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.sm,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l10n.addEmployee, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.fullName,
-              controller: _nameController,
-              validator: (v) => (v == null || v.isEmpty) ? l10n.requiredField : null,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(label: l10n.positionLabel, controller: _positionController),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.baseSalaryLabel,
-              controller: _salaryController,
-              keyboardType: TextInputType.number,
-              validator: (v) => (v == null || double.tryParse(v) == null) ? l10n.enterValidAmount : null,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _save,
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(l10n.saveEmployee),
-            ),
-          ],
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.sm,
+          right: AppSpacing.sm,
+          top: AppSpacing.sm,
+          bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.sm,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.addEmployee, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: AppSpacing.sm),
+              AppTextField(
+                label: l10n.fullName,
+                controller: _nameController,
+                validator: (v) => (v == null || v.isEmpty) ? l10n.requiredField : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              AppTextField(label: l10n.positionLabel, controller: _positionController),
+              const SizedBox(height: AppSpacing.sm),
+              AppTextField(
+                label: l10n.baseSalaryLabel,
+                controller: _salaryController,
+                keyboardType: TextInputType.number,
+                validator: (v) => (v == null || double.tryParse(v) == null) ? l10n.enterValidAmount : null,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _save,
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(l10n.saveEmployee),
+              ),
+            ],
+          ),
         ),
       ),
     );

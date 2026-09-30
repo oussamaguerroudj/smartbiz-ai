@@ -51,6 +51,8 @@ function toPublicUser(row) {
     id: row.id,
     name: row.name,
     email: row.email,
+    phone: row.phone || null,
+    avatarUrl: row.avatar_url || null,
     role: row.role,
     companyId: row.company_id,
     emailVerified: row.email_verified === true,
@@ -123,13 +125,27 @@ async function register({ name, email, password }) {
     [name, email, passwordHash, codeHash, expires],
   );
 
+  // FIX (bug: "verification codes are sometimes never received" with
+  // no visible error): this used to catch a send failure here, log it
+  // server-side only, and still return 201 { pendingVerification: true
+  // } — so the client had no idea the email never went out and the
+  // user was just left staring at a code screen with nothing to enter.
+  // The pending_registrations row above is already committed at this
+  // point (code + expiry stored), so resend-verification can still
+  // recover from this without the user re-entering their details — but
+  // the *initial* failure must not be reported to the client as
+  // success. sendMail() (utils/email.js) already throws a real Error
+  // for both "SMTP not configured" and an actual provider failure.
+  // Wrap it as a typed ApiError (matching every other failure mode in
+  // this file) instead of letting a bare 500 through, so the client
+  // gets an actionable message + code and can offer "tap resend"
+  // rather than this looking like registration itself failed.
   try {
     await sendVerificationCodeEmail({ name, email, code });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `register(): could not send verification email to ${email}:`,
-      err.message,
+    throw ApiError.internal(
+      'We could not send the verification email. Please try resending the code.',
+      'VERIFICATION_EMAIL_FAILED',
     );
   }
 
@@ -548,6 +564,128 @@ async function resetPassword({ email, code, newPassword }) {
   });
 }
 
+async function getProfile(userId) {
+  const result = await query(
+    `SELECT u.*, c.name AS company_name, c.business_type, c.currency, c.phone AS company_phone, c.address AS company_address
+     FROM users u
+     LEFT JOIN companies c ON c.id = u.company_id
+     WHERE u.id = $1 AND u.deleted_at IS NULL`,
+    [userId],
+  );
+
+  const user = result.rows[0];
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  return {
+    user: toPublicUser(user),
+    company: {
+      id: user.company_id,
+      name: user.company_name,
+      businessType: user.business_type,
+      currency: user.currency,
+      phone: user.company_phone || null,
+      address: user.company_address || null,
+    },
+  };
+}
+
+async function updateProfile(userId, { name, email, phone, avatarUrl }) {
+  const checkUser = await query(
+    `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [userId],
+  );
+  const user = checkUser.rows[0];
+  if (!user) throw ApiError.notFound('User not found');
+
+  if (email && email.trim() !== user.email) {
+    const existingEmail = await query(
+      `SELECT id FROM users WHERE email = $1 AND id != $2 AND deleted_at IS NULL`,
+      [email.trim(), userId],
+    );
+    if (existingEmail.rows.length > 0) {
+      throw ApiError.conflict('An account with this email already exists', 'EMAIL_TAKEN');
+    }
+  }
+
+  const updatedResult = await query(
+    `UPDATE users
+     SET name = COALESCE($2, name),
+         email = COALESCE($3, email),
+         phone = CASE WHEN $4::text IS NOT NULL THEN (CASE WHEN $4::text = '' THEN NULL ELSE $4::text END) ELSE phone END,
+         avatar_url = CASE WHEN $5::text IS NOT NULL THEN (CASE WHEN $5::text = '' THEN NULL ELSE $5::text END) ELSE avatar_url END,
+         updated_at = now()
+     WHERE id = $1 AND deleted_at IS NULL
+     RETURNING *`,
+    [
+      userId,
+      name !== undefined ? name.trim() : null,
+      email !== undefined ? email.trim() : null,
+      phone !== undefined ? phone.trim() : null,
+      avatarUrl !== undefined ? avatarUrl.trim() : null,
+    ],
+  );
+
+  return toPublicUser(updatedResult.rows[0]);
+}
+
+async function changePassword(userId, { currentPassword, newPassword }) {
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    throw ApiError.badRequest('newPassword must be at least 6 characters', 'VALIDATION_ERROR');
+  }
+
+  const userRes = await query(
+    `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [userId],
+  );
+  const user = userRes.rows[0];
+  if (!user) throw ApiError.notFound('User not found');
+
+  const matches = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!matches) {
+    throw ApiError.badRequest('Current password is incorrect', 'INVALID_PASSWORD');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await query(
+    `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
+    [userId, passwordHash],
+  );
+
+  return { success: true };
+}
+
+async function deleteAccount(userId, { password }) {
+  const userRes = await query(
+    `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [userId],
+  );
+  const user = userRes.rows[0];
+  if (!user) throw ApiError.notFound('User not found');
+
+  const matches = await bcrypt.compare(password, user.password_hash);
+  if (!matches) {
+    throw ApiError.badRequest('Password is incorrect to confirm account deletion', 'INVALID_PASSWORD');
+  }
+
+  return withTransaction(async (client) => {
+    await client.query(
+      `UPDATE users SET deleted_at = now(), updated_at = now() WHERE id = $1`,
+      [userId],
+    );
+
+    if (user.role === 'owner') {
+      await client.query(
+        `UPDATE companies SET updated_at = now() WHERE id = $1`,
+        [user.company_id],
+      );
+    }
+
+    return { deleted: true };
+  });
+}
+
 module.exports = {
   register,
   login,
@@ -556,4 +694,8 @@ module.exports = {
   verifyEmail,
   requestPasswordReset,
   resetPassword,
+  getProfile,
+  updateProfile,
+  changePassword,
+  deleteAccount,
 };

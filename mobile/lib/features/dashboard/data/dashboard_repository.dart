@@ -15,6 +15,7 @@ class DashboardData {
     required this.lowStockCount,
     required this.unpaidInvoicesCount,
     required this.upcomingAppointmentsCount,
+    required this.totalOutstandingCredit,
   });
 
   final double todayRevenue;
@@ -25,6 +26,12 @@ class DashboardData {
   final int unpaidInvoicesCount;
   final int upcomingAppointmentsCount;
 
+  /// Total customer debt still owed across all Credit Sales (Ch. 15
+  /// Dashboard). Reads from `customers.balance_due` for now — the full
+  /// Credit Purchases/Payments ledger this will eventually total up
+  /// from is still pending (a separate, larger piece of work).
+  final double totalOutstandingCredit;
+
   factory DashboardData.fromJson(Map<String, dynamic> json) => DashboardData(
         todayRevenue: (json['todayRevenue'] as num).toDouble(),
         todayExpenses: (json['todayExpenses'] as num).toDouble(),
@@ -33,6 +40,7 @@ class DashboardData {
         lowStockCount: json['lowStockCount'] as int,
         unpaidInvoicesCount: json['unpaidInvoicesCount'] as int,
         upcomingAppointmentsCount: json['upcomingAppointmentsCount'] as int,
+        totalOutstandingCredit: (json['totalOutstandingCredit'] as num?)?.toDouble() ?? 0,
       );
 }
 
@@ -56,6 +64,6 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
 }
 
 final dashboardRepositoryProvider =
-    StateNotifierProvider<DashboardRepository, AsyncValue<DashboardData>>(
+    StateNotifierProvider.autoDispose<DashboardRepository, AsyncValue<DashboardData>>(
   (ref) => DashboardRepository(ref),
 );

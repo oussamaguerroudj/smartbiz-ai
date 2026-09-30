@@ -95,10 +95,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get businessTypeClothingDesc => 'مقاسات، ألوان، باركود';
 
   @override
-  String get businessTypeGrocery => 'متجر بقالة';
+  String get businessTypeGrocery => 'سوق / متجر';
 
   @override
-  String get businessTypeGroceryDesc => 'تواريخ الصلاحية، الموردون';
+  String get businessTypeGroceryDesc =>
+      'سوبر ماركت، ميني ماركت، بقالة، متجر عام';
 
   @override
   String get businessTypePharmacy => 'صيدلية';
@@ -107,19 +108,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get businessTypePharmacyDesc => 'المخزون، تنبيهات الصلاحية';
 
   @override
-  String get businessTypeClinic => 'عيادة / طبيب';
+  String get businessTypeClinic => 'عيادة طبية';
 
   @override
-  String get businessTypeClinicDesc => 'المرضى، المواعيد';
+  String get businessTypeClinicDesc => 'المرضى، المواعيد — طبية وأسنان';
 
   @override
-  String get businessTypeRestaurant => 'مطعم';
+  String get businessTypeRestaurant => 'مطعم / مقهى';
 
   @override
-  String get businessTypeRestaurantDesc => 'قائمة الطعام، المكوّنات';
+  String get businessTypeRestaurantDesc =>
+      'قائمة الطعام، الطلبات، الطاولات — مطاعم ومقاهي';
 
   @override
-  String get businessTypeCompany => 'شركة';
+  String get businessTypeCompany => 'مؤسسة / شركة';
 
   @override
   String get businessTypeCompanyDesc => 'الموظفون، الفواتير';
@@ -392,7 +394,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get positionLabel => 'المنصب';
 
   @override
-  String get baseSalaryLabel => 'الراتب الأساسي (دج)';
+  String get baseSalaryLabel => 'الراتب الأساسي';
 
   @override
   String get staffDefault => 'موظف';
@@ -527,7 +529,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get businessProfileTitle => 'ملف الشركة';
 
   @override
-  String get businessProfileSubtitle => 'التعديل من الإعدادات غير متاح بعد';
+  String get businessProfileSubtitle =>
+      'إدارة البيانات الشخصية ومعلومات النشاط';
 
   @override
   String get businessProfileSnack =>
@@ -902,6 +905,497 @@ class AppLocalizationsAr extends AppLocalizations {
   String get barcodeFieldHint => 'امسح أو أدخل يدويًا';
 
   @override
+  String get noItemsDetected =>
+      'لم يتم العثور على أي عناصر في هذه الصورة — حاول مرة أخرى بإضاءة أفضل.';
+
+  @override
+  String get expensePeriodTypeLabel => 'نوع الفترة';
+
+  @override
+  String get periodOneTime => 'مرة واحدة';
+
+  @override
+  String get periodCustom => 'مخصص';
+
+  @override
+  String get periodStartLabel => 'من';
+
+  @override
+  String get periodEndLabel => 'إلى';
+
+  @override
+  String expenseCoversDays(Object days) {
+    return 'يغطي $days يوم';
+  }
+
+  @override
+  String get selectPeriodEndDate =>
+      'الرجاء اختيار تاريخ نهاية لهذه الفترة المخصصة';
+
+  @override
+  String get selectCustomerFirst => 'الرجاء اختيار الزبون أولاً';
+
+  @override
+  String get noCustomersYet => 'لا يوجد زبائن بعد — أضف واحدًا أولاً';
+
+  @override
+  String get amountExceedsTotal => 'المبلغ المدفوع لا يمكن أن يتجاوز الإجمالي';
+
+  @override
+  String get creditSaleTitle => 'عملية بيع بالدين جديدة';
+
+  @override
+  String get selectCustomerHint => 'اختر زبونًا';
+
+  @override
+  String get amountToPayNowLabel => 'المبلغ المدفوع الآن (دج)';
+
+  @override
+  String get remainingCreditLabel => 'الدين المتبقي';
+
+  @override
+  String get confirmCreditSaleButton => 'تأكيد عملية البيع بالدين';
+
+  @override
+  String get creditSaleRecorded => 'تم تسجيل عملية البيع بالدين';
+
+  @override
+  String get creditPageTitle => 'الديون';
+
+  @override
+  String get newCreditSaleAction => 'عملية بيع بالدين جديدة';
+
+  @override
+  String get customersWithCreditTitle => 'الزبائن الذين عليهم ديون';
+
+  @override
+  String get noOutstandingCredit => 'لا يوجد أي زبون عليه دين حاليًا';
+
+  @override
+  String get totalCreditLabel => 'إجمالي الدين';
+
+  @override
+  String get totalPaidLabel => 'المدفوع';
+
+  @override
+  String get noOutstandingBalanceForCustomer =>
+      'لا يوجد رصيد مستحق على هذا الزبون';
+
+  @override
+  String get recordPaymentTitle => 'تسجيل دفعة';
+
+  @override
+  String currentBalanceHelper(Object balance) {
+    return 'الرصيد الحالي: $balance دج';
+  }
+
+  @override
+  String get paymentRecorded => 'تم تسجيل الدفعة';
+
+  @override
+  String get noTransactionsYet => 'لا توجد معاملات بعد';
+
+  @override
+  String get creditPurchaseLabel => 'عملية بيع بالدين';
+
+  @override
+  String get paymentLabel => 'دفعة';
+
+  @override
+  String balanceAfterLabel(Object balance) {
+    return 'الرصيد بعد العملية: $balance دج';
+  }
+
+  @override
+  String get clinicDashboardTitle => 'لوحة تحكم العيادة';
+
+  @override
+  String get patientsTodayLabel => 'المرضى اليوم';
+
+  @override
+  String get appointmentsTodayLabel => 'المواعيد اليوم';
+
+  @override
+  String get waitingLabel => 'في الانتظار';
+
+  @override
+  String get completedTodayLabel => 'تمت معاينتهم اليوم';
+
+  @override
+  String get noShowTodayLabel => 'لم يحضروا اليوم';
+
+  @override
+  String get newPatientsTodayLabel => 'مرضى جدد اليوم';
+
+  @override
+  String get doctorsLabel => 'الأطباء';
+
+  @override
+  String get clinicQueueTitle => 'قائمة الانتظار';
+
+  @override
+  String get callNextPatientButton => 'استدعاء المريض التالي';
+
+  @override
+  String nextPatientLabel(Object name) {
+    return 'المريض التالي: $name';
+  }
+
+  @override
+  String get noOneWaitingMessage => 'لا يوجد أحد ينتظر حاليًا';
+
+  @override
+  String get completeConsultationButton => 'إنهاء المعاينة';
+
+  @override
+  String get clinicPatientsTitle => 'المرضى';
+
+  @override
+  String get addPatientTitle => 'إضافة مريض';
+
+  @override
+  String get fullNameLabel => 'الاسم الكامل';
+
+  @override
+  String get genderLabel => 'الجنس';
+
+  @override
+  String get dateOfBirthLabel => 'تاريخ الميلاد';
+
+  @override
+  String get savePatient => 'حفظ المريض';
+
+  @override
+  String get patientProfileTitle => 'ملف المريض';
+
+  @override
+  String get visitHistoryTitle => 'سجل الزيارات';
+
+  @override
+  String get noVisitsYetMessage => 'لا توجد زيارات مسجلة بعد';
+
+  @override
+  String get diagnosisLabel => 'التشخيص';
+
+  @override
+  String get treatmentLabel => 'العلاج';
+
+  @override
+  String get prescriptionLabel => 'الوصفة الطبية';
+
+  @override
+  String get followUpDateLabel => 'تاريخ المتابعة';
+
+  @override
+  String get addToQueueAction => 'إضافة إلى قائمة الانتظار';
+
+  @override
+  String get selectPatientTitle => 'اختر مريضًا';
+
+  @override
+  String get searchPatientsHint => 'البحث عن المرضى...';
+
+  @override
+  String get noPatientsFoundMessage => 'لم يتم العثور على مرضى';
+
+  @override
+  String get delete => 'حذف';
+
+  @override
+  String get documentsTitle => 'الوثائق الطبية';
+
+  @override
+  String get addDocumentAction => 'إضافة وثيقة';
+
+  @override
+  String get documentNameLabel => 'اسم الوثيقة';
+
+  @override
+  String get documentTypeLabel => 'نوع الوثيقة';
+
+  @override
+  String get fileUrlLabel => 'رابط الملف';
+
+  @override
+  String get noDocumentsYetMessage => 'لا توجد وثائق بعد';
+
+  @override
+  String get confirmDeleteDocumentMessage => 'هل تريد حذف هذه الوثيقة؟';
+
+  @override
+  String get documentDeletedMessage => 'تم حذف الوثيقة';
+
+  @override
+  String get documentAddedMessage => 'تمت إضافة الوثيقة';
+
+  @override
+  String get prescriptionsTitle => 'الوصفات الطبية';
+
+  @override
+  String get newPrescriptionAction => 'وصفة جديدة';
+
+  @override
+  String get noPrescriptionsYetMessage => 'لا توجد وصفات بعد';
+
+  @override
+  String get medicationNameLabel => 'اسم الدواء';
+
+  @override
+  String get dosageLabel => 'الجرعة';
+
+  @override
+  String get frequencyLabel => 'التكرار';
+
+  @override
+  String get durationLabel => 'المدة';
+
+  @override
+  String get instructionsLabel => 'التعليمات';
+
+  @override
+  String get addMedicationAction => 'إضافة دواء';
+
+  @override
+  String get savePrescriptionAction => 'حفظ الوصفة';
+
+  @override
+  String get prescriptionSavedMessage => 'تم حفظ الوصفة';
+
+  @override
+  String get prescriptionNumberLabel => 'رقم الوصفة';
+
+  @override
+  String get medicationRequiredMessage => 'يلزم دواء واحد على الأقل';
+
+  @override
+  String get patientAddedMessage => 'تمت إضافة المريض';
+
+  @override
+  String get queueEmptyMessage => 'قائمة الانتظار فارغة';
+
+  @override
+  String get consultationPriceLabel => 'سعر الاستشارة';
+
+  @override
+  String get amountPaidLabel => 'المبلغ المدفوع';
+
+  @override
+  String get markFullyPaidLabel => 'تعليم كمدفوع بالكامل';
+
+  @override
+  String get remainingLabel => 'المتبقي';
+
+  @override
+  String get invoiceTitle => 'الفاتورة';
+
+  @override
+  String get paymentStatusLabel => 'حالة الدفع';
+
+  @override
+  String get orderDetailsTitle => 'تفاصيل الطلب';
+
+  @override
+  String get paidAmountShortLabel => 'المدفوع';
+
+  @override
+  String get updateStatusLabel => 'تحديث الحالة';
+
+  @override
+  String get restaurantRecordPaymentAction => 'تسجيل الدفع';
+
+  @override
+  String get paymentRecordedMessage => 'تم تسجيل الدفع';
+
+  @override
+  String get enterValidAmountMessage => 'أدخل مبلغًا صالحًا';
+
+  @override
+  String get confirmAction => 'تأكيد';
+
+  @override
+  String get addInventoryItemTitle => 'إضافة عنصر للمخزون';
+
+  @override
+  String get applyAction => 'تطبيق';
+
+  @override
+  String get minStockLabel => 'الحد الأدنى للمخزون';
+
+  @override
+  String get noInventoryItemsMessage => 'لا توجد عناصر في المخزون';
+
+  @override
+  String get openingQuantityLabel => 'الكمية الافتتاحية';
+
+  @override
+  String get removeAction => 'إزالة';
+
+  @override
+  String get searchInventoryHint => 'البحث في المخزون...';
+
+  @override
+  String get supplierLabel => 'المورد';
+
+  @override
+  String get unitLabel => 'الوحدة';
+
+  @override
+  String get lowStockLabel => 'مخزون منخفض';
+
+  @override
+  String get enterNonZeroAmountMessage => 'أدخل مبلغًا غير صفري';
+
+  @override
+  String get manualAdjustmentLabel => 'تعديل يدوي';
+
+  @override
+  String get inventoryTitle => 'المخزون';
+
+  @override
+  String get saveRecipeAction => 'حفظ الوصفة';
+
+  @override
+  String get addAction => 'إضافة';
+
+  @override
+  String get ordersTitle => 'الطلبات';
+
+  @override
+  String get noActiveOrdersMessage => 'لا توجد طلبات نشطة حاليًا';
+
+  @override
+  String get moveToNextStageTooltip => 'الانتقال إلى المرحلة التالية';
+
+  @override
+  String get cancelOrderTooltip => 'إلغاء الطلب';
+
+  @override
+  String get takeawayLabel => 'طلب خارجي';
+
+  @override
+  String get newOrderTitle => 'طلب جديد';
+
+  @override
+  String get tableOptionalLabel =>
+      'الطاولة (اختياري — طلب خارجي إذا تُرك فارغًا)';
+
+  @override
+  String get takeawayNoTableOption => 'طلب خارجي / بدون طاولة';
+
+  @override
+  String get noMenuItemsYetMessage =>
+      'لا توجد أصناف في القائمة بعد — أضف بعضها من شاشة القائمة';
+
+  @override
+  String get addAtLeastOneItemMessage => 'أضف عنصرًا واحدًا على الأقل';
+
+  @override
+  String get orderCreatedMessage => 'تم إنشاء الطلب';
+
+  @override
+  String get createOrderAction => 'إنشاء الطلب';
+
+  @override
+  String get tablesTitle => 'الطاولات';
+
+  @override
+  String get addTableTitle => 'إضافة طاولة';
+
+  @override
+  String get tableNameFieldLabel => 'اسم / رقم الطاولة';
+
+  @override
+  String get seatsLabel => 'عدد المقاعد';
+
+  @override
+  String get noTablesYetMessage => 'لا توجد طاولات بعد';
+
+  @override
+  String get saveAction => 'حفظ';
+
+  @override
+  String get reservationsTitle => 'الحجوزات';
+
+  @override
+  String get newReservationTitle => 'حجز جديد';
+
+  @override
+  String get customerNameLabel => 'اسم العميل';
+
+  @override
+  String get partySizeLabel => 'عدد الأشخاص';
+
+  @override
+  String get noReservationsYetMessage => 'لا توجد حجوزات بعد';
+
+  @override
+  String get seatAction => 'إجلاس';
+
+  @override
+  String get menuTitle => 'القائمة';
+
+  @override
+  String get addMenuItemTitle => 'إضافة صنف';
+
+  @override
+  String get dishNameLabel => 'اسم الطبق';
+
+  @override
+  String get categoryOptionalLabel => 'الفئة (اختياري)';
+
+  @override
+  String get priceDzdLabel => 'السعر (دج)';
+
+  @override
+  String get enterValidPriceMessage => 'أدخل سعرًا صالحًا';
+
+  @override
+  String get recipeIngredientsTooltip => 'الوصفة (المكونات)';
+
+  @override
+  String get noShowLabel => 'لم يحضر';
+
+  @override
+  String get dateTimeLabel => 'التاريخ والوقت';
+
+  @override
+  String get guestsLabel => 'ضيوف';
+
+  @override
+  String adjustItemTitle(Object itemName) {
+    return 'تعديل $itemName';
+  }
+
+  @override
+  String adjustQuantityHint(Object unit) {
+    return 'التغيير ($unit) — سالب للإزالة';
+  }
+
+  @override
+  String get todayRevenueLabel => 'إيرادات اليوم';
+
+  @override
+  String get todayProfitLabel => 'ربح اليوم';
+
+  @override
+  String get outstandingPaymentsLabel => 'المدفوعات المستحقة';
+
+  @override
+  String get paymentStatusPaidLabel => 'مدفوع';
+
+  @override
+  String get paymentStatusPartialLabel => 'مدفوع جزئياً';
+
+  @override
+  String get paymentStatusUnpaidLabel => 'غير مدفوع';
+
+  @override
+  String get paymentStatusRefundedLabel => 'مسترجع';
+
+  @override
+  String get clinicRecordPaymentAction => 'تسجيل دفعة';
+
+  @override
   String get cartEmpty => 'السلة فارغة — أضف منتجًا أعلاه';
 
   @override
@@ -920,4 +1414,674 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get outOfStockLabel => 'نفد من المخزون';
+
+  @override
+  String get storeDashboardTitle => 'لوحة تحكم المتجر';
+
+  @override
+  String get pharmacyDashboardTitle => 'لوحة تحكم الصيدلية';
+
+  @override
+  String get customerDebtLabel => 'ديون العملاء';
+
+  @override
+  String get stockValueLabel => 'قيمة المخزون';
+
+  @override
+  String get expiringSoonLabel => 'قرب انتهاء الصلاحية';
+
+  @override
+  String get inventoryValueLabel => 'قيمة المخزون';
+
+  @override
+  String get kpiSubtitleDzdToday => 'دج اليوم';
+
+  @override
+  String get kpiSubtitleNetToday => 'صافي، اليوم';
+
+  @override
+  String get transactionsLabel => 'المعاملات';
+
+  @override
+  String get stockAlertsTitle => 'تنبيهات المخزون';
+
+  @override
+  String get noStockAlertsMessage => 'لا توجد تنبيهات مخزون حاليًا';
+
+  @override
+  String get noStockOrExpiryAlertsMessage =>
+      'لا توجد تنبيهات مخزون أو انتهاء صلاحية حاليًا';
+
+  @override
+  String get customerDebtTitle => 'ديون العملاء';
+
+  @override
+  String get noOutstandingDebtMessage => 'لا توجد ديون عملاء مستحقة';
+
+  @override
+  String get stockByCategoryTitle => 'المخزون حسب الفئة';
+
+  @override
+  String get noProductsYetMessage => 'لا توجد منتجات بعد';
+
+  @override
+  String get expirationDateLabel => 'تاريخ الصلاحية';
+
+  @override
+  String get selectDateHint => 'اختر التاريخ';
+
+  @override
+  String get clearDateAction => 'مسح';
+
+  @override
+  String get sizeLabel => 'المقاس';
+
+  @override
+  String get colorLabel => 'اللون';
+
+  @override
+  String get brandLabel => 'العلامة التجارية';
+
+  @override
+  String get editProductTitle => 'تعديل المنتج';
+
+  @override
+  String get editAction => 'تعديل';
+
+  @override
+  String get saveChangesAction => 'حفظ التغييرات';
+
+  @override
+  String get productUpdatedMessage => 'تم تحديث المنتج';
+
+  @override
+  String get goodDay => 'يوم سعيد';
+
+  @override
+  String get companyDashboardTitle => 'لوحة تحكم الشركة';
+
+  @override
+  String get openProjectsLabel => 'المشاريع المفتوحة';
+
+  @override
+  String get dzdThisMonthLabel => 'دج هذا الشهر';
+
+  @override
+  String get thisMonthLabel => 'هذا الشهر';
+
+  @override
+  String get netProfitLabel => 'الربح الصافي';
+
+  @override
+  String get salariesLabel => 'الرواتب';
+
+  @override
+  String todayRevenueProfit(Object revenue, Object profit) {
+    return 'اليوم: $revenue إيرادات · $profit ربح';
+  }
+
+  @override
+  String get projectsTitle => 'المشاريع';
+
+  @override
+  String get noOpenProjectsMessage => 'لا توجد مشاريع مفتوحة';
+
+  @override
+  String overdueCount(Object count) {
+    return '$count متأخر';
+  }
+
+  @override
+  String get unpaidInvoicesTitle => 'الفواتير غير المدفوعة';
+
+  @override
+  String get noUnpaidInvoicesMessage => 'لا توجد فواتير غير مدفوعة';
+
+  @override
+  String clientCreditBalancesMessage(Object amount) {
+    return 'أرصدة ديون العملاء: $amount';
+  }
+
+  @override
+  String get noProjectsYetMessage => 'لا توجد مشاريع بعد';
+
+  @override
+  String get dueDateBeforeStartDateError =>
+      'تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ البداية';
+
+  @override
+  String get newProjectTitle => 'مشروع جديد';
+
+  @override
+  String get projectNameLabel => 'اسم المشروع';
+
+  @override
+  String get clientOptionalLabel => 'العميل (اختياري)';
+
+  @override
+  String get noClientOption => 'بدون عميل';
+
+  @override
+  String get budgetDzdOptionalLabel => 'الميزانية (دج، اختياري)';
+
+  @override
+  String get descriptionOptionalLabel => 'الوصف (اختياري)';
+
+  @override
+  String get startDateLabel => 'تاريخ البداية';
+
+  @override
+  String get dueDateLabel => 'تاريخ الاستحقاق';
+
+  @override
+  String get restaurantDashboardTitle => 'لوحة تحكم المطعم';
+
+  @override
+  String get tablesOccupiedLabel => 'الطاولات المشغولة';
+
+  @override
+  String get reservationsTodayLabel => 'حجوزات اليوم';
+
+  @override
+  String get todaysOrdersLabel => 'طلبات اليوم';
+
+  @override
+  String get activeOrdersLabel => 'الطلبات النشطة';
+
+  @override
+  String get inProgressLabel => 'قيد التنفيذ';
+
+  @override
+  String pendingCount(Object count) {
+    return '$count في الانتظار';
+  }
+
+  @override
+  String preparingCount(Object count) {
+    return '$count قيد التحضير';
+  }
+
+  @override
+  String readyCount(Object count) {
+    return '$count جاهز';
+  }
+
+  @override
+  String get clothingProductsTitle => 'منتجات الملابس';
+
+  @override
+  String get viewAllAction => 'عرض الكل';
+
+  @override
+  String get noClothingProductsMessage => 'لم يتم إضافة منتجات ملابس بعد';
+
+  @override
+  String expiresOnLabel(Object date) {
+    return 'ينتهي في $date';
+  }
+
+  @override
+  String deleteConfirmTitle(Object item) {
+    return 'حذف $item';
+  }
+
+  @override
+  String deleteConfirmMessage(Object item) {
+    return 'هل أنت متأكد أنك تريد حذف ($item)؟';
+  }
+
+  @override
+  String get serverSettingsTitle => 'إعدادات الخادم';
+
+  @override
+  String get serverBaseUrlLabel => 'رابط الخادم الرئيسي';
+
+  @override
+  String get testConnectionAction => 'اختبار الاتصال';
+
+  @override
+  String get editExpenseTitle => 'تعديل المصروف';
+
+  @override
+  String get updateExpenseAction => 'تحديث المصروف';
+
+  @override
+  String get editMenuItemTitle => 'تعديل الصنف';
+
+  @override
+  String recipeTitle(Object name) {
+    return 'الوصفة — $name';
+  }
+
+  @override
+  String quantityRequiredUnit(Object unit) {
+    return 'الكمية المطلوبة ($unit)';
+  }
+
+  @override
+  String enterValidQuantityFor(Object name) {
+    return 'أدخل كمية صالحة لـ $name';
+  }
+
+  @override
+  String get noPastOrdersFoundMessage => 'لم يتم العثور على طلبات سابقة';
+
+  @override
+  String get deleteMenuItemTitle => 'حذف الصنف';
+
+  @override
+  String get deleteSupplierTitle => 'حذف المورد';
+
+  @override
+  String get deleteCustomerTitle => 'حذف العميل';
+
+  @override
+  String get deleteEmployeeTitle => 'حذف الموظف';
+
+  @override
+  String get deleteExpenseTitle => 'حذف المصروف';
+
+  @override
+  String get deleteProductTitle => 'حذف المنتج';
+
+  @override
+  String get supplierFallback => 'المورد';
+
+  @override
+  String get customerFallback => 'العميل';
+
+  @override
+  String get expenseFallback => 'المصروف';
+
+  @override
+  String get personalProfileTitle => 'الملف الشخصي';
+
+  @override
+  String get saveProfile => 'حفظ الملف الشخصي';
+
+  @override
+  String get profileUpdatedSuccess => 'تم تحديث الملف الشخصي بنجاح';
+
+  @override
+  String errorUpdatingProfile(Object error) {
+    return 'خطأ أثناء تحديث الملف الشخصي: $error';
+  }
+
+  @override
+  String get businessInfoTitle => 'معلومات النشاط التجاري';
+
+  @override
+  String get updateBusinessInfo => 'تحديث معلومات النشاط';
+
+  @override
+  String get businessInfoUpdatedSuccess =>
+      'تم تحديث معلومات النشاط التجاري بنجاح';
+
+  @override
+  String errorUpdatingBusiness(Object error) {
+    return 'خطأ أثناء تحديث معلومات النشاط: $error';
+  }
+
+  @override
+  String get changePasswordTitle => 'تغيير كلمة المرور';
+
+  @override
+  String get currentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get enterCurrentPassword => 'أدخل كلمة المرور الحالية';
+
+  @override
+  String get confirmNewPassword => 'تأكيد كلمة المرور الجديدة';
+
+  @override
+  String get confirmYourNewPassword => 'أكّد كلمة المرور الجديدة';
+
+  @override
+  String get updatePasswordAction => 'تحديث كلمة المرور';
+
+  @override
+  String get passwordChangedSuccess => 'تم تغيير كلمة المرور بنجاح';
+
+  @override
+  String errorChangingPassword(Object error) {
+    return 'خطأ أثناء تغيير كلمة المرور: $error';
+  }
+
+  @override
+  String get dangerZoneTitle => 'منطقة الخطر';
+
+  @override
+  String get deleteAccountPermanently => 'حذف الحساب نهائياً';
+
+  @override
+  String get deleteAccountWarning =>
+      'سيؤدي حذف حسابك إلى حذف ملفك الشخصي وإعدادات نشاطك التجاري والمنتجات والمبيعات والفواتير نهائياً. لا يمكن التراجع عن هذا الإجراء.';
+
+  @override
+  String get enterPasswordToConfirm => 'أدخل كلمة المرور للتأكيد';
+
+  @override
+  String get deletePermanentlyAction => 'حذف نهائي';
+
+  @override
+  String accountDeletionFailed(Object error) {
+    return 'فشل حذف الحساب: $error';
+  }
+
+  @override
+  String failedToPickImage(Object error) {
+    return 'فشل اختيار الصورة: $error';
+  }
+
+  @override
+  String get businessPhoneLabel => 'هاتف العمل';
+
+  @override
+  String get businessAddressLabel => 'عنوان العمل';
+
+  @override
+  String get businessNameRequired => 'اسم النشاط التجاري مطلوب';
+
+  @override
+  String get reportRevenueLabel => 'الإيرادات';
+
+  @override
+  String get reportExpensesLabel => 'المصاريف';
+
+  @override
+  String get reportNetProfitLabel => 'صافي الأرباح';
+
+  @override
+  String get salesCountLabel => 'عدد المبيعات';
+
+  @override
+  String salesCountInPeriod(Object count) {
+    return '$count عملية بيع في هذه الفترة';
+  }
+
+  @override
+  String get topProductsTitle => 'المنتجات الأكثر مبيعاً';
+
+  @override
+  String unitsSoldLabel(Object count) {
+    return 'تم بيع $count';
+  }
+
+  @override
+  String get noActivityInPeriod => 'لا يوجد نشاط مسجل في هذه الفترة حتى الآن';
+
+  @override
+  String get aiActiveSnack => 'المساعد الذكي وماسح الفواتير نشطان';
+
+  @override
+  String get businessTypeRetail => 'متجر تجزئة عام';
+
+  @override
+  String get financialOverview => 'نظرة عامة مالية';
+
+  @override
+  String get revenueBreakdownTitle => 'تفاصيل الإيرادات';
+
+  @override
+  String get expensesBreakdownTitle => 'تفاصيل المصاريف';
+
+  @override
+  String get operatingExpensesLabel => 'مصاريف العمليات';
+
+  @override
+  String get employeeSalariesLabel => 'رواتب الموظفين';
+
+  @override
+  String get totalExpensesLabel => 'إجمالي المصاريف';
+
+  @override
+  String get profitCalculationTitle => 'حساب الأرباح';
+
+  @override
+  String get profitMarginLabel => 'هامش الربح';
+
+  @override
+  String get netLossLabel => 'خسارة صافية';
+
+  @override
+  String get activitySummaryTitle => 'ملخص النشاط';
+
+  @override
+  String get invoicesCountLabel => 'الفواتير';
+
+  @override
+  String get expensesCountLabel => 'المصاريف';
+
+  @override
+  String get employeesCountLabel => 'الموظفون';
+
+  @override
+  String get recentTransactionsTitle => 'المعاملات الأخيرة';
+
+  @override
+  String get noTransactionsInPeriod => 'لا توجد معاملات في هذه الفترة';
+
+  @override
+  String get coreSalesLabel => 'المبيعات المباشرة';
+
+  @override
+  String get creditPaymentsLabel => 'مدفوعات الديون';
+
+  @override
+  String get categoryBreakdownTitle => 'المصاريف حسب الفئة';
+
+  @override
+  String get employeeBreakdownTitle => 'الرواتب حسب الموظف';
+
+  @override
+  String get noEmployeesFound => 'لا يوجد موظفون مسجلون';
+
+  @override
+  String get noExpensesFound => 'لا توجد مصاريف مسجلة';
+
+  @override
+  String get profitFormulaExplanation =>
+      'صافي الربح = إجمالي الإيرادات - إجمالي المصاريف';
+
+  @override
+  String get dateRangeLabel => 'الفترة الزمنية';
+
+  @override
+  String get scanStageUploading => 'جارٍ رفع صورة الفاتورة...';
+
+  @override
+  String get scanStageOcr => 'جارٍ التعرف الضوئي على النصوص (OCR)...';
+
+  @override
+  String get scanStageExtracting => 'جارٍ استخراج المنتجات والأسعار...';
+
+  @override
+  String get scanStageFinalizing => 'جارٍ إتمام استخراج بنود الفاتورة...';
+
+  @override
+  String get scanTimeoutMessage =>
+      'انتهت مهلة مسح الفاتورة. يرجى المحاولة مرة أخرى أو فحص اتصال الذكاء الاصطناعي.';
+
+  @override
+  String get scanCancelledMessage => 'تم إلغاء مسح الفاتورة.';
+
+  @override
+  String get retryScanAction => 'إعادة المسح';
+
+  @override
+  String get aiServiceDisabledMessage =>
+      'خدمات الذكاء الاصطناعي معطلة حالياً. يمكنك تفعيلها من الإعدادات.';
+
+  @override
+  String get aiServiceUnavailableMessage =>
+      'خادم الذكاء الاصطناعي غير متاح. يرجى التحقق من الاتصال في الإعدادات.';
+
+  @override
+  String get scanFailedTitle => 'فشل المسح';
+
+  @override
+  String get scanSuccessTitle => 'تم مسح الفاتورة بنجاح';
+
+  @override
+  String get cancelScanAction => 'إلغاء المسح';
+
+  @override
+  String get aiStatusOnline => 'متصل';
+
+  @override
+  String get aiStatusDegraded => 'متدهور (نماذج مفقودة)';
+
+  @override
+  String get aiStatusOffline => 'غير متصل';
+
+  @override
+  String get aiStatusDisabled => 'معطل';
+
+  @override
+  String get aiEnabledLabel => 'تفعيل ميزات الذكاء الاصطناعي';
+
+  @override
+  String get aiEnabledDescription =>
+      'استخدام الذكاء الاصطناعي المحلي لمسح الفواتير وOCR والتحليلات الذكية';
+
+  @override
+  String get aiServerUrlLabel => 'رابط خادم الذكاء الاصطناعي';
+
+  @override
+  String get aiServerUrlHint => 'مثال: http://10.0.2.2:11434/v1';
+
+  @override
+  String get aiOcrModelLabel => 'نموذج التعرف الضوئي (OCR)';
+
+  @override
+  String get aiVisionModelLabel => 'نموذج الرؤية (Vision)';
+
+  @override
+  String get aiChatModelLabel => 'نموذج المساعد الذكي / المحادثة';
+
+  @override
+  String get testAiConnectionAction => 'اختبار اتصال الذكاء الاصطناعي';
+
+  @override
+  String get aiConnectionSuccessMessage =>
+      'تم الاتصال بخادم الذكاء الاصطناعي بنجاح';
+
+  @override
+  String aiConnectionFailedMessage(Object error) {
+    return 'فشل الاتصال: $error';
+  }
+
+  @override
+  String get availableModelsLabel => 'النماذج المتاحة على الخادم';
+
+  @override
+  String get missingModelsLabel => 'النماذج المفقودة';
+
+  @override
+  String get saveAiSettingsAction => 'حفظ إعدادات الذكاء الاصطناعي';
+
+  @override
+  String get aiSettingsSavedSuccess => 'تم حفظ إعدادات الذكاء الاصطناعي بنجاح';
+
+  @override
+  String get couldNotLoadSalesTrend => 'تعذر تحميل مؤشر المبيعات';
+
+  @override
+  String get askAboutYourBusiness => 'اسأل عن نشاطك التجاري';
+
+  @override
+  String get aiAnswersComputedLive =>
+      'الإجابات محسوبة مباشرة من بياناتك الحقيقية';
+
+  @override
+  String get changeStatusTitle => 'تغيير الحالة';
+
+  @override
+  String get deleteProductTooltip => 'حذف المنتج';
+
+  @override
+  String get projectStatusPlanned => 'مخطط';
+
+  @override
+  String get projectStatusInProgress => 'قيد التنفيذ';
+
+  @override
+  String get projectStatusOnHold => 'معلّق';
+
+  @override
+  String get projectStatusCompleted => 'مكتمل';
+
+  @override
+  String get projectStatusCancelled => 'ملغى';
+
+  @override
+  String get projectStatusOverdue => 'متأخر';
+
+  @override
+  String get globalNetProfitTitle => 'صافي الربح الإجمالي';
+
+  @override
+  String get allRevenueLabel => 'إجمالي الإيرادات';
+
+  @override
+  String get allExpensesLabel => 'إجمالي المصروفات';
+
+  @override
+  String get globalBalanceLabel => 'الرصيد الكلي';
+
+  @override
+  String get selectDate => 'اختر التاريخ';
+
+  @override
+  String get selectMonth => 'اختر الشهر';
+
+  @override
+  String get selectYear => 'اختر السنة';
+
+  @override
+  String get salaryPeriodLabel => 'فترة الراتب';
+
+  @override
+  String get paymentDateLabel => 'تاريخ الدفع';
+
+  @override
+  String get paySalary => 'دفع الراتب';
+
+  @override
+  String get recordSalaryPayment => 'تسجيل دفع راتب';
+
+  @override
+  String get duplicateSalaryWarningTitle => 'تم دفع الراتب مسبقاً';
+
+  @override
+  String get duplicateSalaryWarningMessage =>
+      'تم تسجيل دفع راتب لهذا الموظف عن هذه الفترة مسبقاً. هل أنت متأكد من تسجيل دفعة أخرى؟';
+
+  @override
+  String get monthlyBreakdownTitle => 'التفصيل الشهري';
+
+  @override
+  String get noTransactionsForPeriod => 'لا توجد معاملات مسجلة لهذه الفترة';
+
+  @override
+  String get salaryExpenseLabel => 'مصاريف الرواتب';
+
+  @override
+  String get otherExpensesLabel => 'المصاريف الأخرى';
+
+  @override
+  String get chooseEmployee => 'اختر الموظف';
+
+  @override
+  String get salaryPaidSuccess => 'تم تسجيل دفع الراتب بنجاح';
+
+  @override
+  String get dailyReportTitle => 'التقرير اليومي';
+
+  @override
+  String get monthlyReportTitle => 'التقرير الشهري';
+
+  @override
+  String get yearlyReportTitle => 'التقرير السنوي';
 }

@@ -13,6 +13,12 @@ class Product {
     this.minimumStock = 5,
     this.barcode,
     this.expirationDate,
+    this.imageUrl,
+    // Ch. 18 (Clothing) attributes — backend migration 020, nullable for
+    // every business type that doesn't use them.
+    this.size,
+    this.color,
+    this.brand,
   });
 
   final String id;
@@ -24,6 +30,10 @@ class Product {
   final int minimumStock;
   final String? barcode;
   final DateTime? expirationDate;
+  final String? imageUrl;
+  final String? size;
+  final String? color;
+  final String? brand;
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
         id: json['id'] as String,
@@ -37,6 +47,10 @@ class Product {
         expirationDate: json['expiration_date'] != null
             ? DateTime.tryParse(json['expiration_date'] as String)
             : null,
+        imageUrl: json['image_url'] as String?,
+        size: json['size'] as String?,
+        color: json['color'] as String?,
+        brand: json['brand'] as String?,
       );
 
   bool get isOutOfStock => quantity <= 0;
