@@ -392,6 +392,78 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(yearly.rangeStart).toBe('2026-01-01');
       expect(yearly.rangeEnd).toBe('2026-12-31');
     });
+
+    it('Scenario 24: Profit Margin Formula Verification (Purchase 100, Sale 150, Qty 10 => Revenue 500, Stock 20 => Inventory Value 1000, Expenses 200 => Net Profit 300)', async () => {
+      const purchasePrice = 100;
+      const salePrice = 150;
+      const quantitySold = 10;
+      const currentStock = 20;
+      const expenses = 200;
+
+      // MARGIN PER UNIT = 150 - 100 = 50
+      const marginPerUnit = salePrice - purchasePrice;
+      expect(marginPerUnit).toBe(50);
+
+      // REVENUE = MARGIN PER UNIT * QUANTITY SOLD = 50 * 10 = 500
+      const expectedRevenue = marginPerUnit * quantitySold;
+      expect(expectedRevenue).toBe(500);
+
+      // INVENTORY VALUE = MARGIN PER UNIT * CURRENT STOCK = 50 * 20 = 1000
+      const expectedInventoryValue = marginPerUnit * currentStock;
+      expect(expectedInventoryValue).toBe(1000);
+
+      // NET PROFIT = REVENUE - EXPENSES = 500 - 200 = 300
+      const expectedNetProfit = expectedRevenue - expenses;
+      expect(expectedNetProfit).toBe(300);
+
+      // Verify calculateFinancials handles inventoryValue and profit margin correctly
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('SELECT') && sql.includes('AS revenue')) {
+          return Promise.resolve({
+            rows: [{ revenue: expectedRevenue, cogs: 0, sales_count: 1 }],
+          });
+        }
+        if (sql.includes('inventory_value')) {
+          return Promise.resolve({
+            rows: [{ inventory_value: expectedInventoryValue }],
+          });
+        }
+        if (sql.includes('FROM sale_items')) {
+          return Promise.resolve({ rows: [] });
+        }
+        if (sql.includes('FROM expenses') && sql.includes('COUNT(*)')) {
+          return Promise.resolve({ rows: [{ count: 1 }] });
+        }
+        if (sql.includes('FROM employees')) {
+          return Promise.resolve({ rows: [] });
+        }
+        if (sql.includes('FROM invoices')) {
+          return Promise.resolve({ rows: [{ count: 0 }] });
+        }
+        if (sql.includes('FROM expenses') && sql.includes('GROUP BY category')) {
+          return Promise.resolve({ rows: [{ category: 'Operating', total: expenses }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(expenses);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'daily' });
+
+      expect(result.revenue).toBe(500);
+      expect(result.inventoryValue).toBe(1000);
+      expect(result.expenses).toBe(200);
+      expect(result.netProfit).toBe(300);
+      expect(result.grossProfit).toBe(500);
+      expect(result.costOfGoodsSold).toBe(0);
+    });
   });
 });
 

@@ -16,6 +16,7 @@ class DashboardData {
     required this.unpaidInvoicesCount,
     required this.upcomingAppointmentsCount,
     required this.totalOutstandingCredit,
+    this.inventoryValue = 0,
   });
 
   final double todayRevenue;
@@ -25,6 +26,7 @@ class DashboardData {
   final int lowStockCount;
   final int unpaidInvoicesCount;
   final int upcomingAppointmentsCount;
+  final double inventoryValue;
 
   /// Total customer debt still owed across all Credit Sales (Ch. 15
   /// Dashboard). Reads from `customers.balance_due` for now — the full
@@ -41,6 +43,7 @@ class DashboardData {
         unpaidInvoicesCount: json['unpaidInvoicesCount'] as int,
         upcomingAppointmentsCount: json['upcomingAppointmentsCount'] as int,
         totalOutstandingCredit: (json['totalOutstandingCredit'] as num?)?.toDouble() ?? 0,
+        inventoryValue: (json['inventoryValue'] as num?)?.toDouble() ?? 0,
       );
 }
 

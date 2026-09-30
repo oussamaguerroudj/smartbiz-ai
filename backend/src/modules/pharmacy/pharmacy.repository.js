@@ -86,7 +86,7 @@ async function lowStockCount(companyId) {
 async function inventoryValue(companyId) {
   const result = await query(
     `SELECT
-       COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * COALESCE(NULLIF(purchase_price, 0), selling_price, 0) ELSE 0 END), 0) AS cost_value,
+       COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * (COALESCE(selling_price, 0) - COALESCE(purchase_price, 0)) ELSE 0 END), 0) AS cost_value,
        COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * COALESCE(selling_price, 0) ELSE 0 END), 0) AS retail_value,
        COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0)::int AS units_in_stock
      FROM products
@@ -107,9 +107,15 @@ async function inventoryValue(companyId) {
 async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
   const result = await query(
     `SELECT
-       COALESCE(SUM(s.total), 0) AS revenue,
        COALESCE((
-         SELECT SUM(si.line_profit) FROM sale_items si
+         SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
+         FROM sale_items si
+         JOIN sales s2 ON s2.id = si.sale_id
+         WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
+       ), 0) AS revenue,
+       COALESCE((
+         SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
+         FROM sale_items si
          JOIN sales s2 ON s2.id = si.sale_id
          WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
        ), 0) AS gross_profit,

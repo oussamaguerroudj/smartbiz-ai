@@ -131,6 +131,17 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                     ),
                     FadeSlideIn(
+                      delay: const Duration(milliseconds: 90),
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          top: AppSpacing.sm,
+                        ),
+                        child: _InventoryValueCard(
+                          value: dashboard.inventoryValue,
+                        ),
+                      ),
+                    ),
+                    FadeSlideIn(
                       delay: const Duration(milliseconds: 110),
                       child: Padding(
                         padding: const EdgeInsets.only(
@@ -647,7 +658,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
           );
 
           if (idx != -1) {
-            totals[idx] += sale.total;
+            totals[idx] += (sale.margin ?? sale.total);
           }
         }
 
@@ -702,7 +713,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
             );
 
             if (!d.isBefore(weekStarts[i]) && d.isBefore(weekEnd)) {
-              totals[i] += sale.total;
+              totals[i] += (sale.margin ?? sale.total);
               break;
             }
           }
@@ -730,7 +741,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
           for (var i = 0; i < months.length; i++) {
             if (sale.soldAt.year == months[i].year &&
                 sale.soldAt.month == months[i].month) {
-              totals[i] += sale.total;
+              totals[i] += (sale.margin ?? sale.total);
               break;
             }
           }
@@ -886,3 +897,61 @@ class _LowStockAlert extends StatelessWidget {
     );
   }
 }
+
+class _InventoryValueCard extends StatelessWidget {
+  const _InventoryValueCard({
+    required this.value,
+  });
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(
+          AppSpacing.radiusCard,
+        ),
+        boxShadow: AppSpacing.cardElevation,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.info.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusInput),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.inventory_2_outlined, color: AppColors.info),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.inventoryValueLabel,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${value.toStringAsFixed(0)} DZD',
+                  style: AppTypography.statValue(AppColors.info),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

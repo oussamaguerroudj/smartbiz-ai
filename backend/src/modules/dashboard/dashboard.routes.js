@@ -55,6 +55,7 @@ const getDashboard = asyncHandler(async (req, res) => {
       todayCostOfGoodsSold: financials.costOfGoodsSold,
       todayGrossProfit: financials.grossProfit,
       todayProfit: financials.netProfit,
+      inventoryValue: financials.inventoryValue,
       salesCount: financials.salesCount,
       lowStockCount: lowStock.rows[0].count,
       unpaidInvoicesCount: unpaidInvoices.rows[0].count,

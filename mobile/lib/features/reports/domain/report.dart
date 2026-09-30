@@ -231,11 +231,13 @@ class GlobalFinancials {
   final double allRevenue;
   final double allExpenses;
   final double globalNetProfit;
+  final double inventoryValue;
 
   GlobalFinancials({
     required this.allRevenue,
     required this.allExpenses,
     required this.globalNetProfit,
+    this.inventoryValue = 0.0,
   });
 
   factory GlobalFinancials.fromJson(Map<String, dynamic> json) =>
@@ -243,6 +245,7 @@ class GlobalFinancials {
         allRevenue: (json['allRevenue'] as num?)?.toDouble() ?? 0.0,
         allExpenses: (json['allExpenses'] as num?)?.toDouble() ?? 0.0,
         globalNetProfit: (json['globalNetProfit'] as num?)?.toDouble() ?? 0.0,
+        inventoryValue: (json['inventoryValue'] as num?)?.toDouble() ?? 0.0,
       );
 }
 
@@ -272,6 +275,7 @@ class ReportData {
   final double allRevenue;
   final double allExpenses;
   final double globalNetProfit;
+  final double inventoryValue;
 
   ReportData({
     required this.period,
@@ -297,6 +301,7 @@ class ReportData {
     required this.allRevenue,
     required this.allExpenses,
     required this.globalNetProfit,
+    this.inventoryValue = 0.0,
   });
 
   factory ReportData.fromJson(Map<String, dynamic> json) {
@@ -401,6 +406,10 @@ class ReportData {
       allRevenue: allRev,
       allExpenses: allExp,
       globalNetProfit: globalProfit,
+      inventoryValue: (json['inventoryValue'] as num?)?.toDouble() ??
+          (json['global'] is Map<String, dynamic>
+              ? ((json['global']['inventoryValue'] as num?)?.toDouble() ?? 0.0)
+              : 0.0),
     );
   }
 }

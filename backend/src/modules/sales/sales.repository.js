@@ -6,7 +6,10 @@ async function findAll(companyId) {
             i.id AS invoice_id, i.invoice_number, i.status AS invoice_status,
             (SELECT COUNT(*)::int
              FROM sale_items si
-             WHERE si.sale_id = s.id) AS item_count
+             WHERE si.sale_id = s.id) AS item_count,
+            (SELECT COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0)
+             FROM sale_items si
+             WHERE si.sale_id = s.id) AS margin
      FROM sales s
      LEFT JOIN customers c
        ON c.id = s.customer_id
@@ -24,7 +27,10 @@ async function findAll(companyId) {
 
 async function findById(companyId, id) {
   const saleResult = await query(
-    `SELECT s.*, c.name AS customer_name
+    `SELECT s.*, c.name AS customer_name,
+            (SELECT COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0)
+             FROM sale_items si
+             WHERE si.sale_id = s.id) AS margin
      FROM sales s
      LEFT JOIN customers c
        ON c.id = s.customer_id

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/app_fab.dart';
 import '../../../../core/widgets/barcode_scanner_screen.dart';
@@ -150,29 +151,65 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
                   ? Center(child: Text(l10n.noProductsFound))
                   : RefreshIndicator(
                       onRefresh: () => ref.read(productsRepositoryProvider.notifier).load(search: _query),
-                      child: ListView.separated(
-                        // Horizontal inset matches the search field's
-                        // padding above for consistent page-level side
-                        // margins. Bottom inset clears the floating "add
-                        // product" FAB (56 button + its own 16 margin on
-                        // each side ≈ 88) plus a small safety gap, so the
-                        // last row is never hidden or touching behind it;
-                        // top inset gives the first row the same
-                        // breathing room as every gap between rows'
-                        // separators, so it doesn't sit flush under the
-                        // search field.
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.sm,
-                          AppSpacing.xs,
-                          AppSpacing.sm,
-                          AppSpacing.xl + AppSpacing.lg,
-                        ),
-                        itemCount: products.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
-                        itemBuilder: (context, i) => FadeSlideIn(
-                          delay: Duration(milliseconds: 30 * i),
-                          child: _ProductRow(product: products[i]),
-                        ),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                                border: Border.all(
+                                  color: AppColors.info.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.info),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        l10n.inventoryValueLabel,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    '${products.fold<double>(0.0, (sum, p) => sum + (p.quantity > 0 ? (p.sellingPrice - p.purchasePrice) * p.quantity : 0.0)).toStringAsFixed(0)} DZD',
+                                    style: AppTypography.statValue(AppColors.info).copyWith(fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.sm,
+                                AppSpacing.xs,
+                                AppSpacing.sm,
+                                AppSpacing.xl + AppSpacing.lg,
+                              ),
+                              itemCount: products.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                              itemBuilder: (context, i) => FadeSlideIn(
+                                delay: Duration(milliseconds: 30 * i),
+                                child: _ProductRow(product: products[i]),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
             ),

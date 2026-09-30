@@ -382,6 +382,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: AppSpacing.xs),
+
+                  // Inventory Value (Margin tied up in current stock)
+                  FadeSlideIn(
+                    delay: const Duration(milliseconds: 15),
+                    child: _FinancialStatCard(
+                      label: l10n.inventoryValueLabel,
+                      value: report.inventoryValue,
+                      color: AppColors.info,
+                      icon: Icons.inventory_2_outlined,
+                    ),
+                  ),
+
                   const SizedBox(height: AppSpacing.sm),
 
                   // B. Profit Calculation Formula Card (Period Revenue - Period Expenses = Net Profit)

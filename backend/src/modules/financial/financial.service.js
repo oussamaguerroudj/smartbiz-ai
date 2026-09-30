@@ -141,9 +141,18 @@ async function calculateFinancials(companyId, params = {}) {
     globalClinicRes,
     globalRestaurantRes,
     globalExpensesRes,
+    globalInventoryRes,
   ] = await Promise.all([
     query(
-      `SELECT COALESCE(SUM(total), 0) AS revenue FROM sales WHERE company_id = $1`,
+      `SELECT COALESCE(
+         (
+           SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
+           FROM sale_items si
+           JOIN sales s ON s.id = si.sale_id
+           WHERE s.company_id = $1
+         ),
+         0
+       ) AS revenue`,
       [companyId],
     ),
     creditRepo.totalPaymentsForRange(companyId, '2000-01-01', '2100-12-31').catch(() => 0),
@@ -151,6 +160,17 @@ async function calculateFinancials(companyId, params = {}) {
     restaurantRepo.revenueForRange(companyId, '2000-01-01', '2100-12-31').catch(() => 0),
     query(
       `SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE company_id = $1 AND deleted_at IS NULL`,
+      [companyId],
+    ),
+    query(
+      `SELECT COALESCE(SUM(
+         CASE
+           WHEN quantity > 0 THEN quantity * (COALESCE(selling_price, 0) - COALESCE(purchase_price, 0))
+           ELSE 0
+         END
+       ), 0) AS inventory_value
+       FROM products
+       WHERE company_id = $1 AND deleted_at IS NULL`,
       [companyId],
     ),
   ]);
@@ -163,6 +183,7 @@ async function calculateFinancials(companyId, params = {}) {
 
   const allExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
   const globalNetProfit = allRevenue - allExpenses;
+  const inventoryValue = Number(globalInventoryRes.rows[0]?.inventory_value || 0);
 
   // 2. Period Calculations (Aggregating actual transactions within rangeStart..rangeEnd)
   const [
@@ -180,17 +201,17 @@ async function calculateFinancials(companyId, params = {}) {
   ] = await Promise.all([
     query(
       `SELECT
-         COALESCE(SUM(s.total), 0) AS revenue,
          COALESCE(
            (
-             SELECT SUM(si.unit_cost * si.quantity)
+             SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
              FROM sale_items si
              JOIN sales s2 ON s2.id = si.sale_id
              WHERE s2.company_id = $1
                AND s2.sold_at::date BETWEEN $2::date AND $3::date
            ),
            0
-         ) AS cogs,
+         ) AS revenue,
+         0 AS cogs,
          COUNT(*)::int AS sales_count
        FROM sales s
        WHERE s.company_id = $1
@@ -201,7 +222,7 @@ async function calculateFinancials(companyId, params = {}) {
       `SELECT
          p.name,
          SUM(si.quantity)::int AS units_sold,
-         COALESCE(SUM(si.line_total), 0) AS total
+         COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0) AS total
        FROM sale_items si
        JOIN sales s ON s.id = si.sale_id AND s.company_id = $1
        JOIN products p ON p.id = si.product_id AND p.company_id = s.company_id
@@ -342,12 +363,18 @@ async function calculateFinancials(companyId, params = {}) {
   // Recent transactions (sales + expenses + salaries) for period
   const [recentSalesRes, recentExpensesRes] = await Promise.all([
     query(
-      `SELECT id, 'sale' AS type, total AS amount, payment_status AS status, sold_at AS date,
-              'Vente #' || SUBSTRING(id::text, 1, 8) AS title,
+      `SELECT s.id, 'sale' AS type,
+              COALESCE((
+                SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
+                FROM sale_items si
+                WHERE si.sale_id = s.id
+              ), s.total) AS amount,
+              s.payment_status AS status, s.sold_at AS date,
+              'Vente #' || SUBSTRING(s.id::text, 1, 8) AS title,
               'Vente' AS description
-       FROM sales
-       WHERE company_id = $1 AND sold_at::date BETWEEN $2::date AND $3::date
-       ORDER BY sold_at DESC
+       FROM sales s
+       WHERE s.company_id = $1 AND s.sold_at::date BETWEEN $2::date AND $3::date
+       ORDER BY s.sold_at DESC
        LIMIT 25`,
       [companyId, rangeStart, rangeEnd],
     ),
@@ -409,9 +436,11 @@ async function calculateFinancials(companyId, params = {}) {
     const [salesByMonthRes, creditByMonthRes, clinicByMonthRes, restByMonthRes, expByMonthRes] =
       await Promise.all([
         query(
-          `SELECT EXTRACT(MONTH FROM sold_at)::int AS month, COALESCE(SUM(total), 0) AS revenue
-           FROM sales
-           WHERE company_id = $1 AND EXTRACT(YEAR FROM sold_at) = $2
+          `SELECT EXTRACT(MONTH FROM s.sold_at)::int AS month,
+                  COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0) AS revenue
+           FROM sales s
+           LEFT JOIN sale_items si ON si.sale_id = s.id
+           WHERE s.company_id = $1 AND EXTRACT(YEAR FROM s.sold_at) = $2
            GROUP BY month`,
           [companyId, targetYear],
         ),
@@ -489,21 +518,24 @@ async function calculateFinancials(companyId, params = {}) {
       allRevenue,
       allExpenses,
       globalNetProfit,
+      inventoryValue,
     },
     allRevenue,
     allExpenses,
     globalNetProfit,
+    inventoryValue,
 
     // Period specific financials
     period,
     rangeStart,
     rangeEnd,
     revenue,
+    inventoryValue,
     expenses: totalExpenses,
     operatingExpenses,
     employeeSalaries,
-    costOfGoodsSold: cogsTotal,
-    grossProfit,
+    costOfGoodsSold: 0,
+    grossProfit: revenue,
     netProfit,
     profitMargin,
     salesCount,
@@ -520,7 +552,7 @@ async function calculateFinancials(companyId, params = {}) {
     expensesBreakdown: {
       operatingExpenses,
       employeeSalaries,
-      costOfGoodsSold: cogsTotal,
+      costOfGoodsSold: 0,
       totalExpenses,
       byCategory: expensesByCategory,
       byEmployee: employeeSalariesBreakdown,

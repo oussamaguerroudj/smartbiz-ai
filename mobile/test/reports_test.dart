@@ -219,6 +219,37 @@ void main() {
       expect(tx.salaryPeriod, 'September 2026');
       expect(tx.duration, '1 month');
     });
+
+    test('Correctly computes and parses profit margin Revenue, Inventory Value, and Net Profit', () {
+      const purchasePrice = 100.0;
+      const salePrice = 150.0;
+      const quantitySold = 10;
+      const currentStock = 20;
+      const expenses = 200.0;
+
+      const marginPerUnit = salePrice - purchasePrice;
+      const revenue = marginPerUnit * quantitySold; // 500
+      const inventoryValue = marginPerUnit * currentStock; // 1000
+      const netProfit = revenue - expenses; // 300
+
+      final json = {
+        'period': 'daily',
+        'rangeStart': '2026-09-30',
+        'rangeEnd': '2026-09-30',
+        'revenue': revenue,
+        'inventoryValue': inventoryValue,
+        'expenses': expenses,
+        'netProfit': netProfit,
+        'grossProfit': revenue,
+        'salesCount': 1,
+      };
+
+      final report = ReportData.fromJson(json);
+      expect(report.revenue, 500.0);
+      expect(report.inventoryValue, 1000.0);
+      expect(report.expenses, 200.0);
+      expect(report.netProfit, 300.0);
+    });
   });
 }
 

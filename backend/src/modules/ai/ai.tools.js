@@ -59,7 +59,12 @@ function resolvePeriodRange(period) {
 async function salesTotals(companyId, start, end) {
   const result = await query(
     `SELECT
-       COALESCE(SUM(total), 0) AS revenue,
+       COALESCE((
+         SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
+         FROM sale_items si
+         JOIN sales s2 ON s2.id = si.sale_id
+         WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
+       ), 0) AS revenue,
        COUNT(*)::int AS order_count
      FROM sales
      WHERE company_id = $1 AND sold_at::date BETWEEN $2::date AND $3::date`,
@@ -463,7 +468,7 @@ async function get_inventory_summary(companyId) {
        COALESCE(SUM(quantity), 0)::int AS total_units,
        COUNT(*) FILTER (WHERE quantity = 0)::int AS out_of_stock,
        COUNT(*) FILTER (WHERE quantity <= minimum_stock AND quantity > 0)::int AS low_stock,
-       COALESCE(SUM(quantity * selling_price), 0)::numeric(14,2) AS total_inventory_value,
+       COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * (COALESCE(selling_price, 0) - COALESCE(purchase_price, 0)) ELSE 0 END), 0)::numeric(14,2) AS total_inventory_value,
        COALESCE(SUM(quantity * purchase_price), 0)::numeric(14,2) AS total_cost_value
      FROM products
      WHERE company_id = $1 AND deleted_at IS NULL`,
