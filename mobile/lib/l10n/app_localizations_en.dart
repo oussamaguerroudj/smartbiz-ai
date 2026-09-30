@@ -790,6 +790,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get purchasePriceFieldLabel => 'Purchase price';
 
   @override
+  String get salePriceFieldLabel => 'Sale price';
+
+  @override
+  String get salePriceRequired =>
+      'Please enter a valid sale price for all products';
+
+  @override
   String get confirmAddToInventory => 'Confirm & Add to Inventory';
 
   @override

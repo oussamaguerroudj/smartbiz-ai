@@ -61,6 +61,7 @@ class ScannedItem {
     required this.name,
     required this.quantity,
     required this.purchasePrice,
+    this.sellingPrice,
     this.matchedProductId,
     this.expirationDate,
     this.size,
@@ -70,6 +71,11 @@ class ScannedItem {
   String name;
   int quantity;
   double purchasePrice;
+
+  /// Sale price entered manually by the user on review.
+  /// Not extracted from invoice. If the item matches an existing product
+  /// in inventory, this can be pre-filled with the existing selling price.
+  double? sellingPrice;
 
   /// Sales mode only: which existing product this scanned line has been
   /// matched to. Null means "no match yet / needs the user to pick one"
@@ -732,19 +738,26 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
   // repository on confirm. ----
 
   Future<void> _confirmAndAddToInventory() async {
-    setState(() => _isSubmitting = true);
-    try {
-      if (widget.mode == InvoiceScanMode.restaurantInventory) {
+    final l10n = AppLocalizations.of(context)!;
+
+    if (_items.isEmpty) return;
+
+    for (final item in _items) {
+      if (item.name.trim().isEmpty) {
+        _showSnack(l10n.productNameFieldLabel);
+        return;
+      }
+      if (item.quantity < 0 || item.purchasePrice < 0) {
+        _showSnack(l10n.mustBeNonNegative);
+        return;
+      }
+    }
+
+    if (widget.mode == InvoiceScanMode.restaurantInventory) {
+      setState(() => _isSubmitting = true);
+      try {
         final repo = ref.read(restaurantRepositoryProvider);
-        // FIX: previously called createInventoryItem for every confirmed
-        // line unconditionally, so re-scanning a restock invoice for
-        // something already in inventory (e.g. "Tomatoes" bought again
-        // next week) created a SECOND "Tomatoes" row instead of topping
-        // up the existing one — fragmenting stock across duplicate rows
-        // and undermining Ch. 14's "one true current stock number" per
-        // item. Now looks up an existing item by case-insensitive name
-        // first and adjusts it if found; only creates a new item when
-        // there's genuinely no match.
+        // Look up existing item by case-insensitive name first and adjusts it if found
         final existingItems = await repo.listInventoryItems();
         for (final item in _items) {
           final match = existingItems.where(
@@ -763,31 +776,78 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
             );
           }
         }
-      } else {
-        final repo = ref.read(productsRepositoryProvider.notifier);
-        for (final item in _items) {
-          await repo.addProduct(
-            name: item.name,
-            category: AppLocalizations.of(context)!.uncategorized,
-            purchasePrice: item.purchasePrice,
-            sellingPrice: item.purchasePrice * 1.3, // placeholder markup; user edits later
-            quantity: item.quantity,
-            expirationDate: item.expirationDate,
-            size: item.size,
-            color: item.color,
-            brand: item.brand,
+        await _confirmAiLogIfNeeded();
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.productsAddedToInventory(_items.length))),
           );
         }
+      } catch (e) {
+        _showSnack(l10n.networkError);
+      } finally {
+        if (mounted) setState(() => _isSubmitting = false);
       }
-      await _confirmAiLogIfNeeded();
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.productsAddedToInventory(_items.length))),
-        );
+    } else {
+      // Validate that sale price is specified and non-negative for every item
+      for (final item in _items) {
+        if (item.sellingPrice == null || item.sellingPrice! < 0) {
+          _showSnack(l10n.salePriceRequired);
+          return;
+        }
       }
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+
+      setState(() => _isSubmitting = true);
+      try {
+        final repo = ref.read(productsRepositoryProvider.notifier);
+        final products = ref.read(productsRepositoryProvider).valueOrNull ?? [];
+
+        for (final item in _items) {
+          final existing = products.cast<Product?>().firstWhere(
+            (p) =>
+                p != null &&
+                (p.id == item.matchedProductId ||
+                    p.name.trim().toLowerCase() == item.name.trim().toLowerCase()),
+            orElse: () => null,
+          );
+
+          if (existing != null) {
+            await repo.updateProduct(
+              existing.id,
+              quantity: existing.quantity + item.quantity,
+              purchasePrice: item.purchasePrice,
+              sellingPrice: item.sellingPrice!,
+              expirationDate: item.expirationDate ?? existing.expirationDate,
+              size: item.size ?? existing.size,
+              color: item.color ?? existing.color,
+              brand: item.brand ?? existing.brand,
+            );
+          } else {
+            await repo.addProduct(
+              name: item.name.trim(),
+              category: l10n.uncategorized,
+              purchasePrice: item.purchasePrice,
+              sellingPrice: item.sellingPrice!,
+              quantity: item.quantity,
+              expirationDate: item.expirationDate,
+              size: item.size,
+              color: item.color,
+              brand: item.brand,
+            );
+          }
+        }
+        await _confirmAiLogIfNeeded();
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.productsAddedToInventory(_items.length))),
+          );
+        }
+      } catch (e) {
+        _showSnack(l10n.networkError);
+      } finally {
+        if (mounted) setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -857,6 +917,25 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
     final l10n = AppLocalizations.of(context)!;
     final isSales = widget.mode == InvoiceScanMode.sales;
     final businessType = ref.watch(companyInfoProvider).valueOrNull?.businessType;
+    final products = ref.watch(productsRepositoryProvider).valueOrNull ?? [];
+
+    if (products.isNotEmpty) {
+      if (isSales) {
+        for (final item in _items) {
+          item.matchedProductId ??= _bestNameMatch(item.name, products)?.id;
+        }
+      } else if (widget.mode == InvoiceScanMode.stock) {
+        for (final item in _items) {
+          if (item.matchedProductId == null && item.sellingPrice == null) {
+            final match = _bestNameMatch(item.name, products);
+            if (match != null) {
+              item.matchedProductId = match.id;
+              item.sellingPrice = match.sellingPrice;
+            }
+          }
+        }
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -911,7 +990,9 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
                                 onQuantityChanged: (qty) => setState(() => _items[i].quantity = qty),
                               )
                             : _StockReviewCard(
+                                key: ValueKey(_items[i]),
                                 item: _items[i],
+                                showSalePrice: widget.mode != InvoiceScanMode.restaurantInventory,
                                 showExpirationDate: businessType == 'pharmacy',
                                 showClothingAttributes: businessType == 'clothing',
                                 onRemove: () => setState(() => _items.removeAt(i)),
@@ -940,37 +1021,100 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
   }
 }
 
-/// Stock-mode review card — name/quantity/purchase price, all editable.
-/// Extracted unchanged from the original inline builder. Phase 2 finding:
-/// now also shows an expiration-date picker (pharmacy accounts) and
-/// size/color/brand fields (clothing accounts) — a receipt/invoice scan
-/// can't OCR these since they're not printed on it, so they're plain
-/// user-entered fields here, same as the pre-existing ones on this card.
-class _StockReviewCard extends StatelessWidget {
+/// Stock-mode review card — name/quantity/purchase price/sale price, all editable.
+/// Shows dedicated editable Sale Price field with live unit profit calculation,
+/// warning if selling price is below purchase price, expiration-date picker
+/// (pharmacy accounts) and size/color/brand fields (clothing accounts).
+class _StockReviewCard extends StatefulWidget {
   const _StockReviewCard({
+    super.key,
     required this.item,
+    this.showSalePrice = true,
     this.showExpirationDate = false,
     this.showClothingAttributes = false,
     this.onRemove,
     required this.onChanged,
   });
+
   final ScannedItem item;
+  final bool showSalePrice;
   final bool showExpirationDate;
   final bool showClothingAttributes;
   final VoidCallback? onRemove;
   final VoidCallback onChanged;
 
+  @override
+  State<_StockReviewCard> createState() => _StockReviewCardState();
+}
+
+class _StockReviewCardState extends State<_StockReviewCard> {
+  late TextEditingController _nameController;
+  late TextEditingController _quantityController;
+  late TextEditingController _purchasePriceController;
+  late TextEditingController _sellingPriceController;
+  late TextEditingController _sizeController;
+  late TextEditingController _colorController;
+  late TextEditingController _brandController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.item.name);
+    _quantityController = TextEditingController(text: '${widget.item.quantity}');
+    _purchasePriceController = TextEditingController(
+      text: widget.item.purchasePrice > 0 ? '${widget.item.purchasePrice}' : '0',
+    );
+    _sellingPriceController = TextEditingController(
+      text: widget.item.sellingPrice != null ? '${widget.item.sellingPrice}' : '',
+    );
+    _sizeController = TextEditingController(text: widget.item.size ?? '');
+    _colorController = TextEditingController(text: widget.item.color ?? '');
+    _brandController = TextEditingController(text: widget.item.brand ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant _StockReviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item != widget.item) {
+      _nameController.text = widget.item.name;
+      _quantityController.text = '${widget.item.quantity}';
+      _purchasePriceController.text =
+          widget.item.purchasePrice > 0 ? '${widget.item.purchasePrice}' : '0';
+      _sellingPriceController.text =
+          widget.item.sellingPrice != null ? '${widget.item.sellingPrice}' : '';
+      _sizeController.text = widget.item.size ?? '';
+      _colorController.text = widget.item.color ?? '';
+      _brandController.text = widget.item.brand ?? '';
+    } else {
+      if (widget.item.sellingPrice != null && _sellingPriceController.text.trim().isEmpty) {
+        _sellingPriceController.text = '${widget.item.sellingPrice}';
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _quantityController.dispose();
+    _purchasePriceController.dispose();
+    _sellingPriceController.dispose();
+    _sizeController.dispose();
+    _colorController.dispose();
+    _brandController.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickExpirationDate(BuildContext context) async {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: item.expirationDate ?? now,
+      initialDate: widget.item.expirationDate ?? now,
       firstDate: now,
       lastDate: DateTime(now.year + 20),
     );
     if (picked != null) {
-      item.expirationDate = picked;
-      onChanged();
+      widget.item.expirationDate = picked;
+      widget.onChanged();
     }
   }
 
@@ -980,6 +1124,11 @@ class _StockReviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final item = widget.item;
+    final hasSellingPrice = item.sellingPrice != null;
+    final isSellingBelowPurchase = hasSellingPrice && item.sellingPrice! < item.purchasePrice;
+    final unitProfit = hasSellingPrice ? item.sellingPrice! - item.purchasePrice : 0.0;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.sm),
@@ -990,16 +1139,19 @@ class _StockReviewCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextFormField(
-                    initialValue: item.name,
+                    controller: _nameController,
                     decoration: InputDecoration(labelText: l10n.productNameFieldLabel),
-                    onChanged: (v) => item.name = v,
+                    onChanged: (v) {
+                      item.name = v;
+                      widget.onChanged();
+                    },
                   ),
                 ),
-                if (onRemove != null)
+                if (widget.onRemove != null)
                   IconButton(
                     tooltip: l10n.removeItemLabel,
                     icon: const Icon(Icons.close_rounded, color: AppColors.danger),
-                    onPressed: onRemove,
+                    onPressed: widget.onRemove,
                   ),
               ],
             ),
@@ -1008,25 +1160,73 @@ class _StockReviewCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextFormField(
-                    initialValue: '${item.quantity}',
+                    controller: _quantityController,
                     decoration: InputDecoration(labelText: l10n.quantityFieldLabel),
                     keyboardType: TextInputType.number,
-                    onChanged: (v) => item.quantity = int.tryParse(v) ?? item.quantity,
+                    onChanged: (v) {
+                      item.quantity = int.tryParse(v) ?? item.quantity;
+                      widget.onChanged();
+                    },
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: TextFormField(
-                    initialValue: '${item.purchasePrice}',
-                    decoration: InputDecoration(labelText: l10n.purchasePriceFieldLabel),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) =>
-                        item.purchasePrice = double.tryParse(v) ?? item.purchasePrice,
+                    controller: _purchasePriceController,
+                    decoration: InputDecoration(
+                      labelText: l10n.purchasePriceFieldLabel,
+                      suffixText: 'DZD',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      item.purchasePrice = double.tryParse(v) ?? item.purchasePrice;
+                      widget.onChanged();
+                    },
                   ),
                 ),
               ],
             ),
-            if (showExpirationDate) ...[
+            if (widget.showSalePrice) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _sellingPriceController,
+                decoration: InputDecoration(
+                  labelText: l10n.salePriceFieldLabel,
+                  hintText: '0.00',
+                  suffixText: 'DZD',
+                  helperText: hasSellingPrice
+                      ? l10n.profitPerUnitValue(
+                          unitProfit >= 0
+                              ? '+${unitProfit.toStringAsFixed(2)}'
+                              : unitProfit.toStringAsFixed(2),
+                        )
+                      : null,
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (v) {
+                  final trimmed = v.trim();
+                  item.sellingPrice = trimmed.isEmpty ? null : double.tryParse(trimmed);
+                  widget.onChanged();
+                },
+              ),
+              if (isSellingBelowPurchase)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 16, color: Theme.of(context).colorScheme.error),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          l10n.sellingBelowPurchaseWarning,
+                          style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            if (widget.showExpirationDate) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(l10n.expirationDateLabel, style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 4),
@@ -1040,32 +1240,41 @@ class _StockReviewCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (showClothingAttributes) ...[
+            if (widget.showClothingAttributes) ...[
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
-                      initialValue: item.size,
+                      controller: _sizeController,
                       decoration: InputDecoration(labelText: l10n.sizeLabel),
-                      onChanged: (v) => item.size = v,
+                      onChanged: (v) {
+                        item.size = v;
+                        widget.onChanged();
+                      },
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
-                      initialValue: item.color,
+                      controller: _colorController,
                       decoration: InputDecoration(labelText: l10n.colorLabel),
-                      onChanged: (v) => item.color = v,
+                      onChanged: (v) {
+                        item.color = v;
+                        widget.onChanged();
+                      },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
               TextFormField(
-                initialValue: item.brand,
+                controller: _brandController,
                 decoration: InputDecoration(labelText: l10n.brandLabel),
-                onChanged: (v) => item.brand = v,
+                onChanged: (v) {
+                  item.brand = v;
+                  widget.onChanged();
+                },
               ),
             ],
           ],

@@ -355,6 +355,8 @@
   "productNameFieldLabel": "Nom du produit",
   "quantityFieldLabel": "Quantité",
   "purchasePriceFieldLabel": "Prix d'achat",
+  "salePriceFieldLabel": "Prix de vente",
+  "salePriceRequired": "Veuillez saisir un prix de vente valide pour tous les produits",
   "confirmAddToInventory": "Confirmer et ajouter à l'inventaire",
   "productsAddedToInventory": "{count} produit(s) ajouté(s) à l'inventaire",
   "@productsAddedToInventory": {

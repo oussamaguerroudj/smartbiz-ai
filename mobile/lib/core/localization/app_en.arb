@@ -355,6 +355,8 @@
   "productNameFieldLabel": "Product name",
   "quantityFieldLabel": "Quantity",
   "purchasePriceFieldLabel": "Purchase price",
+  "salePriceFieldLabel": "Sale price",
+  "salePriceRequired": "Please enter a valid sale price for all products",
   "confirmAddToInventory": "Confirm & Add to Inventory",
   "productsAddedToInventory": "{count} product(s) added to inventory",
   "@productsAddedToInventory": {

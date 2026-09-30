@@ -35,6 +35,7 @@ void main() {
       expect(valid.name, 'Milk 1L');
       expect(valid.quantity, 10);
       expect(valid.purchasePrice, 125.0);
+      expect(valid.sellingPrice, isNull);
 
       final rawList = [
         {'name': 'Milk 1L', 'quantity': 10, 'unitPrice': 125.0},
@@ -53,7 +54,40 @@ void main() {
 
       expect(filtered.length, 2);
       expect(filtered[0].name, 'Milk 1L');
+      expect(filtered[0].purchasePrice, 125.0);
+      expect(filtered[0].sellingPrice, isNull);
       expect(filtered[1].name, 'Bread');
+    });
+
+    test('ScannedItem preserves purchase price and calculates unit profit correctly when sale price entered', () {
+      final item = ScannedItem(name: 'Coca Cola 1L', quantity: 10, purchasePrice: 80.0);
+      expect(item.purchasePrice, 80.0);
+      expect(item.sellingPrice, isNull);
+
+      // User manually enters sale price
+      item.sellingPrice = 100.0;
+      expect(item.purchasePrice, 80.0, reason: 'Purchase price must be preserved exactly as extracted');
+      expect(item.sellingPrice, 100.0);
+
+      // Unit profit calculation
+      final profitPerUnit = item.sellingPrice! - item.purchasePrice;
+      expect(profitPerUnit, 20.0);
+      expect(item.sellingPrice! < item.purchasePrice, isFalse);
+
+      // Selling below purchase price warning condition
+      item.sellingPrice = 70.0;
+      final lossPerUnit = item.sellingPrice! - item.purchasePrice;
+      expect(lossPerUnit, -10.0);
+      expect(item.sellingPrice! < item.purchasePrice, isTrue);
+    });
+
+    test('Sale price validation requires non-null and non-negative value', () {
+      bool isValidSalePrice(double? price) => price != null && price >= 0;
+
+      expect(isValidSalePrice(null), isFalse);
+      expect(isValidSalePrice(-5.0), isFalse);
+      expect(isValidSalePrice(0.0), isTrue);
+      expect(isValidSalePrice(150.0), isTrue);
     });
 
     test('Pipeline reaches deterministic terminal state on success', () {

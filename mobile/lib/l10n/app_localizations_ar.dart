@@ -787,6 +787,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get purchasePriceFieldLabel => 'سعر الشراء';
 
   @override
+  String get salePriceFieldLabel => 'سعر البيع';
+
+  @override
+  String get salePriceRequired => 'يرجى إدخال سعر بيع صالح لجميع المنتجات';
+
+  @override
   String get confirmAddToInventory => 'تأكيد والإضافة إلى المخزون';
 
   @override

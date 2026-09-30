@@ -796,6 +796,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get purchasePriceFieldLabel => 'Prix d\'achat';
 
   @override
+  String get salePriceFieldLabel => 'Prix de vente';
+
+  @override
+  String get salePriceRequired =>
+      'Veuillez saisir un prix de vente valide pour tous les produits';
+
+  @override
   String get confirmAddToInventory => 'Confirmer et ajouter à l\'inventaire';
 
   @override

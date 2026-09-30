@@ -355,6 +355,8 @@
   "productNameFieldLabel": "اسم المنتج",
   "quantityFieldLabel": "الكمية",
   "purchasePriceFieldLabel": "سعر الشراء",
+  "salePriceFieldLabel": "سعر البيع",
+  "salePriceRequired": "يرجى إدخال سعر بيع صالح لجميع المنتجات",
   "confirmAddToInventory": "تأكيد والإضافة إلى المخزون",
   "productsAddedToInventory": "تمت إضافة {count} منتج إلى المخزون",
   "@productsAddedToInventory": {

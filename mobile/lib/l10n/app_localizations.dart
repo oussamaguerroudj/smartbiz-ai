@@ -1546,6 +1546,18 @@ abstract class AppLocalizations {
   /// **'Purchase price'**
   String get purchasePriceFieldLabel;
 
+  /// No description provided for @salePriceFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale price'**
+  String get salePriceFieldLabel;
+
+  /// No description provided for @salePriceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid sale price for all products'**
+  String get salePriceRequired;
+
   /// No description provided for @confirmAddToInventory.
   ///
   /// In en, this message translates to:
