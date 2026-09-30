@@ -1,5 +1,7 @@
 const repo = require('./invoices.repository');
 const ApiError = require('../../utils/ApiError');
+const pdfService = require('../../utils/pdf.service');
+const { query } = require('../../config/db');
 
 async function list(companyId) {
   return repo.findAll(companyId);
@@ -17,4 +19,13 @@ async function markPaid(companyId, id) {
   return updated;
 }
 
-module.exports = { list, getOne, markPaid };
+async function streamInvoicePdf(res, companyId, id) {
+  const [companyRes, invoice] = await Promise.all([
+    query('SELECT name, phone, address FROM companies WHERE id = $1', [companyId]),
+    getOne(companyId, id),
+  ]);
+  const company = companyRes.rows[0] || {};
+  pdfService.streamStandardInvoicePdf(res, { company, invoice });
+}
+
+module.exports = { list, getOne, markPaid, streamInvoicePdf };

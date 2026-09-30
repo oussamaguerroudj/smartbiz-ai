@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Data for a single nav destination.
 class PillNavItem {
@@ -390,20 +391,12 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
     final isActive = _active == i;
     final isPressed = _pressedIndex == i;
 
-    final iconType =
-        i < _iconTypes.length
-            ? _iconTypes[i]
-            : _FnbIconType.more;
-
-    final iconSize =
-        i < _iconSizes.length
-            ? _iconSizes[i]
-            : 26.0;
+    final iconData = isActive ? item.activeIcon : item.icon;
 
     final scale =
         isPressed
             ? 0.96
-            : (isActive ? 1.1 : 1.0);
+            : (isActive ? 1.08 : 1.0);
 
     return Tooltip(
       message: item.label,
@@ -429,7 +422,7 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
             minWidth: 44,
             minHeight: 44,
           ),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           alignment: Alignment.center,
           child: AnimatedBuilder(
             animation: _pulseCtrl,
@@ -442,16 +435,25 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
                 curve: Curves.easeOutCubic,
                 child: SizedBox(
                   key: _itemKeys[i],
-                  width: iconSize,
-                  height: iconSize,
-                  child: CustomPaint(
-                    painter: _FnbIconPainter(
-                      type: iconType,
-                      active: isActive,
-                      glow: isActive
-                          ? _pulseCtrl.value
-                          : 0,
-                    ),
+                  width: 26,
+                  height: 26,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (isActive)
+                        Icon(
+                          iconData,
+                          size: 26,
+                          color: const Color(0x8045B8FF),
+                        ),
+                      Icon(
+                        iconData,
+                        size: 24,
+                        color: isActive
+                            ? const Color(0xFFF8FAFF)
+                            : const Color(0xFFF8FAFF).withValues(alpha: 0.58),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -464,7 +466,7 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
 
   Widget _buildAiItem() {
     return Tooltip(
-      message: 'AI Assistant',
+      message: AppLocalizations.of(context).moreAiAssistant,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onAiAssistant,

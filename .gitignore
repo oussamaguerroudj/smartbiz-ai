@@ -37,6 +37,8 @@ Thumbs.db
 **/.gradle/
 android/.gradle/
 android/local.properties
+**/local.properties
+local.properties
 
 # iOS generated files
 ios/Pods/
@@ -56,3 +58,13 @@ linux/flutter/ephemeral/
 # Flutter generated ephemeral files
 **/ephemeral/
 **/_ephemeral_pub_cache_pointers/
+
+# Archives & Binaries
+*.zip
+*.apk
+*.aab
+*.tar.gz
+
+# Backend storage
+storage/
+**/storage/

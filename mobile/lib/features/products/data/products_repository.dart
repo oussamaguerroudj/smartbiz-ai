@@ -44,6 +44,13 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     required int quantity,
     int minimumStock = 5,
     String? barcode,
+    // Pharmacy (Ch. 15) — nullable, only ever sent when the caller
+    // (Add Product form / AI Scan review) actually collected one.
+    DateTime? expirationDate,
+    // Clothing (Ch. 18) — nullable, same rule as expirationDate above.
+    String? size,
+    String? color,
+    String? brand,
   }) async {
     final client = _ref.read(apiClientProvider);
     await client.post('/products', body: {
@@ -54,7 +61,77 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
       'quantity': quantity,
       'minimumStock': minimumStock,
       if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
+      // Backend expects a plain DATE string (migration 006,
+      // products.repository.create) — the time-of-day component is
+      // meaningless for an expiration date, so it's stripped here.
+      if (expirationDate != null)
+        'expirationDate': _dateOnly(expirationDate),
+      if (size != null && size.isNotEmpty) 'size': size,
+      if (color != null && color.isNotEmpty) 'color': color,
+      if (brand != null && brand.isNotEmpty) 'brand': brand,
     });
+    await load();
+  }
+
+  static String _dateOnly(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Ch. 17/18 — saves an already-uploaded image
+  /// (ImagesRepository.uploadImage(namespace: 'products')) onto this
+  /// product via the existing PUT /products/:id endpoint (already
+  /// supports partial updates via COALESCE — see
+  /// products.repository.update).
+  Future<void> updateProductImage(String id, String imageUrl) async {
+    final client = _ref.read(apiClientProvider);
+    await client.put('/products/$id', body: {'imageUrl': imageUrl});
+    await load();
+  }
+
+  /// Generic Edit Product save (Phase 2 finding — previously only the
+  /// image could be updated from the app). Backend's PUT /products/:id
+  /// already supports a full partial update via COALESCE for every one
+  /// of these columns (products.repository.js `update`) — this was
+  /// simply never called with anything but imageUrl from the client
+  /// side until now. Every parameter is optional/nullable and only
+  /// included in the request body when non-null, so calling this with
+  /// just the fields that actually changed never clobbers the rest
+  /// (COALESCE on the server keeps whatever wasn't sent).
+  Future<void> updateProduct(
+    String id, {
+    String? name,
+    String? category,
+    String? barcode,
+    double? purchasePrice,
+    double? sellingPrice,
+    int? quantity,
+    int? minimumStock,
+    DateTime? expirationDate,
+    String? size,
+    String? color,
+    String? brand,
+    String? imageUrl,
+  }) async {
+    final client = _ref.read(apiClientProvider);
+    await client.put('/products/$id', body: {
+      if (name != null) 'name': name,
+      if (category != null) 'category': category,
+      if (barcode != null) 'barcode': barcode,
+      if (purchasePrice != null) 'purchasePrice': purchasePrice,
+      if (sellingPrice != null) 'sellingPrice': sellingPrice,
+      if (quantity != null) 'quantity': quantity,
+      if (minimumStock != null) 'minimumStock': minimumStock,
+      if (expirationDate != null) 'expirationDate': _dateOnly(expirationDate),
+      if (size != null) 'size': size,
+      if (color != null) 'color': color,
+      if (brand != null) 'brand': brand,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+    });
+    await load();
+  }
+
+  Future<void> deleteProduct(String id) async {
+    final client = _ref.read(apiClientProvider);
+    await client.delete('/products/$id');
     await load();
   }
 
@@ -107,6 +184,6 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
 }
 
 final productsRepositoryProvider =
-    StateNotifierProvider<ProductsRepository, AsyncValue<List<Product>>>(
+    StateNotifierProvider.autoDispose<ProductsRepository, AsyncValue<List<Product>>>(
   (ref) => ProductsRepository(ref),
 );

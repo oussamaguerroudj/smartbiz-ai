@@ -1,4 +1,4 @@
-﻿package com.example.modiri_ai
+package com.example.modiri_ai
 
 import io.flutter.embedding.android.FlutterActivity
 

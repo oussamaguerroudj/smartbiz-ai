@@ -14,8 +14,8 @@ const getOne = asyncHandler(async (req, res) => {
 const create = asyncHandler(async (req, res) => {
   const result = await service.createSale(req.user.companyId, {
     ...req.body,
+    employeeId: req.body.employeeId,
   });
-
   res.status(201).json({ data: result });
 });
 

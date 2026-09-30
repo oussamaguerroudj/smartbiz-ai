@@ -48,6 +48,47 @@ async function create(
   return result.rows[0];
 }
 
+async function update(
+  companyId,
+  id,
+  {
+    name,
+    phone,
+    address,
+  },
+) {
+  const result = await query(
+    `UPDATE suppliers
+     SET name = COALESCE($3, name),
+         phone = COALESCE($4, phone),
+         address = COALESCE($5, address),
+         updated_at = now()
+     WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL
+     RETURNING *`,
+    [
+      companyId,
+      id,
+      name,
+      phone,
+      address,
+    ],
+  );
+
+  return result.rows[0] || null;
+}
+
+async function softDelete(companyId, id) {
+  const result = await query(
+    `UPDATE suppliers
+     SET deleted_at = now()
+     WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL
+     RETURNING id`,
+    [companyId, id],
+  );
+
+  return result.rows[0] || null;
+}
+
 // Service
 async function createSupplier(companyId, data = {}) {
   const {
@@ -112,6 +153,39 @@ async function createSupplier(companyId, data = {}) {
   });
 }
 
+async function updateSupplier(companyId, id, data = {}) {
+  const { name, phone, address } = data;
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || name.trim().length < 2) {
+      throw ApiError.badRequest('name must be at least 2 characters', 'VALIDATION_ERROR');
+    }
+    if (name.trim().length > 255) {
+      throw ApiError.badRequest('name must not exceed 255 characters', 'VALIDATION_ERROR');
+    }
+  }
+
+  const updated = await update(companyId, id, {
+    name: typeof name === 'string' ? name.trim() : undefined,
+    phone: typeof phone === 'string' ? phone.trim() : phone,
+    address: typeof address === 'string' ? address.trim() : address,
+  });
+
+  if (!updated) {
+    throw ApiError.notFound('Supplier not found');
+  }
+
+  return updated;
+}
+
+async function deleteSupplier(companyId, id) {
+  const deleted = await softDelete(companyId, id);
+  if (!deleted) {
+    throw ApiError.notFound('Supplier not found');
+  }
+  return { id };
+}
+
 // Controller
 const list = asyncHandler(async (req, res) => {
   res.json({
@@ -130,6 +204,29 @@ const createHandler = asyncHandler(async (req, res) => {
   });
 });
 
+const updateHandler = asyncHandler(async (req, res) => {
+  const supplier = await updateSupplier(
+    req.user.companyId,
+    req.params.id,
+    req.body || {},
+  );
+
+  res.json({
+    data: supplier,
+  });
+});
+
+const deleteHandler = asyncHandler(async (req, res) => {
+  const result = await deleteSupplier(
+    req.user.companyId,
+    req.params.id,
+  );
+
+  res.json({
+    data: result,
+  });
+});
+
 // Routes
 const router = express.Router();
 
@@ -137,5 +234,7 @@ router.use(authMiddleware);
 
 router.get('/', list);
 router.post('/', createHandler);
+router.put('/:id', updateHandler);
+router.delete('/:id', deleteHandler);
 
 module.exports = router;

@@ -5,6 +5,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/barcode_scanner_screen.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../auth/data/companies_repository.dart';
 import '../../data/products_repository.dart';
 
 /// Add Product — Spec Ch. 10.2. Now calls POST /products for real
@@ -29,6 +30,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _sellingPriceController = TextEditingController();
   final _quantityController = TextEditingController();
   late final _barcodeController = TextEditingController(text: widget.initialBarcode ?? '');
+  // Clothing (Ch. 18) attributes — only rendered/sent for clothing accounts.
+  final _sizeController = TextEditingController();
+  final _colorController = TextEditingController();
+  final _brandController = TextEditingController();
+  // Pharmacy (Ch. 15) — only rendered/sent for pharmacy accounts.
+  DateTime? _expirationDate;
 
   @override
   void dispose() {
@@ -38,8 +45,29 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     _sellingPriceController.dispose();
     _quantityController.dispose();
     _barcodeController.dispose();
+    _sizeController.dispose();
+    _colorController.dispose();
+    _brandController.dispose();
     super.dispose();
   }
+
+  Future<void> _pickExpirationDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _expirationDate ?? now,
+      // A product being entered today can't have already expired, so
+      // the picker doesn't offer past dates as a starting point.
+      firstDate: now,
+      lastDate: DateTime(now.year + 20),
+    );
+    if (picked != null) {
+      setState(() => _expirationDate = picked);
+    }
+  }
+
+  String _formatDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   String? _requiredText(String? v) {
     final l10n = AppLocalizations.of(context)!;
@@ -71,6 +99,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
+      final businessType = ref.read(companyInfoProvider).valueOrNull?.businessType;
       await ref.read(productsRepositoryProvider.notifier).addProduct(
             name: _nameController.text.trim(),
             category: _categoryController.text.trim().isEmpty
@@ -82,6 +111,16 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             barcode: _barcodeController.text.trim().isEmpty
                 ? null
                 : _barcodeController.text.trim(),
+            expirationDate: businessType == 'pharmacy' ? _expirationDate : null,
+            size: businessType == 'clothing' && _sizeController.text.trim().isNotEmpty
+                ? _sizeController.text.trim()
+                : null,
+            color: businessType == 'clothing' && _colorController.text.trim().isNotEmpty
+                ? _colorController.text.trim()
+                : null,
+            brand: businessType == 'clothing' && _brandController.text.trim().isNotEmpty
+                ? _brandController.text.trim()
+                : null,
           );
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {
@@ -102,6 +141,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final businessType = ref.watch(companyInfoProvider).valueOrNull?.businessType;
+    final isPharmacy = businessType == 'pharmacy';
+    final isClothing = businessType == 'clothing';
     return Scaffold(
       appBar: AppBar(title: Text(l10n.addProductTitle)),
       body: SafeArea(
@@ -181,6 +223,45 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                     return null;
                   },
                 ),
+                if (isPharmacy) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(l10n.expirationDateLabel, style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                    onPressed: _pickExpirationDate,
+                    icon: const Icon(Icons.event_outlined),
+                    label: Text(
+                      _expirationDate == null
+                          ? l10n.selectDateHint
+                          : _formatDate(_expirationDate!),
+                    ),
+                  ),
+                  if (_expirationDate != null)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () => setState(() => _expirationDate = null),
+                        child: Text(l10n.clearDateAction),
+                      ),
+                    ),
+                ],
+                if (isClothing) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    label: l10n.sizeLabel,
+                    controller: _sizeController,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    label: l10n.colorLabel,
+                    controller: _colorController,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    label: l10n.brandLabel,
+                    controller: _brandController,
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _save,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:printing/printing.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/status_pill.dart';
@@ -8,10 +9,8 @@ import '../../data/invoices_repository.dart';
 import '../../domain/invoice.dart';
 import '../../../sales/domain/sale.dart';
 
-/// Invoices — Spec Ch. 13/14. Real API-backed (Phase 5 wiring): reads
-/// from GET /invoices / GET /invoices/:id. PDF export / WhatsApp share
-/// still stubbed — the backend endpoint exists but returns 501
-/// (NOT_IMPLEMENTED) until a PDF library is wired in a future batch.
+/// Invoices — Spec Ch. 13/14. Real API-backed: reads from GET /invoices,
+/// GET /invoices/:id, and streams binary PDF via GET /invoices/:id/pdf.
 class InvoicesScreen extends ConsumerWidget {
   const InvoicesScreen({super.key});
 
@@ -137,14 +136,55 @@ class InvoiceDetailsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.pdfExportNotImplemented),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      try {
+                        await Printing.layoutPdf(
+                          onLayout: (_) => ref
+                              .read(invoicesRepositoryProvider.notifier)
+                              .fetchInvoicePdf(invoice.id),
+                          name: 'invoice_${invoice.invoiceNumber}.pdf',
+                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString())),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.print_outlined),
+                    label: Text(l10n.exportAsPdf),
+                  ),
                 ),
-              ),
-              icon: const Icon(Icons.share_outlined),
-              label: Text(l10n.shareViaWhatsapp),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final bytes = await ref
+                            .read(invoicesRepositoryProvider.notifier)
+                            .fetchInvoicePdf(invoice.id);
+                        await Printing.sharePdf(
+                          bytes: bytes,
+                          filename: 'invoice_${invoice.invoiceNumber}.pdf',
+                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString())),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.share_outlined),
+                    label: Text(l10n.shareViaWhatsapp),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

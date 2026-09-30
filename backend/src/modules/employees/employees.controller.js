@@ -19,9 +19,39 @@ const markAttendance = asyncHandler(async (req, res) => {
   res.status(201).json({ data: record });
 });
 
+const update = asyncHandler(async (req, res) => {
+  const employee = await service.updateEmployee(req.user.companyId, req.params.id, req.body);
+  res.json({ data: employee });
+});
+
+const remove = asyncHandler(async (req, res) => {
+  res.json({ data: await service.deleteEmployee(req.user.companyId, req.params.id) });
+});
+
 const addSalaryAdjustment = asyncHandler(async (req, res) => {
   const adjustment = await service.addSalaryAdjustment(req.user.companyId, req.params.id, req.body);
   res.status(201).json({ data: adjustment });
 });
 
-module.exports = { list, getOne, create, markAttendance, addSalaryAdjustment };
+const paySalary = asyncHandler(async (req, res) => {
+  const payment = await service.paySalary(req.user.companyId, req.params.id, req.body);
+  res.status(201).json({ data: payment });
+});
+
+const getSalaryPayments = asyncHandler(async (req, res) => {
+  const payments = await service.getSalaryPayments(req.user.companyId, req.params.id);
+  res.json({ data: payments });
+});
+
+module.exports = {
+  list,
+  getOne,
+  create,
+  update,
+  remove,
+  markAttendance,
+  addSalaryAdjustment,
+  paySalary,
+  getSalaryPayments,
+};
+

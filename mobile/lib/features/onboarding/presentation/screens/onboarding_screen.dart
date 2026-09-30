@@ -129,28 +129,30 @@ class _SlideView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          BreathingIcon(
-            size: 132,
-            child: Icon(slide.icon, size: 56, color: Colors.white),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            slide.title,
-            textAlign: TextAlign.center,
-            style: AppTypography.screenTitle(Colors.white),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            slide.description,
-            textAlign: TextAlign.center,
-            style: AppTypography.body(Colors.white.withValues(alpha: 0.65)),
-          ),
-        ],
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            BreathingIcon(
+              size: 132,
+              child: Icon(slide.icon, size: 56, color: Colors.white),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              slide.title,
+              textAlign: TextAlign.center,
+              style: AppTypography.screenTitle(Colors.white),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              slide.description,
+              textAlign: TextAlign.center,
+              style: AppTypography.body(Colors.white.withValues(alpha: 0.65)),
+            ),
+          ],
+        ),
       ),
     );
   }

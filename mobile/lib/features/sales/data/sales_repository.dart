@@ -7,6 +7,19 @@ import '../../dashboard/data/dashboard_repository.dart';
 
 /// Real HTTP-backed Sales repository (Phase 5 wiring).
 ///
+/// FIX (multi-user data isolation bug): salesRepositoryProvider (and the
+/// equivalent provider in every other `features/*/data/*_repository.dart`
+/// sibling — employees, invoices, customers, expenses, products,
+/// suppliers, appointments, dashboard) used to be a plain, non-autoDispose
+/// StateNotifierProvider. It fetches in its constructor and, because
+/// Riverpod never disposes a non-autoDispose provider on its own, kept
+/// whichever account's data it first loaded cached in memory for the
+/// life of the app process — so switching accounts on the same device
+/// without a full app restart could leak User A's sales/stock/etc. into
+/// User B's session. Now `.autoDispose`: it tears down when nothing
+/// watches it anymore, i.e. when MainShell unmounts on logout (see
+/// main.dart), and rebuilds fresh on the next login.
+///
 /// IMPORTANT SIMPLIFICATION vs. the Phase 4 local version: all the
 /// "Validate products / Check stock / Update inventory / Calculate
 /// profit / Generate invoice" logic that used to live in this file
@@ -41,14 +54,14 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
   /// Throws [ApiException] (e.g. code INSUFFICIENT_STOCK) if the server
   /// rejects the sale — nothing is refreshed in that case since nothing
   /// changed server-side either (transaction rolled back).
-  Future<void> createSale({
+  Future<Map<String, dynamic>> createSale({
     required List<SaleItemInput> items,
     double discount = 0,
     PaymentStatus paymentStatus = PaymentStatus.paid,
     String? customerId,
   }) async {
     final client = _ref.read(apiClientProvider);
-    await client.post('/sales', body: {
+    final response = await client.post('/sales', body: {
       'items': items.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList(),
       'discount': discount,
       'paymentStatus': paymentStatusToApi(paymentStatus),
@@ -61,9 +74,11 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
     await _ref.read(productsRepositoryProvider.notifier).load();
     await _ref.read(invoicesRepositoryProvider.notifier).load();
     await _ref.read(dashboardRepositoryProvider.notifier).load();
+
+    return (response['data'] as Map<String, dynamic>?) ?? {};
   }
 }
 
-final salesRepositoryProvider = StateNotifierProvider<SalesRepository, AsyncValue<List<Sale>>>(
+final salesRepositoryProvider = StateNotifierProvider.autoDispose<SalesRepository, AsyncValue<List<Sale>>>(
   (ref) => SalesRepository(ref),
 );

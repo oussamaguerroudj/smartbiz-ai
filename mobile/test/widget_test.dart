@@ -1,30 +1,46 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:modiri_ai/main.dart';
+import 'package:modiri_ai/core/network/session.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const ModiriApp());
+  group('Session Tests', () {
+    test('Empty session is not logged in', () {
+      const session = Session.empty;
+      expect(session.isLoggedIn, false);
+      expect(session.accessToken, isNull);
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('Session correctly parses from JSON and serializes to JSON', () {
+      final json = {
+        'accessToken': 'test_access_token',
+        'refreshToken': 'test_refresh_token',
+        'userId': 'user_123',
+        'companyId': 'company_456',
+        'userName': 'John Doe',
+        'email': 'john@example.com',
+        'phone': '12345678',
+        'avatarUrl': 'http://example.com/avatar.png',
+        'role': 'owner',
+      };
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      final session = Session.fromStorageJson(json);
+      expect(session.isLoggedIn, true);
+      expect(session.userName, 'John Doe');
+      expect(session.email, 'john@example.com');
+      expect(session.phone, '12345678');
+      expect(session.avatarUrl, 'http://example.com/avatar.png');
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      final serialized = session.toStorageJson();
+      expect(serialized['accessToken'], 'test_access_token');
+      expect(serialized['phone'], '12345678');
+    });
+
+    test('Session copyWith creates updated session', () {
+      const session = Session(userName: 'Old Name', email: 'old@example.com');
+      final updated = session.copyWith(userName: 'New Name', phone: '99999999');
+
+      expect(updated.userName, 'New Name');
+      expect(updated.email, 'old@example.com');
+      expect(updated.phone, '99999999');
+    });
   });
 }

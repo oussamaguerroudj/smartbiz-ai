@@ -9,6 +9,8 @@ import '../../../products/domain/product.dart';
 import '../../data/sales_repository.dart';
 import '../../domain/sale.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../invoices/presentation/screens/invoices_screen.dart';
+import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 
 /// Create Sale — Spec Ch. 11.2.
 ///
@@ -143,14 +145,34 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
         .toList();
 
     try {
-      await ref.read(salesRepositoryProvider.notifier).createSale(
+      final result = await ref.read(salesRepositoryProvider.notifier).createSale(
             items: items,
             discount: _discount,
             paymentStatus: PaymentStatus.paid,
           );
       if (mounted) {
-        Navigator.of(context).pop();
-        _showSnack(AppLocalizations.of(context)!.saleRecordedSuccessfully);
+        final nav = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
+        nav.pop();
+        final invoice = result['invoice'] as Map<String, dynamic>?;
+        final invoiceId = invoice?['id']?.toString();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.saleRecordedSuccessfully),
+            action: invoiceId != null
+                ? SnackBarAction(
+                    label: AppLocalizations.of(context)!.invoicesTitle,
+                    onPressed: () {
+                      nav.push(
+                        MaterialPageRoute(
+                          builder: (_) => InvoiceDetailsScreen(invoiceId: invoiceId),
+                        ),
+                      );
+                    },
+                  )
+                : null,
+          ),
+        );
       }
     } on ApiException catch (e) {
       // Real server rejection (e.g. INSUFFICIENT_STOCK) — nothing was
@@ -174,7 +196,20 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.newSaleTitle)),
+      appBar: AppBar(
+        title: Text(l10n.newSaleTitle),
+        actions: [
+          IconButton(
+            tooltip: l10n.scanInvoice,
+            icon: const Icon(Icons.document_scanner_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const AiScannerScreen(mode: InvoiceScanMode.sales),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -196,6 +231,20 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                     tooltip: l10n.scanBarcodeTooltip,
                     icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
                     onPressed: _scanBarcode,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Material(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusInput),
+                  child: IconButton(
+                    tooltip: l10n.scanInvoice,
+                    icon: const Icon(Icons.document_scanner_rounded, color: AppColors.primary),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AiScannerScreen(mode: InvoiceScanMode.sales),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -321,35 +370,42 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              autofocus: true,
-              decoration: InputDecoration(hintText: l10n.searchProductDots),
-              onChanged: (v) => setState(() => _query = v),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            SizedBox(
-              height: 320,
-              child: ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (context, i) {
-                  final p = filtered[i];
-                  return ListTile(
-                    title: Text(p.name),
-                    subtitle: Text(
-                      p.isOutOfStock ? l10n.outOfStockLabel : l10n.qtyOnly(p.quantity),
-                    ),
-                    trailing: Text('${p.sellingPrice.toStringAsFixed(0)} DZD'),
-                    enabled: !p.isOutOfStock,
-                    onTap: () => Navigator.of(context).pop(p),
-                  );
-                },
+        padding: EdgeInsets.only(
+          left: AppSpacing.sm,
+          right: AppSpacing.sm,
+          top: AppSpacing.sm,
+          bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.sm,
+        ),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                autofocus: true,
+                decoration: InputDecoration(hintText: l10n.searchProductDots),
+                onChanged: (v) => setState(() => _query = v),
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.sm),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: filtered.length,
+                  itemBuilder: (context, i) {
+                    final p = filtered[i];
+                    return ListTile(
+                      title: Text(p.name),
+                      subtitle: Text(
+                        p.isOutOfStock ? l10n.outOfStockLabel : l10n.qtyOnly(p.quantity),
+                      ),
+                      trailing: Text('${p.sellingPrice.toStringAsFixed(0)} DZD'),
+                      enabled: !p.isOutOfStock,
+                      onTap: () => Navigator.of(context).pop(p),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

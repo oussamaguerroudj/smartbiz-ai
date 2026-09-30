@@ -7,7 +7,7 @@ router.use(authMiddleware);
 
 router.get('/', controller.list);
 router.get('/:id', controller.getOne);
-router.get('/:id/pdf', controller.pdfPlaceholder);
+router.get('/:id/pdf', controller.streamPdf);
 router.put('/:id/mark-paid', controller.markPaid);
 
 module.exports = router;

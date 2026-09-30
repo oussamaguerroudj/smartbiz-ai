@@ -1,10 +1,10 @@
 const app = require('./app');
 const env = require('./config/env');
 
-const server = app.listen(env.port, () => {
+const server = app.listen(env.port, '0.0.0.0', () => {
   // eslint-disable-next-line no-console
   console.log(
-    `Backend listening on port ${env.port} (${env.nodeEnv})`,
+    `Backend listening on http://0.0.0.0:${env.port} (${env.nodeEnv})`,
   );
 });
 
@@ -25,3 +25,13 @@ function shutdown(signal) {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+process.on('uncaughtException', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('[UNCAUGHT EXCEPTION]', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  // eslint-disable-next-line no-console
+  console.error('[UNHANDLED REJECTION]', reason);
+});

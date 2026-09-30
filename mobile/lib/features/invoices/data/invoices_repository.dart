@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/invoice.dart';
@@ -28,10 +29,15 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
     final response = await client.get('/invoices/$id');
     return Invoice.fromJson(response['data'] as Map<String, dynamic>);
   }
+
+  Future<Uint8List> fetchInvoicePdf(String id) async {
+    final client = _ref.read(apiClientProvider);
+    return client.getBytes('/invoices/$id/pdf');
+  }
 }
 
 final invoicesRepositoryProvider =
-    StateNotifierProvider<InvoicesRepository, AsyncValue<List<Invoice>>>(
+    StateNotifierProvider.autoDispose<InvoicesRepository, AsyncValue<List<Invoice>>>(
   (ref) => InvoicesRepository(ref),
 );
 
