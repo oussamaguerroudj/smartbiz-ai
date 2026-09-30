@@ -412,4 +412,81 @@ describe('Invoice OCR & Parsing Pipeline', () => {
       expect(result.text).toContain('Fournisseur X');
     });
   });
+
+  describe('Enhanced Deterministic Invoice Parser (Real-world Cases)', () => {
+    test('extracts exactly 7 real items and total from supermarket invoice with dollar signs', () => {
+      const realInvoiceText = `SUPERMARKET
+Lorem ipsum 258
+City Index - D2025
+Tel.: +456-468-987-02
+
+Cashier: #3
+Manager: Eric Steer
+
+Name Qty Price
+Lorem ipsum 1 $9.20
+Lorem ipsum dolor sit 1 $19.20
+Lorem ipsum dolor sit amet 1 $15.00
+Lorem ipsum 1 $15.00
+Lorem ipsum 1 $15.00
+Lorem ipsum dolor sit 1 $15.00
+Lorem ipsum 1 $19.20
+
+Sub Total $107.60
+CASH $200.00
+CHANGE $92.40
+
+THANK YOU!
+Glad to see you again!
+
+modif.al`;
+
+      const result = parseInvoiceText(realInvoiceText);
+
+      expect(result.supplier).toBe('SUPERMARKET');
+      expect(result.total).toBe(107.6);
+      expect(result.items.length).toBe(7);
+
+      expect(result.items).toEqual([
+        { name: 'Lorem ipsum', quantity: 1, unitPrice: 9.2 },
+        { name: 'Lorem ipsum dolor sit', quantity: 1, unitPrice: 19.2 },
+        { name: 'Lorem ipsum dolor sit amet', quantity: 1, unitPrice: 15.0 },
+        { name: 'Lorem ipsum', quantity: 1, unitPrice: 15.0 },
+        { name: 'Lorem ipsum', quantity: 1, unitPrice: 15.0 },
+        { name: 'Lorem ipsum dolor sit', quantity: 1, unitPrice: 15.0 },
+        { name: 'Lorem ipsum', quantity: 1, unitPrice: 19.2 },
+      ]);
+    });
+
+    test('correctly ignores metadata like cashier, change, subtotal, and tax ID from items list', () => {
+      const text = `STORE ALGER
+NIF: 000192837465000
+Tel: 021234567
+Cashier: Mohammed
+Name Qty Price
+Biscuit Bimo 5 45.00 DA
+Chocolat Maxon 2 120.00 DA
+Sub Total 465.00 DA
+CASH 500.00 DA
+CHANGE 35.00 DA`;
+
+      const result = parseInvoiceText(text);
+      expect(result.items.length).toBe(2);
+      expect(result.items[0]).toEqual({ name: 'Biscuit Bimo', quantity: 5, unitPrice: 45 });
+      expect(result.items[1]).toEqual({ name: 'Chocolat Maxon', quantity: 2, unitPrice: 120 });
+      expect(result.total).toBe(465);
+    });
+
+    test('extracts total when currency symbol precedes number ($107.60, €50.00, etc.)', () => {
+      const text = `GROCERY
+Date: 2026-09-20
+Pain 2 $3.50
+Total: $7.00`;
+
+      const result = parseInvoiceText(text);
+      expect(result.total).toBe(7.0);
+      expect(result.items).toEqual([{ name: 'Pain', quantity: 2, unitPrice: 3.5 }]);
+    });
+  });
 });
+

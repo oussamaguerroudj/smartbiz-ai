@@ -16,6 +16,7 @@ class ApiClient {
   final Ref _ref;
 
   static const String defaultBaseUrl = 'http://127.0.0.1:4000/api';
+  static const String lanFallbackBaseUrl = 'http://192.168.1.4:4000/api';
   static String baseUrl = defaultBaseUrl;
 
   static Future<void> initBaseUrl() async {
@@ -24,8 +25,38 @@ class ApiClient {
       final saved = prefs.getString('server_base_url');
       if (saved != null && saved.trim().isNotEmpty) {
         baseUrl = saved.trim();
+      } else {
+        await detectBestBaseUrl();
       }
     } catch (_) {}
+  }
+
+  /// Automatically tests if 127.0.0.1:4000 is reachable (e.g. adb reverse over USB).
+  /// If unreachable (e.g. phone running over Wi-Fi without USB), transparently
+  /// switches to the local network LAN IP so real device scanning works out-of-the-box.
+  static Future<void> detectBestBaseUrl() async {
+    if (baseUrl.contains('127.0.0.1') || baseUrl.contains('localhost')) {
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+      try {
+        final req = await client.getUrl(Uri.parse('http://127.0.0.1:4000/health'));
+        final res = await req.close();
+        if (res.statusCode == 200) {
+          client.close();
+          return; // 127.0.0.1 works (adb reverse active)
+        }
+      } catch (_) {
+        // 127.0.0.1 unreachable (no adb reverse), probe LAN IP
+        try {
+          final lanReq = await client.getUrl(Uri.parse('http://192.168.1.4:4000/health'));
+          final lanRes = await lanReq.close();
+          if (lanRes.statusCode == 200) {
+            baseUrl = lanFallbackBaseUrl;
+          }
+        } catch (_) {}
+      } finally {
+        client.close();
+      }
+    }
   }
 
   static Future<void> setBaseUrl(String url) async {
@@ -92,19 +123,19 @@ class ApiClient {
     } on SocketException {
       throw ApiException(
         statusCode: 0,
-        message: 'Cannot connect to the server.',
+        message: 'Cannot connect to server ($baseUrl). Check network or server URL in Settings.',
         code: 'CONNECTION_ERROR',
       );
     } on HttpException {
       throw ApiException(
         statusCode: 0,
-        message: 'Network error. Please check your connection.',
+        message: 'Network error connecting to $baseUrl.',
         code: 'NETWORK_ERROR',
       );
     } on TimeoutException {
       throw ApiException(
         statusCode: 0,
-        message: 'Server connection timed out.',
+        message: 'Server connection timed out ($baseUrl).',
         code: 'TIMEOUT',
       );
     } on FormatException {
@@ -112,6 +143,12 @@ class ApiClient {
         statusCode: 0,
         message: 'Invalid server response.',
         code: 'INVALID_RESPONSE',
+      );
+    } on http.ClientException catch (e) {
+      throw ApiException(
+        statusCode: 0,
+        message: e.message.isNotEmpty ? e.message : 'Connection closed.',
+        code: 'CLIENT_ERROR',
       );
     }
 

@@ -206,8 +206,13 @@ class AiScannerScreen extends ConsumerWidget {
   }
 }
 
-enum InvoiceScanStatus {
-  processing,
+enum ScannerStage {
+  idle,
+  imageProcessing,
+  uploading,
+  extracting,
+  parsing,
+  success,
   error,
   timeout,
   cancelled,
@@ -224,56 +229,62 @@ class AiProcessingScreen extends ConsumerStatefulWidget {
 }
 
 class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
-  int _stageIndex = 0;
-  Timer? _stageTimer;
-  InvoiceScanStatus _status = InvoiceScanStatus.processing;
+  ScannerStage _stage = ScannerStage.idle;
+  int _elapsedSeconds = 0;
+  Timer? _tickerTimer;
   String? _errorMessage;
   http.Client? _activeClient;
   bool _isDisposed = false;
+  String? _currentScanId;
 
   @override
   void initState() {
     super.initState();
-    _startScan();
-  }
-
-  void _startScan() {
-    _status = InvoiceScanStatus.processing;
-    _errorMessage = null;
-    _stageIndex = 0;
-
-    if (widget.imageBase64 == null) {
-      _runDemoMock();
-    } else {
-      _startStageProgression();
-      _runRealScan(widget.imageBase64!);
-    }
-  }
-
-  void _startStageProgression() {
-    _stageTimer?.cancel();
-    _stageTimer = Timer.periodic(const Duration(milliseconds: 3000), (timer) {
-      if (!mounted || _isDisposed) {
-        timer.cancel();
-        return;
-      }
-      if (_status != InvoiceScanStatus.processing) {
-        timer.cancel();
-        return;
-      }
-      if (_stageIndex < 3) {
-        setState(() => _stageIndex++);
-      } else {
-        timer.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isDisposed) {
+        _startScan();
       }
     });
   }
 
+  void _startScan() {
+    _tickerTimer?.cancel();
+    _elapsedSeconds = 0;
+    _errorMessage = null;
+    _currentScanId = 'SCAN_${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
+
+    // Alive ticker timer — purely increments elapsed seconds for UI display.
+    // It does NOT advance any stages or fake progress.
+    _tickerTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _isDisposed) {
+        timer.cancel();
+        return;
+      }
+      if (_stage == ScannerStage.error ||
+          _stage == ScannerStage.timeout ||
+          _stage == ScannerStage.success ||
+          _stage == ScannerStage.cancelled) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _elapsedSeconds++);
+    });
+
+    if (widget.imageBase64 == null) {
+      _runDemoMock();
+    } else {
+      _runRealScan(widget.imageBase64!, _currentScanId!);
+    }
+  }
+
   void _cancelScan() {
+    final scanId = _currentScanId ?? 'SCAN_UNKNOWN';
+    debugPrint('[$scanId] CANCELLED by user after ${_elapsedSeconds}s');
     _activeClient?.close();
     _activeClient = null;
-    _stageTimer?.cancel();
+    _tickerTimer?.cancel();
     _isDisposed = true;
+    _stage = ScannerStage.cancelled;
     if (mounted) {
       Navigator.of(context).pop();
     }
@@ -282,14 +293,18 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
   @override
   void dispose() {
     _isDisposed = true;
+    _tickerTimer?.cancel();
     _activeClient?.close();
-    _stageTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _runDemoMock() async {
+    setState(() => _stage = ScannerStage.extracting);
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted || _isDisposed) return;
+
+    setState(() => _stage = ScannerStage.success);
+    _tickerTimer?.cancel();
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -306,28 +321,47 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
     );
   }
 
-  Future<void> _runRealScan(String imageBase64) async {
+  Future<void> _runRealScan(String imageBase64, String scanId) async {
     final l10n = AppLocalizations.of(context)!;
     final scanStart = DateTime.now();
-    debugPrint('[INVOICE_SCAN] Sending invoice scan request to backend...');
+
+    debugPrint('[$scanId] START mode=${widget.mode.name}');
+    debugPrint('[$scanId] IMAGE_PROCESSING_END base64Length=${imageBase64.length}');
+
+    if (!mounted || _isDisposed) return;
+    setState(() => _stage = ScannerStage.uploading);
+    debugPrint('[$scanId] UPLOADING_START (sending payload to POST /ai/invoices/scan)');
 
     _activeClient?.close();
     final client = http.Client();
     _activeClient = client;
 
     try {
+      await ApiClient.detectBestBaseUrl();
+      if (mounted && !_isDisposed) {
+        setState(() => _stage = ScannerStage.extracting);
+      }
+      debugPrint('[$scanId] API_REQUEST_START awaiting backend OCR/AI response at ${ApiClient.baseUrl}');
+
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.post(
         '/ai/invoices/scan',
-        body: {'imageBase64': imageBase64, 'mimeType': 'image/jpeg'},
-        timeout: const Duration(seconds: 45),
+        body: {
+          'imageBase64': imageBase64,
+          'mimeType': 'image/jpeg',
+          'scanId': scanId,
+        },
+        timeout: const Duration(seconds: 60),
         client: client,
       );
 
       final elapsedMs = DateTime.now().difference(scanStart).inMilliseconds;
-      debugPrint('[INVOICE_SCAN] Backend responded in ${elapsedMs}ms');
+      debugPrint('[$scanId] API_RESPONSE_RECEIVED in ${elapsedMs}ms');
 
       if (!mounted || _isDisposed) return;
+
+      setState(() => _stage = ScannerStage.parsing);
+      debugPrint('[$scanId] PARSING_START');
 
       final data = response is Map ? (response['data'] as Map<String, dynamic>? ?? {}) : <String, dynamic>{};
       final logId = data['logId'] as String?;
@@ -344,9 +378,14 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
           .where((item) => item.name.trim().isNotEmpty)
           .toList();
 
-      debugPrint('[INVOICE_SCAN] Processed ${items.length} items from OCR result');
+      debugPrint('[$scanId] PARSING_COMPLETE itemCount=${items.length}');
+      debugPrint('[$scanId] VALIDATION_COMPLETE');
 
       if (!mounted || _isDisposed) return;
+
+      setState(() => _stage = ScannerStage.success);
+      _tickerTimer?.cancel();
+      debugPrint('[$scanId] SUCCESS totalElapsedMs=${DateTime.now().difference(scanStart).inMilliseconds}ms');
 
       if (items.isEmpty) {
         Navigator.of(context).pushReplacement(
@@ -373,24 +412,28 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
         ),
       );
     } on ApiException catch (e) {
-      debugPrint('[INVOICE_SCAN] ApiException: ${e.message} (code: ${e.code})');
+      final elapsedMs = DateTime.now().difference(scanStart).inMilliseconds;
+      debugPrint('[$scanId] ERROR stage=${_stage.name} elapsedMs=${elapsedMs}ms code=${e.code} msg=${e.message}');
+      _tickerTimer?.cancel();
       if (!mounted || _isDisposed) return;
 
       setState(() {
         if (e.code == 'TIMEOUT') {
-          _status = InvoiceScanStatus.timeout;
+          _stage = ScannerStage.timeout;
           _errorMessage = l10n.scanTimeoutMessage;
         } else {
-          _status = InvoiceScanStatus.error;
+          _stage = ScannerStage.error;
           _errorMessage = e.message;
         }
       });
     } catch (e) {
-      debugPrint('[INVOICE_SCAN] General error: $e');
+      final elapsedMs = DateTime.now().difference(scanStart).inMilliseconds;
+      debugPrint('[$scanId] GENERAL_ERROR stage=${_stage.name} elapsedMs=${elapsedMs}ms error=$e');
+      _tickerTimer?.cancel();
       if (!mounted || _isDisposed) return;
 
       setState(() {
-        _status = InvoiceScanStatus.error;
+        _stage = ScannerStage.error;
         _errorMessage = l10n.networkError;
       });
     } finally {
@@ -399,22 +442,42 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
   }
 
   String _getStageText(AppLocalizations l10n) {
-    switch (_stageIndex) {
-      case 0:
+    switch (_stage) {
+      case ScannerStage.imageProcessing:
+      case ScannerStage.uploading:
         return l10n.scanStageUploading;
-      case 1:
+      case ScannerStage.extracting:
         return l10n.scanStageOcr;
-      case 2:
+      case ScannerStage.parsing:
         return l10n.scanStageExtracting;
-      case 3:
-      default:
+      case ScannerStage.success:
         return l10n.scanStageFinalizing;
+      default:
+        return l10n.analyzingInvoice;
+    }
+  }
+
+  double? _getStageProgress() {
+    switch (_stage) {
+      case ScannerStage.imageProcessing:
+        return 0.15;
+      case ScannerStage.uploading:
+        return 0.35;
+      case ScannerStage.extracting:
+        return null; // Indeterminate spinner/progress bar while OCR model executes
+      case ScannerStage.parsing:
+        return 0.90;
+      case ScannerStage.success:
+        return 1.0;
+      default:
+        return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isErrorState = _stage == ScannerStage.error || _stage == ScannerStage.timeout;
 
     return PopScope(
       canPop: false,
@@ -437,9 +500,7 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
           child: Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: _status == InvoiceScanStatus.processing
-                  ? _buildProcessingView(l10n)
-                  : _buildErrorView(l10n),
+              child: isErrorState ? _buildErrorView(l10n) : _buildProcessingView(l10n),
             ),
           ),
         ),
@@ -449,6 +510,7 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
 
   Widget _buildProcessingView(AppLocalizations l10n) {
     final stageText = _getStageText(l10n);
+    final progressValue = _getStageProgress();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -471,8 +533,8 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           child: Text(
-            stageText,
-            key: ValueKey<int>(_stageIndex),
+            _elapsedSeconds > 0 ? '$stageText (${_elapsedSeconds}s)' : stageText,
+            key: ValueKey<String>('${_stage.name}_$_elapsedSeconds'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
@@ -483,7 +545,7 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
           child: SizedBox(
             width: 180,
             child: LinearProgressIndicator(
-              value: (_stageIndex + 1) / 4.0,
+              value: progressValue,
               backgroundColor: Colors.white24,
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             ),
@@ -505,7 +567,7 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
   }
 
   Widget _buildErrorView(AppLocalizations l10n) {
-    final isTimeout = _status == InvoiceScanStatus.timeout;
+    final isTimeout = _stage == ScannerStage.timeout;
     final errorText = _errorMessage ?? l10n.networkError;
 
     return Card(

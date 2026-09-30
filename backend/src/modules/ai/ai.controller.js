@@ -7,6 +7,7 @@ const scanInvoice = asyncHandler(async (req, res) => {
     userId: req.user.id,
     imageBase64: req.body.imageBase64,
     mimeType: req.body.mimeType,
+    scanId: req.body.scanId,
   });
 
   res.json({ data: result });

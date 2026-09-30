@@ -399,10 +399,15 @@ function parseJsonLoose(raw) {
 // Invoice scan (OCR text + vision, via Qwen2.5-VL + Deterministic Parser)
 // ---------------------------------------------------------------------
 
-async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
+async function scanInvoice({ companyId, userId, imageBase64, mimeType, scanId: clientScanId }) {
   if (!runtimeAiConfig.enabled) {
     throw ApiError.badRequest('AI services are disabled in settings', 'AI_DISABLED');
   }
+  const scanId = clientScanId || `SCAN_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+  const scanStart = Date.now();
+  // eslint-disable-next-line no-console
+  console.log(`[${scanId}] START companyId=${companyId}`);
+
   await checkRateLimit(companyId);
 
   const safeMime = ['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)
@@ -410,7 +415,7 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
     : 'image/jpeg';
   const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '').trim();
   // eslint-disable-next-line no-console
-  console.log(`[INVOICE_SCAN] Processing invoice scan (companyId: ${companyId}, base64 length: ${cleanBase64.length})`);
+  console.log(`[${scanId}] IMAGE_PROCESSING_END base64Length=${cleanBase64.length} mimeType=${safeMime}`);
 
   const ocrModel = runtimeAiConfig.ocrModel !== undefined ? runtimeAiConfig.ocrModel : env.ai.ocrModel;
   const visionModel = runtimeAiConfig.visionModel !== undefined ? runtimeAiConfig.visionModel : env.ai.visionModel;
@@ -422,43 +427,51 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
   try {
     preflight = await pingOllama(requiredModels);
     // eslint-disable-next-line no-console
-    console.log('[INVOICE_SCAN] Ollama preflight OK');
-    // eslint-disable-next-line no-console
-    console.log(`[INVOICE_SCAN] Available models: ${preflight.availableModels.join(', ')}`);
+    console.log(`[${scanId}] PREFLIGHT_OK availableModels=${preflight.availableModels.join(', ')}`);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn(`[INVOICE_SCAN] Ollama preflight failed: ${err.message}`);
+    console.warn(`[${scanId}] PREFLIGHT_FAILED error=${err.message}`);
     throw err;
   }
 
   // Step 1: Execute fast OCR model (GLM-OCR / microservice)
   let ocrText = '';
+  const ocrStart = Date.now();
+  // eslint-disable-next-line no-console
+  console.log(`[${scanId}] OCR_START model=${ocrModel}`);
   try {
     ocrText = await runOcr(cleanBase64, safeMime);
+    // eslint-disable-next-line no-console
+    console.log(`[${scanId}] OCR_COMPLETE elapsedMs=${Date.now() - ocrStart} textLength=${ocrText.length}`);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn(`[INVOICE_SCAN] GLM-OCR failed: ${err.message}`);
+    console.warn(`[${scanId}] OCR_FAILED error=${err.message}`);
   }
 
   // Step 2: Parse OCR output (deterministic text parser or direct JSON)
   let rawItems = [];
   let supplier = null;
   let date = null;
+  let total = null;
 
+  // eslint-disable-next-line no-console
+  console.log(`[${scanId}] PARSING_START`);
   const jsonCandidate = parseJsonLoose(ocrText);
   if (jsonCandidate && Array.isArray(jsonCandidate.items) && jsonCandidate.items.length > 0) {
     rawItems = jsonCandidate.items;
     supplier = jsonCandidate.supplier || null;
     date = jsonCandidate.date || null;
+    total = typeof jsonCandidate.total === 'number' ? jsonCandidate.total : null;
     // eslint-disable-next-line no-console
-    console.log(`[INVOICE_SCAN] OCR JSON extracted ${rawItems.length} items`);
+    console.log(`[${scanId}] PARSING_COMPLETE (JSON extracted ${rawItems.length} items)`);
   } else if (ocrText && ocrText.length > 0) {
     const deterministicParsed = parseInvoiceText(ocrText);
     rawItems = deterministicParsed.items;
     supplier = deterministicParsed.supplier;
     date = deterministicParsed.date;
+    total = deterministicParsed.total;
     // eslint-disable-next-line no-console
-    console.log(`[INVOICE_SCAN] OCR parser extracted ${rawItems.length} items`);
+    console.log(`[${scanId}] PARSING_COMPLETE (Rule-based extracted ${rawItems.length} items, total=${total})`);
   }
 
   // Step 3: Direct Vision fallback ONLY IF OCR returned completely empty/unusable items
@@ -466,10 +479,10 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
     const ollamaUrl = baseUrl.replace(/\/v1\/?$/, '');
     const visionStart = Date.now();
     // eslint-disable-next-line no-console
-    console.log(`[INVOICE_SCAN] Falling back to vision model: ${visionModel}`);
+    console.log(`[${scanId}] VISION_FALLBACK_START model=${visionModel}`);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 50000);
+    const timeoutId = setTimeout(() => controller.abort(), 40000);
 
     try {
       const response = await fetch(`${ollamaUrl}/api/generate`, {
@@ -477,7 +490,7 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: visionModel,
-          prompt: 'Extract all products, quantities and prices from this invoice or receipt image into JSON. Format: {"items": [{"name": "item name", "quantity": 1, "unitPrice": 100}], "supplier": "Store Name", "date": "YYYY-MM-DD"}. Return JSON only.',
+          prompt: 'Extract all products, quantities and prices from this invoice or receipt image into JSON. Format: {"items": [{"name": "item name", "quantity": 1, "unitPrice": 100}], "supplier": "Store Name", "date": "YYYY-MM-DD", "total": 100}. Return JSON only.',
           images: [cleanBase64],
           stream: false,
           format: 'json',
@@ -488,21 +501,22 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
       if (response.ok) {
         const data = await response.json();
         // eslint-disable-next-line no-console
-        console.log(`[INVOICE_SCAN] Vision model responded in ${Date.now() - visionStart}ms`);
+        console.log(`[${scanId}] VISION_FALLBACK_COMPLETE elapsedMs=${Date.now() - visionStart}`);
         const parsed = parseJsonLoose(data.response || '{}');
         if (parsed) {
           if (Array.isArray(parsed.items) && parsed.items.length > 0) rawItems = parsed.items;
           if (parsed.supplier && !supplier) supplier = parsed.supplier;
           if (parsed.date && !date) date = parsed.date;
+          if (typeof parsed.total === 'number' && total === null) total = parsed.total;
         }
       } else {
         const errText = await response.text().catch(() => '');
         // eslint-disable-next-line no-console
-        console.warn(`[INVOICE_SCAN] Vision model HTTP error ${response.status}: ${errText}`);
+        console.warn(`[${scanId}] VISION_FALLBACK_HTTP_ERROR status=${response.status} msg=${errText}`);
       }
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn(`[INVOICE_SCAN] Vision model failed: ${err.message}`);
+      console.warn(`[${scanId}] VISION_FALLBACK_FAILED error=${err.message}`);
     } finally {
       clearTimeout(timeoutId);
     }
@@ -518,15 +532,17 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
       unitPrice: Math.max(0, Number(item.unitPrice) || 0),
     }));
 
+  // eslint-disable-next-line no-console
+  console.log(`[${scanId}] VALIDATION_COMPLETE validItems=${items.length}`);
+
   if (items.length === 0) {
+    // eslint-disable-next-line no-console
+    console.error(`[${scanId}] ERROR stage=VALIDATION elapsedMs=${Date.now() - scanStart} message=No items extracted`);
     throw ApiError.internal(
       'Unable to extract invoice items from the image. Please ensure the invoice is clear and well-lit, or add products manually.',
       'AI_REQUEST_FAILED',
     );
   }
-
-  // eslint-disable-next-line no-console
-  console.log(`[INVOICE_SCAN] Extracted ${items.length} validated items for company ${companyId}`);
 
   let logId = null;
   try {
@@ -534,20 +550,25 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType }) {
       companyId,
       userId,
       type: 'invoice_scan',
-      inputRef: 'invoice photo upload',
-      result: { items, supplier: supplier ?? null, date: date ?? null },
+      inputRef: `invoice scan [${scanId}]`,
+      result: { items, supplier: supplier ?? null, date: date ?? null, total: total ?? null },
       confirmed: false,
     });
   } catch (logErr) {
     // eslint-disable-next-line no-console
-    console.warn('[INVOICE_SCAN] logAi failed:', logErr.message);
+    console.warn(`[${scanId}] DB_LOG_FAILED: ${logErr.message}`);
   }
+
+  // eslint-disable-next-line no-console
+  console.log(`[${scanId}] SUCCESS totalMs=${Date.now() - scanStart} itemsCount=${items.length}`);
 
   return {
     logId,
+    scanId,
     items,
     supplier: supplier ?? null,
     date: date ?? null,
+    total: total ?? null,
     ocrText: ocrText || null,
   };
 }
