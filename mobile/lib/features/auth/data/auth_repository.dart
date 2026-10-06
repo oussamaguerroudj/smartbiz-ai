@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/session.dart';
+import '../../../core/sync/sync_service.dart';
 import 'companies_repository.dart';
 
 class AuthRepository {
@@ -121,17 +123,36 @@ class AuthRepository {
     await logout();
   }
 
-  /// The only place a session should end during normal use — see
-  /// SessionNotifier.clear() for why this is intentionally distinct
-  /// from what api_client.dart does on a merely-expired access token.
+  /// Ends the current session. SQLite data is intentionally NOT deleted.
+  ///
+  /// DATA ISOLATION is achieved through company_id scoping in every
+  /// repository's _fetchFromLocal(), not by wiping the database.
+  ///
+  /// When Account A logs out:
+  ///   - Session is cleared (companyId becomes null)
+  ///   - All repository reads check companyId == null → return []
+  ///   - A's local data survives in SQLite tagged with A's companyId
+  ///
+  /// When Account B logs in next:
+  ///   - Session is set to B's companyId
+  ///   - All repository reads return only WHERE company_id = B's id
+  ///   - A's data is invisible to B (still in DB, not deleted)
+  ///
+  /// When A logs back in:
+  ///   - A's rows reappear because company_id = A matches again
+  ///   - A's offline work and sync queue are fully preserved
   Future<void> logout() async {
     await _ref.read(sessionProvider.notifier).clear();
     _ref.invalidate(companyInfoProvider);
+    // DO NOT call AppDatabase.instance.clearAllData() here.
+    // Isolation is enforced by company_id scoping in all repository reads.
   }
 
   Future<void> _applySession(Map<String, dynamic> data) async {
     await _ref.read(sessionProvider.notifier).apply(data);
     _ref.invalidate(companyInfoProvider);
+    // Background pull all company data into local SQLite so app is instantly ready offline!
+    unawaited(_ref.read(syncServiceProvider.notifier).pullInitialData());
   }
 }
 

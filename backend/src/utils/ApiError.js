@@ -30,6 +30,10 @@ class ApiError extends Error {
     return new ApiError(409, code, message);
   }
 
+  static tooManyRequests(message = 'Too many requests, please try again later', code = 'RATE_LIMIT_EXCEEDED') {
+    return new ApiError(429, code, message);
+  }
+
   static serviceUnavailable(message = 'Service unavailable', code = 'SERVICE_UNAVAILABLE') {
     return new ApiError(503, code, message);
   }

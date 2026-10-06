@@ -1,15 +1,15 @@
 const express = require('express');
 const controller = require('./ai.controller');
 const { validateScanInvoice, validateChat, validateFeedback } = require('./ai.validators');
-const { authMiddleware } = require('../../middlewares/auth.middleware');
+const { authMiddleware, requireRole } = require('../../middlewares/auth.middleware');
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 router.get('/health', controller.health);
 router.get('/config', controller.getConfig);
-router.put('/config', controller.updateConfig);
-
-router.use(authMiddleware);
+router.put('/config', requireRole('owner'), controller.updateConfig);
 
 router.post('/invoices/scan', validateScanInvoice, controller.scanInvoice);
 router.post('/ocr', validateScanInvoice, controller.extractOcr);

@@ -32,6 +32,7 @@ dependencies:
   # placeholder, genuinely new infrastructure. Requires `flutter pub get`.
   file_picker: ^8.1.2
   printing: ^5.13.3
+  pdf: ^3.11.1
   # Persistent, secure session storage (Keychain on iOS, Keystore-backed
   # EncryptedSharedPreferences on Android) — fixes the "asked to verify
   # again after closing the app" bug: tokens now survive app restarts.
@@ -39,6 +40,12 @@ dependencies:
   # Lightweight persisted preferences — used for the chosen app language
   # (and whether the first-launch language picker has been shown yet).
   shared_preferences: ^2.3.2
+  # Offline-First local database & synchronization
+  sqflite: ^2.3.3+1
+  sqflite_common_ffi: ^2.3.3
+  path: ^1.9.0
+  connectivity_plus: ^6.0.5
+  uuid: ^4.4.0
 
 dev_dependencies:
   flutter_test:

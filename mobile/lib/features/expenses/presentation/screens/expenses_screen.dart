@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -253,12 +254,12 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left),
+                    icon: const PreviousChevron(),
                     onPressed: () => setDialogState(() => tempYear--),
                   ),
                   Text('$tempYear', style: const TextStyle(fontWeight: FontWeight.bold)),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right),
+                    icon: const NextChevron(),
                     onPressed: () => setDialogState(() => tempYear++),
                   ),
                 ],
@@ -323,7 +324,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
         break;
     }
     final days = end.difference(_periodStart).inDays + 1;
-    final fmt = (DateTime d) =>
+    String fmt(DateTime d) =>
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
     return '${fmt(_periodStart)} → ${fmt(end)} (${l10n.expenseCoversDays(days)})';
   }
@@ -463,7 +464,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                       loading: () => const LinearProgressIndicator(),
                       error: (e, _) => Text(l10n.errorPrefix(e.toString())),
                       data: (employees) => DropdownButtonFormField<String>(
-                        value: _selectedEmployeeId,
+                        initialValue: _selectedEmployeeId,
                         decoration: InputDecoration(
                           labelText: l10n.chooseEmployee,
                           border: const OutlineInputBorder(),
@@ -515,7 +516,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
               ),
               const SizedBox(height: AppSpacing.sm),
               DropdownButtonFormField<ExpensePeriodType>(
-                value: _periodType,
+                initialValue: _periodType,
                 decoration: InputDecoration(labelText: l10n.expensePeriodTypeLabel),
                 items: [
                   DropdownMenuItem(value: ExpensePeriodType.oneTime, child: Text(l10n.periodOneTime)),
@@ -700,7 +701,7 @@ class _EditExpenseSheetState extends ConsumerState<_EditExpenseSheet> {
             ),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<ExpensePeriodType>(
-              value: _periodType,
+              initialValue: _periodType,
               decoration: InputDecoration(labelText: l10n.expensePeriodTypeLabel),
               items: [
                 DropdownMenuItem(value: ExpensePeriodType.oneTime, child: Text(l10n.periodOneTime)),

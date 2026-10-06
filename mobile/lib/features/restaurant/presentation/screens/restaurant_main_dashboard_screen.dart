@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -17,6 +18,8 @@ import 'restaurant_orders_screen.dart';
 import 'restaurant_tables_screen.dart';
 import 'restaurant_menu_screen.dart';
 import 'restaurant_reservations_screen.dart';
+import 'restaurant_order_detail_screen.dart';
+import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 
 /// Restaurant specialization of the MAIN Dashboard tab (business-
 /// specialization brief Ch. 17; follows SPECIALIZED_MODULES.md §3/§6's
@@ -32,9 +35,6 @@ import 'restaurant_reservations_screen.dart';
 ///   - Body: active-orders snapshot (kitchen/table status) instead of
 ///     the sales trend chart, and restaurant quick actions instead of
 ///     "New Sale" / "Scan Invoice".
-final restaurantDashboardProvider = FutureProvider.autoDispose((ref) {
-  return ref.read(restaurantRepositoryProvider).dashboard();
-});
 
 const double _kKpiCardHeight = 96;
 const double _kKpiOverlap = 32;
@@ -97,6 +97,13 @@ class RestaurantMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const FadeSlideIn(
+                      delay: Duration(milliseconds: 30),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: DashboardPagesSection(),
+                      ),
+                    ),
                     // Second KPI row — tables / reservations / outstanding
                     // payments, same money-card / stat-card visual
                     // language as Clinic's own second row.
@@ -380,7 +387,7 @@ class _ActiveOrdersCard extends StatelessWidget {
             children: [
               Text(AppLocalizations.of(context)!.activeOrdersLabel, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const ForwardChevron(),
                 tooltip: AppLocalizations.of(context)!.ordersTitle,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const RestaurantOrdersScreen()),
@@ -451,25 +458,48 @@ class _OrderLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = restaurantOrderStatusColor(order.status);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(Icons.restaurant_outlined, color: color, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '#${order.orderNumber.toString().padLeft(2, '0')} · ${order.tableName ?? 'Takeaway'}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Text(restaurantOrderStatusLabel(order.status), style: AppTypography.caption(color)),
-            ],
-          ),
+    final typeLabel = order.tableName ??
+        (order.orderType == 'dine_in'
+            ? l10n.dineInOption
+            : order.orderType == 'delivery'
+                ? l10n.deliveryOption
+                : l10n.takeawayOption);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusInput),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RestaurantOrderDetailScreen(orderId: order.id),
         ),
-      ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.restaurant_outlined, color: color, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '#${order.orderNumber.toString().padLeft(2, '0')} · $typeLabel${order.customerName != null && order.customerName!.isNotEmpty ? ' (${order.customerName})' : ''}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(restaurantOrderStatusLabel(order.status), style: AppTypography.caption(color)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            restaurantPaymentBadge(order, l10n),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -54,21 +54,92 @@ function getAiConfig() {
   return { ...runtimeAiConfig };
 }
 
+function isAllowedAiBaseUrl(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return false;
+  }
+
+  // Reject userinfo tricks (e.g. http://user:pass@localhost:11434) and query/hash fragments
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    return false;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+
+  // Never allow cloud metadata or link-local SSRF targets
+  if (
+    host === '169.254.169.254' ||
+    host.startsWith('169.254.') ||
+    host === 'metadata.google.internal' ||
+    host === '0.0.0.0'
+  ) {
+    return false;
+  }
+
+  // Allow configured env host/port or local inference hosts on AI inference ports only
+  let configuredHost = 'localhost';
+  let configuredPort = '11434';
+  try {
+    const envUrl = new URL(env.ai.baseUrl);
+    configuredHost = envUrl.hostname.toLowerCase();
+    if (envUrl.port) {
+      configuredPort = envUrl.port;
+    }
+  } catch (_) {}
+
+  const allowedHosts = new Set([
+    configuredHost,
+    'localhost',
+    '127.0.0.1',
+    '::1',
+    '[::1]',
+    'host.docker.internal',
+    'ollama',
+    'vllm',
+  ]);
+
+  if (!allowedHosts.has(host)) {
+    return false;
+  }
+
+  const allowedPorts = new Set([configuredPort, '11434', '8000']);
+  const effectivePort = parsed.port || (parsed.protocol === 'https:' ? '443' : '80');
+  if (!allowedPorts.has(effectivePort)) {
+    return false;
+  }
+
+  return true;
+}
+
 function updateRuntimeAiConfig(updates = {}) {
   if (typeof updates.enabled === 'boolean') {
     runtimeAiConfig.enabled = updates.enabled;
   }
   if (typeof updates.baseUrl === 'string' && updates.baseUrl.trim().length > 0) {
-    runtimeAiConfig.baseUrl = updates.baseUrl.trim();
+    const candidate = updates.baseUrl.trim();
+    if (!isAllowedAiBaseUrl(candidate)) {
+      throw ApiError.badRequest(
+        'Invalid or disallowed AI baseUrl host',
+        'INVALID_AI_BASE_URL',
+      );
+    }
+    runtimeAiConfig.baseUrl = candidate;
     cachedClient = null;
   }
-  if (typeof updates.ocrModel === 'string') {
+  if (typeof updates.ocrModel === 'string' && updates.ocrModel.trim().length <= 120) {
     runtimeAiConfig.ocrModel = updates.ocrModel.trim();
   }
-  if (typeof updates.visionModel === 'string') {
+  if (typeof updates.visionModel === 'string' && updates.visionModel.trim().length <= 120) {
     runtimeAiConfig.visionModel = updates.visionModel.trim();
   }
-  if (typeof updates.chatModel === 'string') {
+  if (typeof updates.chatModel === 'string' && updates.chatModel.trim().length <= 120) {
     runtimeAiConfig.chatModel = updates.chatModel.trim();
   }
   return { ...runtimeAiConfig };

@@ -1,6 +1,6 @@
-/// Supérette / General Store specialized module domain models
-/// (business-specialization brief Ch. 16). Same one-file convention as
-/// pharmacy_models.dart / clinic_models.dart / restaurant_models.dart.
+// Supérette / General Store specialized module domain models
+// (business-specialization brief Ch. 16). Same one-file convention as
+// pharmacy_models.dart / clinic_models.dart / restaurant_models.dart.
 
 double _toDouble(dynamic v) {
   if (v == null) return 0;

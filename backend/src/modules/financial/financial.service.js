@@ -396,7 +396,7 @@ async function calculateFinancials(companyId, params = {}) {
               e.salary_period,
               e.duration
        FROM expenses e
-       LEFT JOIN employees emp ON emp.id = e.employee_id
+       LEFT JOIN employees emp ON emp.id = e.employee_id AND emp.company_id = e.company_id
        WHERE e.company_id = $1 AND e.deleted_at IS NULL
          AND e.expense_date BETWEEN $2::date AND $3::date
        ORDER BY e.expense_date DESC, e.created_at DESC

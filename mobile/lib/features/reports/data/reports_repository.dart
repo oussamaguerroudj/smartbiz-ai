@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/database/local_financial_calculator.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/session.dart';
 import '../domain/report.dart';
 
 class ReportFilter {
@@ -34,9 +36,10 @@ class ReportFilter {
 }
 
 class ReportsRepository {
-  final ApiClient _client;
+  ReportsRepository(this._ref);
+  final Ref _ref;
 
-  ReportsRepository(this._client);
+  String? get _companyId => _ref.read(sessionProvider).companyId;
 
   Future<ReportData> getReport({
     required String period,
@@ -44,23 +47,45 @@ class ReportsRepository {
     String? month,
     int? year,
   }) async {
-    final query = <String, String>{'period': period};
-    if (date != null && date.isNotEmpty) query['date'] = date;
-    if (month != null && month.isNotEmpty) query['month'] = month;
-    if (year != null) query['year'] = year.toString();
+    final companyId = _companyId;
 
-    final response = await _client.get(
-      '/reports',
-      query: query,
-    );
-    final data = response['data'] as Map<String, dynamic>;
-    return ReportData.fromJson(data);
+    // 1. Calculate locally from SQLite first (guarantees offline support!)
+    // TENANT ISOLATION: every query in calculateReport is scoped by companyId.
+    // Returns an empty report when companyId is null (not logged in).
+    ReportData? localReport;
+    try {
+      localReport = await LocalFinancialCalculator.calculateReport(
+        period: period,
+        companyId: companyId ?? '',
+        date: date,
+        month: month,
+        year: year,
+      );
+    } catch (_) {}
+
+    // 2. If online, try fetching authoritative server report
+    try {
+      final client = _ref.read(apiClientProvider);
+      final query = <String, String>{'period': period};
+      if (date != null && date.isNotEmpty) query['date'] = date;
+      if (month != null && month.isNotEmpty) query['month'] = month;
+      if (year != null) query['year'] = year.toString();
+
+      final response = await client.get('/reports', query: query);
+      final data = response['data'] as Map<String, dynamic>;
+      return ReportData.fromJson(data);
+    } catch (e) {
+      // If server is unreachable or offline, return local report
+      if (localReport != null) {
+        return localReport;
+      }
+      rethrow;
+    }
   }
 }
 
 final reportsRepositoryProvider = Provider<ReportsRepository>((ref) {
-  final client = ref.watch(apiClientProvider);
-  return ReportsRepository(client);
+  return ReportsRepository(ref);
 });
 
 final reportProvider =

@@ -120,6 +120,11 @@ const getOrderDetail = asyncHandler(async (req, res) => {
   res.json({ data: order });
 });
 
+const updateOrder = asyncHandler(async (req, res) => {
+  const order = await service.updateOrder(req.user.companyId, req.params.id, req.body);
+  res.json({ data: order });
+});
+
 const getActiveOrders = asyncHandler(async (req, res) => {
   res.json({ data: await service.getActiveOrders(req.user.companyId) });
 });
@@ -197,6 +202,7 @@ module.exports = {
   updateMenuItem,
   deleteMenuItem,
   createOrder,
+  updateOrder,
   getOrderDetail,
   getActiveOrders,
   listOrders,

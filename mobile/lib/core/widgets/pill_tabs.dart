@@ -82,9 +82,11 @@ class _PillTabsState extends State<PillTabs> {
   Widget build(BuildContext context) {
     final ready = _widths.length == widget.labels.length && _widths.isNotEmpty;
 
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
         color: const Color(0xFFEEF0F8),
         borderRadius: BorderRadius.circular(11),
       ),
@@ -135,6 +137,7 @@ class _PillTabsState extends State<PillTabs> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

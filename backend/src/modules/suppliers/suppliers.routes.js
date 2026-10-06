@@ -237,4 +237,8 @@ router.post('/', createHandler);
 router.put('/:id', updateHandler);
 router.delete('/:id', deleteHandler);
 
+router.createSupplier = createSupplier;
+router.updateSupplier = updateSupplier;
+router.deleteSupplier = deleteSupplier;
+
 module.exports = router;

@@ -2114,4 +2114,338 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get yearlyReportTitle => 'Rapport annuel';
+
+  @override
+  String get connectionOnline => 'Connecté';
+
+  @override
+  String get connectionOffline =>
+      'Hors ligne — Données enregistrées sur cet appareil';
+
+  @override
+  String get connectionServerUnavailable =>
+      'Serveur indisponible — Mode hors ligne';
+
+  @override
+  String syncingPending(Object count) {
+    return 'Synchronisation de $count opérations en attente...';
+  }
+
+  @override
+  String get syncSuccess => 'Toutes les opérations sont synchronisées';
+
+  @override
+  String get syncFailed =>
+      'Certaines opérations n\'ont pas pu être synchronisées';
+
+  @override
+  String get syncNow => 'Synchroniser maintenant';
+
+  @override
+  String get pendingOperations => 'Opérations en attente';
+
+  @override
+  String get syncedOperations => 'Opérations synchronisées';
+
+  @override
+  String get failedOperations => 'Opérations ayant échoué';
+
+  @override
+  String get syncDetails => 'Détails de synchronisation';
+
+  @override
+  String lastSynced(Object time) {
+    return 'Dernière synchro: $time';
+  }
+
+  @override
+  String get noPendingOperations => 'Aucune opération en attente';
+
+  @override
+  String get firstTimeAuthInternetRequired =>
+      'Une connexion Internet est requise pour la première authentification du compte.';
+
+  @override
+  String get firstTimeRegisterInternetRequired =>
+      'Une connexion Internet est requise pour créer un nouveau compte.';
+
+  @override
+  String activeClients(Object count) {
+    return 'Clients en cours ($count)';
+  }
+
+  @override
+  String get newClientAction => '+ Nouveau client';
+
+  @override
+  String get holdCartAction => 'Mettre en attente';
+
+  @override
+  String get resumeCartAction => 'Reprendre';
+
+  @override
+  String get clearCartAction => 'Vider le panier';
+
+  @override
+  String get cartOnHoldStatus => 'En attente';
+
+  @override
+  String cartItemCount(Object count) {
+    return '$count articles';
+  }
+
+  @override
+  String get openCartsTitle => 'Paniers ouverts';
+
+  @override
+  String get newCartAction => '+ Nouveau panier';
+
+  @override
+  String get noOpenCarts =>
+      'Aucun panier ouvert — appuyez sur + pour commencer';
+
+  @override
+  String cartLabel(Object index) {
+    return 'Panier $index';
+  }
+
+  @override
+  String cartProductCount(Object count) {
+    return '$count produits';
+  }
+
+  @override
+  String get deleteCartTooltip => 'Supprimer le panier';
+
+  @override
+  String get deleteCartTitle => 'Supprimer le panier';
+
+  @override
+  String deleteCartConfirm(Object name) {
+    return 'Supprimer le panier de $name ? Cette action est irréversible.';
+  }
+
+  @override
+  String orderNumberLabel(Object number) {
+    return 'COMMANDE #$number';
+  }
+
+  @override
+  String get dineInOption => 'Sur place';
+
+  @override
+  String get takeawayOption => 'À emporter';
+
+  @override
+  String get deliveryOption => 'Livraison';
+
+  @override
+  String get paymentStatusPaidBadge => 'PAYÉ';
+
+  @override
+  String get paymentStatusUnpaidBadge => 'IMPAYÉ';
+
+  @override
+  String get paymentStatusPartiallyPaidBadge => 'PARTIELLEMENT PAYÉ';
+
+  @override
+  String get orderNotReadyMessage => 'La commande n\'est pas encore prête.';
+
+  @override
+  String get paymentRequiredMessage =>
+      'Le paiement est requis avant de terminer la commande.';
+
+  @override
+  String get completeOrderAction => 'Terminer la commande';
+
+  @override
+  String get payNowAction => 'Payer maintenant';
+
+  @override
+  String get payFullAmountAction => 'Payer la totalité';
+
+  @override
+  String get partialPaymentAction => 'Paiement partiel';
+
+  @override
+  String get remainingAmountLabel => 'Reste à payer';
+
+  @override
+  String get paymentCompletedTitle => 'Paiement';
+
+  @override
+  String get tableStatusAvailable => 'DISPONIBLE';
+
+  @override
+  String get tableStatusOccupied => 'OCCUPÉE';
+
+  @override
+  String get tableStatusOrderReady => 'COMMANDE PRÊTE';
+
+  @override
+  String get tableStatusPaymentPending => 'EN ATTENTE DE PAIEMENT';
+
+  @override
+  String get tableStatusCompleted => 'TERMINÉE';
+
+  @override
+  String get switchOrderAction => 'Changer de commande';
+
+  @override
+  String elapsedMinutes(Object minutes) {
+    return 'Il y a $minutes min';
+  }
+
+  @override
+  String get elapsedJustNow => 'À l\'instant';
+
+  @override
+  String get preparationStatusLabel => 'Préparation';
+
+  @override
+  String get orderTypeLabel => 'Type de commande';
+
+  @override
+  String get anonymousWalkInCustomer => 'Client de passage';
+
+  @override
+  String get dashboardPagesTitle => 'Pages';
+
+  @override
+  String get allPagesTitle => 'Toutes les pages';
+
+  @override
+  String get allPagesSubtitle => 'Toutes les pages et modules de gestion';
+
+  @override
+  String get extraPagesTitle => 'Pages supplémentaires';
+
+  @override
+  String get salesPosTitle => 'Point de vente';
+
+  @override
+  String get cashPaymentMethod => 'Espèces';
+
+  @override
+  String get cardPaymentMethod => 'Carte bancaire';
+
+  @override
+  String get editItemTooltip => 'Modifier l\'article';
+
+  @override
+  String get previousDayTooltip => 'Jour précédent';
+
+  @override
+  String get nextDayTooltip => 'Jour suivant';
+
+  @override
+  String get previousMonthTooltip => 'Mois précédent';
+
+  @override
+  String get nextMonthTooltip => 'Mois suivant';
+
+  @override
+  String get previousYearTooltip => 'Année précédente';
+
+  @override
+  String get nextYearTooltip => 'Année suivante';
+
+  @override
+  String customerHasUnpaidDebt(Object amount) {
+    return 'Impossible de supprimer un client avec une dette impayée ($amount DZD)';
+  }
+
+  @override
+  String customerDeletedSuccess(Object name) {
+    return 'Client « $name » supprimé';
+  }
+
+  @override
+  String employeeDeletedSuccess(Object name) {
+    return 'Employé « $name » supprimé';
+  }
+
+  @override
+  String supplierDeletedSuccess(Object name) {
+    return 'Fournisseur « $name » supprimé';
+  }
+
+  @override
+  String get invalidBarcodeChecksum =>
+      'Somme de contrôle du code-barres invalide (corrompu ou illisible)';
+
+  @override
+  String get invalidBarcodeFormat => 'Format de code-barres non valide';
+
+  @override
+  String get configureServerUrlHint =>
+      'Configurer l\'adresse de l\'API backend :';
+
+  @override
+  String get appTagline => 'Gestion d\'entreprise propulsée par l\'IA';
+
+  @override
+  String get clientPhoneNumberLabel => 'Numéro de téléphone du client';
+
+  @override
+  String get clientPhoneRequired =>
+      'Le numéro de téléphone est obligatoire pour la livraison';
+
+  @override
+  String get invalidPhoneNumber => 'Format de numéro de téléphone invalide';
+
+  @override
+  String get deliveryAddressLabel => 'Adresse de livraison';
+
+  @override
+  String get deliveryAddressHint => 'Rue, bâtiment, étage, appartement...';
+
+  @override
+  String get deliveryAddressRequired =>
+      'L\'adresse de livraison est obligatoire';
+
+  @override
+  String get noTableSelected => 'Aucune table (facultatif)';
+
+  @override
+  String get selectRestaurantTable => 'Table de restaurant (facultatif)';
+
+  @override
+  String assignedTableLabel(Object name) {
+    return 'Table : $name';
+  }
+
+  @override
+  String get editAppointmentTitle => 'Modifier le rendez-vous';
+
+  @override
+  String get updateAppointmentAction => 'Mettre à jour le rendez-vous';
+
+  @override
+  String get editReservationTitle => 'Modifier la réservation';
+
+  @override
+  String get updateReservationAction => 'Mettre à jour la réservation';
+
+  @override
+  String get callClientTooltip => 'Appeler le client';
+
+  @override
+  String get copyPhoneTooltip => 'Copier le numéro de téléphone';
+
+  @override
+  String get phoneCopiedMessage =>
+      'Numéro de téléphone copié dans le presse-papier';
+
+  @override
+  String get selectExistingCustomerHint => 'Ou sélectionner un client existant';
+
+  @override
+  String get editOrderTitle => 'Modifier la commande';
+
+  @override
+  String get updateOrderAction => 'Mettre à jour la commande';
+
+  @override
+  String get orderUpdatedMessage => 'Commande mise à jour avec succès';
 }

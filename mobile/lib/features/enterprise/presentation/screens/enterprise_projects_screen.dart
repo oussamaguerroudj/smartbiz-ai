@@ -232,7 +232,7 @@ class _AddProjectSheetState extends ConsumerState<_AddProjectSheet> {
                 Text(AppLocalizations.of(context)!.clientOptionalLabel, style: Theme.of(context).textTheme.labelLarge),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String?>(
-                  value: _customerId,
+                  initialValue: _customerId,
                   isExpanded: true,
                   items: [
                     DropdownMenuItem<String?>(value: null, child: Text(AppLocalizations.of(context)!.noClientOption)),

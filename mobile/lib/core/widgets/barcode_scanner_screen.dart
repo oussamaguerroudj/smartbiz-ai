@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../utils/barcode_validator.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Shared full-screen barcode scanner — used by both the Sales page
@@ -37,40 +38,77 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   bool _handled = false;
 
   void _onDetect(BarcodeCapture capture) {
-    if (_handled) return;
+    if (_handled || !mounted) return;
     final barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
     final value = barcodes.first.rawValue;
     if (value == null || value.trim().isEmpty) return;
 
+    final trimmed = value.trim();
+    // Validate barcode checksum and structure (e.g., EAN-13, EAN-8, UPC-A).
+    // Reject hallucinated/corrupt frame reads so scanner continues on clean frame.
+    if (!BarcodeValidator.isValid(trimmed)) return;
+
     _handled = true;
-    Navigator.of(context).pop(value.trim());
+    if (mounted) {
+      Navigator.of(context).pop(trimmed);
+    }
   }
 
   Future<void> _enterManually() async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
+    String? errorText;
+
     final code = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.manualBarcodeEntryTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.text,
-          decoration: const InputDecoration(isDense: true),
-          onSubmitted: (v) => Navigator.of(dialogContext).pop(v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(MaterialLocalizations.of(dialogContext).cancelButtonLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
-            child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
-          ),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          void submit() {
+            final text = controller.text.trim();
+            if (text.isEmpty) {
+              Navigator.of(dialogContext).pop();
+              return;
+            }
+            final status = BarcodeValidator.validate(text);
+            if (status == BarcodeValidationStatus.valid) {
+              Navigator.of(dialogContext).pop(text);
+            } else if (status == BarcodeValidationStatus.invalidChecksum) {
+              setDialogState(() => errorText = l10n.invalidBarcodeChecksum);
+            } else {
+              setDialogState(() => errorText = l10n.invalidBarcodeFormat);
+            }
+          }
+
+          return AlertDialog(
+            title: Text(l10n.manualBarcodeEntryTitle),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                isDense: true,
+                errorText: errorText,
+              ),
+              onSubmitted: (_) => submit(),
+              onChanged: (_) {
+                if (errorText != null) {
+                  setDialogState(() => errorText = null);
+                }
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(MaterialLocalizations.of(dialogContext).cancelButtonLabel),
+              ),
+              FilledButton(
+                onPressed: submit,
+                child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
+              ),
+            ],
+          );
+        },
       ),
     );
     controller.dispose();
@@ -81,6 +119,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
   @override
   void dispose() {
+    _handled = true;
     _controller.dispose();
     super.dispose();
   }

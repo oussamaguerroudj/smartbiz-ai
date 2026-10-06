@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../settings/data/ai_settings_provider.dart';
-import '../../../settings/presentation/screens/ai_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -101,25 +99,6 @@ class AiScannerScreen extends ConsumerWidget {
 
   Future<void> _pickAndScan(BuildContext context, WidgetRef ref, ImageSource source) async {
     final l10n = AppLocalizations.of(context)!;
-    final aiSettings = ref.read(aiSettingsProvider);
-
-    if (!aiSettings.enabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.aiServiceDisabledMessage),
-          action: SnackBarAction(
-            label: l10n.aiSettingsTitle,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AiSettingsScreen()),
-              );
-            },
-          ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-      return;
-    }
 
     XFile? file;
 
@@ -1348,7 +1327,7 @@ class _SalesReviewCard extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             DropdownButtonFormField<String>(
-              value: validProductId,
+              initialValue: validProductId,
               isExpanded: true,
               decoration: InputDecoration(
                 labelText: l10n.matchProductLabel,

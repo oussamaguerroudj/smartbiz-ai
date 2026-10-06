@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/animated_counter.dart';
+import '../../../../core/widgets/directional_chevron.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/mini_bar_chart.dart';
 import '../../../../core/widgets/pill_tabs.dart';
@@ -89,12 +90,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left),
+                    icon: const PreviousChevron(),
                     onPressed: () => setDialogState(() => tempYear--),
                   ),
                   Text('$tempYear', style: const TextStyle(fontWeight: FontWeight.bold)),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right),
+                    icon: const NextChevron(),
                     onPressed: () => setDialogState(() => tempYear++),
                   ),
                 ],
@@ -525,8 +526,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left, size: 22),
-              tooltip: 'Previous Day',
+              icon: const PreviousChevron(size: 22),
+              tooltip: l10n.previousDayTooltip,
               onPressed: _previousDay,
             ),
             Expanded(
@@ -554,8 +555,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.chevron_right, size: 22),
-              tooltip: 'Next Day',
+              icon: const NextChevron(size: 22),
+              tooltip: l10n.nextDayTooltip,
               onPressed: _nextDay,
             ),
           ],
@@ -575,8 +576,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left, size: 22),
-              tooltip: 'Previous Month',
+              icon: const PreviousChevron(size: 22),
+              tooltip: l10n.previousMonthTooltip,
               onPressed: _previousMonth,
             ),
             Expanded(
@@ -604,8 +605,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.chevron_right, size: 22),
-              tooltip: 'Next Month',
+              icon: const NextChevron(size: 22),
+              tooltip: l10n.nextMonthTooltip,
               onPressed: _nextMonth,
             ),
           ],
@@ -625,8 +626,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left, size: 22),
-              tooltip: 'Previous Year',
+              icon: const PreviousChevron(size: 22),
+              tooltip: l10n.previousYearTooltip,
               onPressed: _previousYear,
             ),
             Expanded(
@@ -654,8 +655,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.chevron_right, size: 22),
-              tooltip: 'Next Year',
+              icon: const NextChevron(size: 22),
+              tooltip: l10n.nextYearTooltip,
               onPressed: _nextYear,
             ),
           ],

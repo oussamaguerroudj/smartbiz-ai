@@ -18,24 +18,39 @@ async function findAll(companyId) {
   return result.rows;
 }
 
+async function findByClientId(companyId, clientId) {
+  if (!clientId) return null;
+  const result = await query(
+    `SELECT *
+     FROM customers
+     WHERE company_id = $1
+       AND client_id = $2
+       AND deleted_at IS NULL`,
+    [companyId, clientId],
+  );
+  return result.rows[0] || null;
+}
+
 async function create(
   companyId,
   {
     name,
     phone,
     address,
+    clientId,
   },
 ) {
   const result = await query(
     `INSERT INTO customers
-       (company_id, name, phone, address)
-     VALUES ($1, $2, $3, $4)
+       (company_id, name, phone, address, client_id)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
     [
       companyId,
       name,
       phone || null,
       address || null,
+      clientId || null,
     ],
   );
 
@@ -89,7 +104,15 @@ async function createCustomer(companyId, data = {}) {
     name,
     phone,
     address,
+    clientId,
   } = data;
+
+  if (clientId) {
+    const existing = await findByClientId(companyId, clientId);
+    if (existing) {
+      return existing;
+    }
+  }
 
   if (
     typeof name !== 'string' ||
@@ -144,6 +167,7 @@ async function createCustomer(companyId, data = {}) {
     address: typeof address === 'string'
       ? address.trim()
       : address,
+    clientId,
   });
 }
 

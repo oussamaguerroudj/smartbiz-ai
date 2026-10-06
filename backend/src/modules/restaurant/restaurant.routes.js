@@ -45,6 +45,8 @@ router.post('/orders', validateCreateOrder, controller.createOrder);
 router.get('/orders', controller.listOrders);
 router.get('/orders/active', controller.getActiveOrders);
 router.get('/orders/:id', controller.getOrderDetail);
+router.put('/orders/:id', controller.updateOrder);
+router.patch('/orders/:id', controller.updateOrder);
 router.patch('/orders/:id/status', controller.updateOrderStatus);
 router.post('/orders/:id/payments', validateRecordPayment, controller.recordPayment);
 router.post('/orders/:id/refund', controller.refundOrder);

@@ -10,13 +10,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_exception.dart';
 import 'session.dart';
 
+enum RefreshResult {
+  refreshed,
+  invalidToken,
+  networkUnavailable,
+}
+
 class ApiClient {
   ApiClient(this._ref);
 
   final Ref _ref;
 
   static const String defaultBaseUrl = 'http://127.0.0.1:4000/api';
-  static const String lanFallbackBaseUrl = 'http://192.168.1.4:4000/api';
+  static const String lanFallbackBaseUrl = 'http://10.33.166.30:4000/api';
   static String baseUrl = defaultBaseUrl;
 
   static Future<void> initBaseUrl() async {
@@ -26,7 +32,7 @@ class ApiClient {
       if (saved != null && saved.trim().isNotEmpty) {
         baseUrl = saved.trim();
       } else {
-        await detectBestBaseUrl();
+        unawaited(detectBestBaseUrl());
       }
     } catch (_) {}
   }
@@ -47,7 +53,7 @@ class ApiClient {
       } catch (_) {
         // 127.0.0.1 unreachable (no adb reverse), probe LAN IP
         try {
-          final lanReq = await client.getUrl(Uri.parse('http://192.168.1.4:4000/health'));
+          final lanReq = await client.getUrl(Uri.parse('http://10.33.166.30:4000/health'));
           final lanRes = await lanReq.close();
           if (lanRes.statusCode == 200) {
             baseUrl = lanFallbackBaseUrl;
@@ -163,13 +169,17 @@ class ApiClient {
     // session actually get cleared — that's the one case update where
     // logging the user out is actually correct.
     if (response.statusCode == 401 && !isRetryAfterRefresh) {
-      final refreshed = await _tryRefreshSession();
+      final refreshResult = await _tryRefreshSession();
 
-      if (refreshed) {
+      if (refreshResult == RefreshResult.refreshed) {
         return _request(request, timeout: timeout, isRetryAfterRefresh: true);
       }
 
-      await _ref.read(sessionProvider.notifier).clear();
+      if (refreshResult == RefreshResult.invalidToken) {
+        // Explicitly rejected by server (401/403) or missing refresh token: clear session
+        await _ref.read(sessionProvider.notifier).clear();
+      }
+      // If networkUnavailable, do NOT clear session! The user remains authenticated in offline mode.
     }
 
     return response;
@@ -177,14 +187,12 @@ class ApiClient {
 
   /// Directly hits /auth/refresh with http (not through this class's
   /// own get/post helpers) to avoid recursing back into _request.
-  /// Returns false — never throws — for any failure reason (network
-  /// error, expired refresh token, malformed response): the caller
-  /// only needs to know whether it's safe to retry, not why not.
-  Future<bool> _tryRefreshSession() async {
+  /// Distinguishes between network/timeout failure and explicit server rejection.
+  Future<RefreshResult> _tryRefreshSession() async {
     final refreshToken = _ref.read(sessionProvider).refreshToken;
 
     if (refreshToken == null || refreshToken.isEmpty) {
-      return false;
+      return RefreshResult.invalidToken;
     }
 
     try {
@@ -196,17 +204,29 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
 
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        return RefreshResult.invalidToken;
+      }
+
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return false;
+        return RefreshResult.networkUnavailable;
       }
 
       final data = jsonDecode(response.body);
-      if (data is! Map<String, dynamic>) return false;
+      if (data is! Map<String, dynamic>) return RefreshResult.networkUnavailable;
 
       await _ref.read(sessionProvider.notifier).apply(data);
-      return true;
+      return RefreshResult.refreshed;
+    } on SocketException {
+      return RefreshResult.networkUnavailable;
+    } on HttpException {
+      return RefreshResult.networkUnavailable;
+    } on TimeoutException {
+      return RefreshResult.networkUnavailable;
+    } on http.ClientException {
+      return RefreshResult.networkUnavailable;
     } catch (_) {
-      return false;
+      return RefreshResult.networkUnavailable;
     }
   }
 

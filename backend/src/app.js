@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const env = require('./config/env');
 const routes = require('./routes');
 const { errorMiddleware, notFoundMiddleware } = require('./middlewares/error.middleware');
+const { apiGlobalLimiter } = require('./middlewares/rateLimit.middleware');
 
 const app = express();
 
@@ -30,7 +31,7 @@ app.use(express.json({ limit: '20mb' }));
 app.get('/health', (req, res) => res.json({ status: 'ok', env: env.nodeEnv }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', env: env.nodeEnv }));
 
-app.use('/api', routes);
+app.use('/api', apiGlobalLimiter, routes);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

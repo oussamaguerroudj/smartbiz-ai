@@ -4,6 +4,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/session.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
@@ -48,6 +49,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(sessionProvider).isLoggedIn) {
+        widget.onLoginSuccess();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -72,6 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(authRepositoryProvider).login(
             email: _emailController.text.trim(),
@@ -80,15 +93,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) widget.onLoginSuccess();
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-        if (e.code == 'EMAIL_NOT_VERIFIED') {
-          widget.onGoToVerify(_emailController.text.trim());
+        if (e.statusCode == 0 ||
+            e.code == 'CONNECTION_ERROR' ||
+            e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.code == 'CLIENT_ERROR') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.firstTimeAuthInternetRequired)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+          if (e.code == 'EMAIL_NOT_VERIFIED') {
+            widget.onGoToVerify(_emailController.text.trim());
+          }
         }
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.networkError)),
+          SnackBar(content: Text(l10n.firstTimeAuthInternetRequired)),
         );
       }
     } finally {
@@ -292,9 +315,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Configure backend API address:',
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  Text(
+                    l10n.configureServerUrlHint,
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 8),
                   TextField(

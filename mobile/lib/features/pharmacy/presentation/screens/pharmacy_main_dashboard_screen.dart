@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -16,6 +17,7 @@ import '../../../suppliers/presentation/screens/suppliers_screen.dart';
 import '../../../credit/presentation/screens/credit_screen.dart';
 import '../../data/pharmacy_repository.dart';
 import '../../domain/pharmacy_models.dart';
+import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 
 /// Pharmacy specialization of the MAIN Dashboard tab (business-
 /// specialization brief Ch. 15; SPECIALIZED_MODULES.md §3/§11's
@@ -99,6 +101,13 @@ class PharmacyMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const FadeSlideIn(
+                      delay: Duration(milliseconds: 30),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: DashboardPagesSection(),
+                      ),
+                    ),
                     FadeSlideIn(
                       delay: const Duration(milliseconds: 60),
                       child: Row(
@@ -382,7 +391,7 @@ class _AlertsCard extends StatelessWidget {
             children: [
               Text(l10n.stockAlertsTitle, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const ForwardChevron(),
                 tooltip: l10n.productsTitle,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ProductsListScreen()),

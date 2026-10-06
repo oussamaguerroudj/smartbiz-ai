@@ -24,6 +24,54 @@ const MIME_EXTENSIONS = {
 };
 
 /**
+ * Verifies the file's leading magic bytes match its declared MIME type
+ * so disguised executables, HTML/SVG XSS payloads, or polyglot files
+ * cannot be uploaded by spoofing `mimeType`.
+ */
+function hasValidMagicBytes(mimeType, buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 4) {
+    return false;
+  }
+  switch (mimeType) {
+    case 'application/pdf':
+      // %PDF- (25 50 44 46 2D)
+      return (
+        buffer.length >= 5 &&
+        buffer[0] === 0x25 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x44 &&
+        buffer[3] === 0x46 &&
+        buffer[4] === 0x2d
+      );
+    case 'image/jpeg':
+      // FF D8 FF
+      return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    case 'image/png':
+      // 89 50 4E 47 0D 0A 1A 0A
+      return (
+        buffer.length >= 8 &&
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4e &&
+        buffer[3] === 0x47 &&
+        buffer[4] === 0x0d &&
+        buffer[5] === 0x0a &&
+        buffer[6] === 0x1a &&
+        buffer[7] === 0x0a
+      );
+    case 'image/webp':
+      // RIFF....WEBP
+      return (
+        buffer.length >= 12 &&
+        buffer.toString('ascii', 0, 4) === 'RIFF' &&
+        buffer.toString('ascii', 8, 12) === 'WEBP'
+      );
+    default:
+      return false;
+  }
+}
+
+/**
  * Decodes and writes a base64 payload under STORAGE_ROOT/<namespace>/<companyId>/.
  * Returns the RELATIVE storage key (not a URL — never handed to a
  * client directly) and the real decoded byte size, which is what gets
@@ -39,9 +87,18 @@ function saveBase64File({ namespace, companyId, originalName, mimeType, base64Da
     throw err;
   }
 
+  if (typeof base64Data !== 'string' || base64Data.trim().length === 0) {
+    const err = new Error('Invalid base64 file data');
+    err.code = 'INVALID_FILE_DATA';
+    throw err;
+  }
+
+  // Strip optional data URI prefix if present
+  const rawBase64 = base64Data.replace(/^data:[^;]+;base64,/, '').trim();
+
   let buffer;
   try {
-    buffer = Buffer.from(base64Data, 'base64');
+    buffer = Buffer.from(rawBase64, 'base64');
   } catch {
     const err = new Error('Invalid base64 file data');
     err.code = 'INVALID_FILE_DATA';
@@ -60,6 +117,12 @@ function saveBase64File({ namespace, companyId, originalName, mimeType, base64Da
     throw err;
   }
 
+  if (!hasValidMagicBytes(mimeType, buffer)) {
+    const err = new Error('File content does not match declared MIME type');
+    err.code = 'INVALID_FILE_DATA';
+    throw err;
+  }
+
   const dir = path.join(STORAGE_ROOT, namespace, companyId);
   fs.mkdirSync(dir, { recursive: true });
 
@@ -74,12 +137,24 @@ function saveBase64File({ namespace, companyId, originalName, mimeType, base64Da
 }
 
 /** Resolves a storage key back to an absolute path, refusing anything
- * that would escape STORAGE_ROOT (defence in depth — storageKey always
- * comes from our own DB row, never directly from client input, but
- * this keeps the guarantee even if that ever changes). */
+ * that would escape STORAGE_ROOT or traverse across namespaces/tenants. */
 function resolveStoragePath(storageKey) {
-  const absolute = path.join(STORAGE_ROOT, storageKey);
-  if (!absolute.startsWith(STORAGE_ROOT)) {
+  if (
+    typeof storageKey !== 'string' ||
+    storageKey.length === 0 ||
+    storageKey.includes('\0') ||
+    storageKey.includes('..') ||
+    storageKey.includes('\\') ||
+    storageKey.startsWith('/')
+  ) {
+    const err = new Error('Invalid storage key');
+    err.code = 'INVALID_STORAGE_KEY';
+    throw err;
+  }
+  const rootResolved = path.resolve(STORAGE_ROOT);
+  const absolute = path.resolve(rootResolved, storageKey);
+  const rootWithSep = rootResolved.endsWith(path.sep) ? rootResolved : rootResolved + path.sep;
+  if (!absolute.startsWith(rootWithSep) && absolute !== rootResolved) {
     const err = new Error('Invalid storage key');
     err.code = 'INVALID_STORAGE_KEY';
     throw err;
@@ -87,4 +162,4 @@ function resolveStoragePath(storageKey) {
   return absolute;
 }
 
-module.exports = { saveBase64File, resolveStoragePath, MIME_EXTENSIONS };
+module.exports = { saveBase64File, resolveStoragePath, hasValidMagicBytes, MIME_EXTENSIONS };

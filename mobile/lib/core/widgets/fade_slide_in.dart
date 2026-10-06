@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Fades and slides its child up into place once, on first build (or
@@ -28,17 +29,23 @@ class _FadeSlideInState extends State<FadeSlideIn> with SingleTickerProviderStat
     duration: widget.duration,
   );
   late final Animation<double> _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(widget.delay, () {
-      if (mounted) _controller.forward();
-    });
+    if (widget.delay == Duration.zero) {
+      _controller.forward();
+    } else {
+      _timer = Timer(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }

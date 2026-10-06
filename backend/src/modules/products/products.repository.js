@@ -28,7 +28,21 @@ async function findById(companyId, id) {
   return result.rows[0] || null;
 }
 
+const ApiError = require('../../utils/ApiError');
+
+async function verifySupplierBelongsToCompany(companyId, supplierId) {
+  if (!supplierId) return;
+  const res = await query(
+    'SELECT id FROM suppliers WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL',
+    [companyId, supplierId],
+  );
+  if (res.rows.length === 0) {
+    throw ApiError.badRequest('Supplier not found for this company', 'VALIDATION_ERROR');
+  }
+}
+
 async function create(companyId, data) {
+  await verifySupplierBelongsToCompany(companyId, data.supplierId);
   const result = await query(
     `INSERT INTO products
        (company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id, size, color, brand)
@@ -56,6 +70,7 @@ async function create(companyId, data) {
 }
 
 async function update(companyId, id, data) {
+  await verifySupplierBelongsToCompany(companyId, data.supplierId);
   const result = await query(
     `UPDATE products SET
        name = COALESCE($3, name),

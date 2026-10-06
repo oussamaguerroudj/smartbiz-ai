@@ -1,6 +1,6 @@
-/// Pharmacy specialized module domain models (business-specialization
-/// brief Ch. 15). Same one-file convention as clinic_models.dart /
-/// restaurant_models.dart.
+// Pharmacy specialized module domain models (business-specialization
+// brief Ch. 15). Same one-file convention as clinic_models.dart /
+// restaurant_models.dart.
 
 double _toDouble(dynamic v) {
   if (v == null) return 0;
@@ -39,6 +39,7 @@ class PharmacyExpiringProduct {
     this.category,
     required this.quantity,
     required this.expirationDate,
+    this.daysUntilExpiration,
   });
 
   final String id;
@@ -46,6 +47,7 @@ class PharmacyExpiringProduct {
   final String? category;
   final int quantity;
   final DateTime expirationDate;
+  final int? daysUntilExpiration;
 
   bool get isExpired => expirationDate.isBefore(DateTime.now());
 
@@ -55,6 +57,8 @@ class PharmacyExpiringProduct {
         category: json['category'] as String?,
         quantity: json['quantity'] as int,
         expirationDate: DateTime.parse(json['expiration_date'] as String),
+        daysUntilExpiration: json['days_until_expiration'] as int? ??
+            json['daysUntilExpiration'] as int?,
       );
 }
 

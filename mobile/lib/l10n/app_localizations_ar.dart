@@ -2090,4 +2090,331 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get yearlyReportTitle => 'التقرير السنوي';
+
+  @override
+  String get connectionOnline => 'متصل';
+
+  @override
+  String get connectionOffline =>
+      'وضع عدم الاتصال — بياناتك محفوظة على هذا الجهاز';
+
+  @override
+  String get connectionServerUnavailable =>
+      'الخادم غير متاح — يتم العمل محلياً دون اتصال';
+
+  @override
+  String syncingPending(Object count) {
+    return 'جاري مزامنة $count عمليات معلقة...';
+  }
+
+  @override
+  String get syncSuccess => 'تمت مزامنة جميع العمليات بنجاح';
+
+  @override
+  String get syncFailed => 'تعثرت مزامنة بعض العمليات — انقر للتفاصيل';
+
+  @override
+  String get syncNow => 'مزامنة الآن';
+
+  @override
+  String get pendingOperations => 'العمليات المعلقة';
+
+  @override
+  String get syncedOperations => 'العمليات المتزامنة';
+
+  @override
+  String get failedOperations => 'العمليات المتعثرة';
+
+  @override
+  String get syncDetails => 'تفاصيل المزامنة';
+
+  @override
+  String lastSynced(Object time) {
+    return 'آخر مزامنة: $time';
+  }
+
+  @override
+  String get noPendingOperations => 'لا توجد عمليات معلقة للمزامنة';
+
+  @override
+  String get firstTimeAuthInternetRequired =>
+      'الاتصال بالإنترنت مطلوب لتسجيل الدخول لأول مرة.';
+
+  @override
+  String get firstTimeRegisterInternetRequired =>
+      'الاتصال بالإنترنت مطلوب لإنشاء حساب جديد.';
+
+  @override
+  String activeClients(Object count) {
+    return 'العملاء الحاليين ($count)';
+  }
+
+  @override
+  String get newClientAction => '+ عميل جديد';
+
+  @override
+  String get holdCartAction => 'تعليق السلة';
+
+  @override
+  String get resumeCartAction => 'استئناف';
+
+  @override
+  String get clearCartAction => 'تفريغ السلة';
+
+  @override
+  String get cartOnHoldStatus => 'معلقة';
+
+  @override
+  String cartItemCount(Object count) {
+    return '$count عنصر';
+  }
+
+  @override
+  String get openCartsTitle => 'السلال المفتوحة';
+
+  @override
+  String get newCartAction => '+ سلة جديدة';
+
+  @override
+  String get noOpenCarts => 'لا توجد سلال مفتوحة — اضغط + للبدء';
+
+  @override
+  String cartLabel(Object index) {
+    return 'السلة $index';
+  }
+
+  @override
+  String cartProductCount(Object count) {
+    return '$count منتجات';
+  }
+
+  @override
+  String get deleteCartTooltip => 'حذف السلة';
+
+  @override
+  String get deleteCartTitle => 'حذف السلة';
+
+  @override
+  String deleteCartConfirm(Object name) {
+    return 'حذف سلة $name؟ لا يمكن التراجع عن هذا الإجراء.';
+  }
+
+  @override
+  String orderNumberLabel(Object number) {
+    return 'طلب #$number';
+  }
+
+  @override
+  String get dineInOption => 'صالة';
+
+  @override
+  String get takeawayOption => 'سفري';
+
+  @override
+  String get deliveryOption => 'توصيل';
+
+  @override
+  String get paymentStatusPaidBadge => 'مدفوع';
+
+  @override
+  String get paymentStatusUnpaidBadge => 'غير مدفوع';
+
+  @override
+  String get paymentStatusPartiallyPaidBadge => 'مدفوع جزئيًا';
+
+  @override
+  String get orderNotReadyMessage => 'الطلب غير جاهز بعد.';
+
+  @override
+  String get paymentRequiredMessage => 'الدفع مطلوب قبل إتمام الطلب.';
+
+  @override
+  String get completeOrderAction => 'إتمام الطلب';
+
+  @override
+  String get payNowAction => 'الدفع الآن';
+
+  @override
+  String get payFullAmountAction => 'دفع المبلغ بالكامل';
+
+  @override
+  String get partialPaymentAction => 'دفع جزئي';
+
+  @override
+  String get remainingAmountLabel => 'المبلغ المتبقي';
+
+  @override
+  String get paymentCompletedTitle => 'الدفع';
+
+  @override
+  String get tableStatusAvailable => 'متاح';
+
+  @override
+  String get tableStatusOccupied => 'مشغولة';
+
+  @override
+  String get tableStatusOrderReady => 'الطلب جاهز';
+
+  @override
+  String get tableStatusPaymentPending => 'بانتظار الدفع';
+
+  @override
+  String get tableStatusCompleted => 'مكتملة';
+
+  @override
+  String get switchOrderAction => 'تبديل الطلب';
+
+  @override
+  String elapsedMinutes(Object minutes) {
+    return 'منذ $minutes دقيقة';
+  }
+
+  @override
+  String get elapsedJustNow => 'الآن';
+
+  @override
+  String get preparationStatusLabel => 'التحضير';
+
+  @override
+  String get orderTypeLabel => 'نوع الطلب';
+
+  @override
+  String get anonymousWalkInCustomer => 'زبون عابر';
+
+  @override
+  String get dashboardPagesTitle => 'الصفحات';
+
+  @override
+  String get allPagesTitle => 'جميع الصفحات';
+
+  @override
+  String get allPagesSubtitle => 'جميع صفحات وأدوات إدارة الأعمال';
+
+  @override
+  String get extraPagesTitle => 'المزيد من الصفحات';
+
+  @override
+  String get salesPosTitle => 'نقطة البيع';
+
+  @override
+  String get cashPaymentMethod => 'نقدًا';
+
+  @override
+  String get cardPaymentMethod => 'بطاقة بنكية';
+
+  @override
+  String get editItemTooltip => 'تعديل العنصر';
+
+  @override
+  String get previousDayTooltip => 'اليوم السابق';
+
+  @override
+  String get nextDayTooltip => 'اليوم التالي';
+
+  @override
+  String get previousMonthTooltip => 'الشهر السابق';
+
+  @override
+  String get nextMonthTooltip => 'الشهر التالي';
+
+  @override
+  String get previousYearTooltip => 'السنة السابقة';
+
+  @override
+  String get nextYearTooltip => 'السنة التالية';
+
+  @override
+  String customerHasUnpaidDebt(Object amount) {
+    return 'لا يمكن حذف عميل عليه ديون غير مدفوعة ($amount د.ج)';
+  }
+
+  @override
+  String customerDeletedSuccess(Object name) {
+    return 'تم حذف العميل «$name»';
+  }
+
+  @override
+  String employeeDeletedSuccess(Object name) {
+    return 'تم حذف الموظف «$name»';
+  }
+
+  @override
+  String supplierDeletedSuccess(Object name) {
+    return 'تم حذف المورد «$name»';
+  }
+
+  @override
+  String get invalidBarcodeChecksum =>
+      'رمز التحقق للباركود غير صالح (تالف أو غير مقروء)';
+
+  @override
+  String get invalidBarcodeFormat => 'صيغة الباركود غير صالحة';
+
+  @override
+  String get configureServerUrlHint => 'تهيئة عنوان خادم الواجهة الخلفية:';
+
+  @override
+  String get appTagline => 'إدارة الأعمال بالذكاء الاصطناعي';
+
+  @override
+  String get clientPhoneNumberLabel => 'رقم هاتف العميل';
+
+  @override
+  String get clientPhoneRequired => 'رقم الهاتف مطلوب لطلبات التوصيل';
+
+  @override
+  String get invalidPhoneNumber => 'صيغة رقم الهاتف غير صالحة';
+
+  @override
+  String get deliveryAddressLabel => 'عنوان التوصيل';
+
+  @override
+  String get deliveryAddressHint => 'الشارع، العمارة، الطابق، الشقة...';
+
+  @override
+  String get deliveryAddressRequired => 'عنوان التوصيل مطلوب';
+
+  @override
+  String get noTableSelected => 'بدون طاولة (اختياري)';
+
+  @override
+  String get selectRestaurantTable => 'طاولة المطعم (اختياري)';
+
+  @override
+  String assignedTableLabel(Object name) {
+    return 'طاولة: $name';
+  }
+
+  @override
+  String get editAppointmentTitle => 'تعديل الموعد';
+
+  @override
+  String get updateAppointmentAction => 'تحديث الموعد';
+
+  @override
+  String get editReservationTitle => 'تعديل الحجز';
+
+  @override
+  String get updateReservationAction => 'تحديث الحجز';
+
+  @override
+  String get callClientTooltip => 'الاتصال بالعميل';
+
+  @override
+  String get copyPhoneTooltip => 'نسخ رقم الهاتف';
+
+  @override
+  String get phoneCopiedMessage => 'تم نسخ رقم الهاتف إلى الحافظة';
+
+  @override
+  String get selectExistingCustomerHint => 'أو اختر عميلاً مسجلاً';
+
+  @override
+  String get editOrderTitle => 'تعديل الطلب';
+
+  @override
+  String get updateOrderAction => 'تحديث الطلب';
+
+  @override
+  String get orderUpdatedMessage => 'تم تحديث الطلب بنجاح';
 }

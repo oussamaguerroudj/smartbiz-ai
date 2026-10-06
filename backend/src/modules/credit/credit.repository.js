@@ -64,7 +64,7 @@ async function findAllCreditPurchases(companyId) {
   const result = await query(
     `SELECT cp.*, c.name AS customer_name, c.phone AS customer_phone
      FROM credit_purchases cp
-     JOIN customers c ON c.id = cp.customer_id
+     JOIN customers c ON c.id = cp.customer_id AND c.company_id = cp.company_id
      WHERE cp.company_id = $1
      ORDER BY cp.created_at DESC`,
     [companyId],
@@ -77,7 +77,7 @@ async function findCreditPurchaseById(companyId, id) {
     query(
       `SELECT cp.*, c.name AS customer_name, c.phone AS customer_phone
        FROM credit_purchases cp
-       JOIN customers c ON c.id = cp.customer_id
+       JOIN customers c ON c.id = cp.customer_id AND c.company_id = cp.company_id
        WHERE cp.company_id = $1 AND cp.id = $2`,
       [companyId, id],
     ),
@@ -97,17 +97,26 @@ async function findCreditPurchaseById(companyId, id) {
 // Payments
 // ---------------------------------------------------------------------
 
+async function findPaymentByClientId(companyId, clientId) {
+  if (!clientId) return null;
+  const result = await query(
+    `SELECT * FROM credit_payments WHERE company_id = $1 AND client_id = $2`,
+    [companyId, clientId],
+  );
+  return result.rows[0] || null;
+}
+
 async function insertCreditPayment(
   client,
   companyId,
-  { customerId, creditPurchaseId, amount, note, createdBy },
+  { customerId, creditPurchaseId, amount, note, createdBy, clientId },
 ) {
   const result = await client.query(
     `INSERT INTO credit_payments
-       (company_id, customer_id, credit_purchase_id, amount, note, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6)
+       (company_id, customer_id, credit_purchase_id, amount, note, created_by, client_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
-    [companyId, customerId, creditPurchaseId || null, amount, note || null, createdBy || null],
+    [companyId, customerId, creditPurchaseId || null, amount, note || null, createdBy || null, clientId || null],
   );
   return result.rows[0];
 }
@@ -207,6 +216,7 @@ module.exports = {
   findAllCreditPurchases,
   findCreditPurchaseById,
   insertCreditPayment,
+  findPaymentByClientId,
   totalPaymentsForRange,
   insertCustomerTransaction,
   findCustomerTransactions,

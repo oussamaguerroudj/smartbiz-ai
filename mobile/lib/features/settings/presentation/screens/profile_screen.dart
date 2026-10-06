@@ -126,7 +126,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToPickImage(e.toString()))),
         );
       }
     }
@@ -453,7 +453,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      value: _selectedBusinessType,
+                      initialValue: _selectedBusinessType,
                       decoration: InputDecoration(
                         labelText: l10n.businessTypeLabel,
                         prefixIcon: const Icon(Icons.category_outlined),

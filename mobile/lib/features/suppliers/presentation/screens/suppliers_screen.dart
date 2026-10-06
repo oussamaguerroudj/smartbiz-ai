@@ -1,9 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
+import '../../../../core/connectivity/connectivity_service.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../../core/sync/sync_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/session.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/app_fab.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -29,41 +36,196 @@ class SuppliersRepository extends StateNotifier<AsyncValue<List<Supplier>>> {
   }
   final Ref _ref;
 
-  Future<void> load() async {
-    state = const AsyncValue.loading();
+  String? get _companyId => _ref.read(sessionProvider).companyId;
+
+  Future<void> load({String? search}) async {
+    // 1. Immediately read from local SQLite
+    try {
+      final local = await _fetchFromLocal(search: search);
+      if (!mounted) return;
+      state = AsyncValue.data(local);
+    } catch (_) {}
+
+    // 2. If online, fetch from backend in background
+    final status = _ref.read(connectionStatusProvider);
+    if (status != ConnectionStatus.online) return;
+
     try {
       final client = _ref.read(apiClientProvider);
       final response = await client.get('/suppliers');
-      state = AsyncValue.data(
-        (response['data'] as List).map((j) => Supplier.fromJson(j as Map<String, dynamic>)).toList(),
-      );
+      final rows = (response['data'] as List).map((j) => Supplier.fromJson(j as Map<String, dynamic>)).toList();
+      await _upsertToLocal(rows);
+      final fresh = await _fetchFromLocal(search: search);
+      if (!mounted) return;
+      state = AsyncValue.data(fresh);
     } catch (e, st) {
+      if (!mounted) return;
+      if (state.hasValue) return;
       state = AsyncValue.error(e, st);
     }
   }
 
+  Future<List<Supplier>> _fetchFromLocal({String? search}) async {
+    final companyId = _companyId;
+    if (companyId == null) return [];
+
+    final db = await AppDatabase.instance.database;
+    List<Map<String, dynamic>> rows;
+    if (search != null && search.trim().isNotEmpty) {
+      final q = '%${search.trim()}%';
+      rows = await db.query(
+        'suppliers',
+        where: 'company_id = ? AND deleted_at IS NULL AND (name LIKE ? OR phone LIKE ?)',
+        whereArgs: [companyId, q, q],
+        orderBy: 'name ASC',
+      );
+    } else {
+      rows = await db.query(
+        'suppliers',
+        where: 'company_id = ? AND deleted_at IS NULL',
+        whereArgs: [companyId],
+        orderBy: 'name ASC',
+      );
+    }
+
+    return rows.map((r) => Supplier(
+      id: r['id'] as String,
+      name: r['name'] as String,
+      phone: r['phone'] as String?,
+      productsSupplied: (r['products_supplied'] as num?)?.toInt() ?? 0,
+    )).toList();
+  }
+
+  Future<void> _upsertToLocal(List<Supplier> suppliers) async {
+    final companyId = _companyId;
+    if (companyId == null) return;
+
+    final db = await AppDatabase.instance.database;
+    final batch = db.batch();
+    for (final s in suppliers) {
+      batch.insert(
+        'suppliers',
+        {
+          'id': s.id,
+          'company_id': companyId,
+          'name': s.name,
+          'phone': s.phone,
+          'products_supplied': s.productsSupplied,
+          'created_at': DateTime.now().toIso8601String(),
+          'synced': 1,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<void> addSupplier(String name, String? phone) async {
-    final client = _ref.read(apiClientProvider);
-    await client.post('/suppliers', body: {'name': name, if (phone != null) 'phone': phone});
-    await load();
+    final companyId = _companyId;
+    if (companyId == null) return;
+
+    final newId = const Uuid().v4();
+    final clientId = const Uuid().v4();
+    final db = await AppDatabase.instance.database;
+    final nowIso = DateTime.now().toIso8601String();
+
+    await db.insert('suppliers', {
+      'id': newId,
+      'client_id': clientId,
+      'company_id': companyId,
+      'name': name,
+      'phone': phone,
+      'products_supplied': 0,
+      'created_at': nowIso,
+      'synced': 0,
+    });
+
+    final fresh = await _fetchFromLocal();
+    state = AsyncValue.data(fresh);
+
+    await _ref.read(syncServiceProvider.notifier).enqueueOperation(
+      id: const Uuid().v4(),
+      clientTransactionId: clientId,
+      entityType: 'supplier',
+      entityId: newId,
+      operationType: 'CREATE',
+      payload: {
+        'name': name,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+      },
+    );
+
+    unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
   }
 
   Future<void> updateSupplier(String id, String name, String? phone) async {
-    final client = _ref.read(apiClientProvider);
-    await client.put('/suppliers/$id', body: {'name': name, if (phone != null) 'phone': phone});
-    await load();
+    final companyId = _companyId;
+    if (companyId == null) return;
+
+    final db = await AppDatabase.instance.database;
+    await db.update(
+      'suppliers',
+      {
+        'name': name,
+        'phone': phone,
+        'synced': 0,
+      },
+      where: 'id = ? AND company_id = ?',
+      whereArgs: [id, companyId],
+    );
+
+    final fresh = await _fetchFromLocal();
+    state = AsyncValue.data(fresh);
+
+    await _ref.read(syncServiceProvider.notifier).enqueueOperation(
+      id: const Uuid().v4(),
+      clientTransactionId: const Uuid().v4(),
+      entityType: 'supplier',
+      entityId: id,
+      operationType: 'UPDATE',
+      payload: {
+        'name': name,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+      },
+    );
+
+    unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
   }
 
   Future<void> deleteSupplier(String id) async {
-    final client = _ref.read(apiClientProvider);
-    await client.delete('/suppliers/$id');
-    await load();
+    final companyId = _companyId;
+    if (companyId == null) return;
+
+    final db = await AppDatabase.instance.database;
+    await db.update(
+      'suppliers',
+      {'deleted_at': DateTime.now().toIso8601String(), 'synced': 0},
+      where: 'id = ? AND company_id = ?',
+      whereArgs: [id, companyId],
+    );
+
+    final fresh = await _fetchFromLocal();
+    state = AsyncValue.data(fresh);
+
+    await _ref.read(syncServiceProvider.notifier).enqueueOperation(
+      id: const Uuid().v4(),
+      clientTransactionId: const Uuid().v4(),
+      entityType: 'supplier',
+      entityId: id,
+      operationType: 'DELETE',
+      payload: {'id': id},
+    );
+
+    unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
   }
 }
 
 final suppliersRepositoryProvider =
     StateNotifierProvider.autoDispose<SuppliersRepository, AsyncValue<List<Supplier>>>(
-  (ref) => SuppliersRepository(ref),
+  (ref) {
+    ref.watch(sessionProvider.select((s) => s.companyId));
+    return SuppliersRepository(ref);
+  },
 );
 
 /// Suppliers — Spec Ch. 21.2. Real API-backed with full CRUD support.
@@ -158,7 +320,7 @@ class SuppliersScreen extends ConsumerWidget {
                                     await ref.read(suppliersRepositoryProvider.notifier).deleteSupplier(s.id);
                                     if (context.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('${l10n.supplierFallback} "${s.name}" ${l10n.delete.toLowerCase()}')),
+                                        SnackBar(content: Text(l10n.supplierDeletedSuccess(s.name))),
                                       );
                                     }
                                   } catch (e) {

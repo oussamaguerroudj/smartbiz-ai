@@ -165,16 +165,28 @@ async function nextOrderNumber(client, companyId) {
  * are snapshotted onto restaurant_order_items so a later menu price
  * change never rewrites this order's total.
  */
-async function createOrder(companyId, { tableId, items, notes }) {
+async function createOrder(companyId, { tableId, items, notes, customerName, customerId, orderType, customerPhone, deliveryAddress }) {
   return withTransaction(async (client) => {
     const orderNumber = await nextOrderNumber(client, companyId);
     const totalAmount = items.reduce((sum, it) => sum + Number(it.unitPrice) * Number(it.quantity), 0);
+    const resolvedOrderType = orderType || (tableId ? 'dine_in' : 'takeaway');
 
     const orderResult = await client.query(
-      `INSERT INTO restaurant_orders (company_id, table_id, order_number, total_amount, notes)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO restaurant_orders (company_id, table_id, order_number, total_amount, notes, customer_name, customer_id, order_type, customer_phone, delivery_address)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [companyId, tableId || null, orderNumber, totalAmount, notes || null],
+      [
+        companyId,
+        tableId || null,
+        orderNumber,
+        totalAmount,
+        notes || null,
+        customerName || null,
+        customerId || null,
+        resolvedOrderType,
+        customerPhone || null,
+        deliveryAddress || null,
+      ],
     );
     const order = orderResult.rows[0];
 
@@ -211,7 +223,7 @@ async function getActiveOrders(companyId) {
   const result = await query(
     `SELECT ro.*, rt.name AS table_name
      FROM restaurant_orders ro
-     LEFT JOIN restaurant_tables rt ON rt.id = ro.table_id
+     LEFT JOIN restaurant_tables rt ON rt.id = ro.table_id AND rt.company_id = ro.company_id
      WHERE ro.company_id = $1
        AND ro.created_at::date = CURRENT_DATE
        AND ro.status IN ('pending', 'preparing', 'ready', 'served')
@@ -226,7 +238,7 @@ async function findOrders(companyId, { from, to } = {}) {
     const result = await query(
       `SELECT ro.*, rt.name AS table_name
        FROM restaurant_orders ro
-       LEFT JOIN restaurant_tables rt ON rt.id = ro.table_id
+       LEFT JOIN restaurant_tables rt ON rt.id = ro.table_id AND rt.company_id = ro.company_id
        WHERE ro.company_id = $1 AND ro.created_at BETWEEN $2 AND $3
        ORDER BY ro.created_at DESC`,
       [companyId, from, to],
@@ -236,7 +248,7 @@ async function findOrders(companyId, { from, to } = {}) {
   const result = await query(
     `SELECT ro.*, rt.name AS table_name
      FROM restaurant_orders ro
-     LEFT JOIN restaurant_tables rt ON rt.id = ro.table_id
+     LEFT JOIN restaurant_tables rt ON rt.id = ro.table_id AND rt.company_id = ro.company_id
      WHERE ro.company_id = $1
      ORDER BY ro.created_at DESC
      LIMIT 100`,
@@ -247,8 +259,64 @@ async function findOrders(companyId, { from, to } = {}) {
 
 async function findOrderById(companyId, id) {
   const result = await query(
-    `SELECT * FROM restaurant_orders WHERE company_id = $1 AND id = $2`,
+    `SELECT ro.*, rt.name AS table_name
+     FROM restaurant_orders ro
+     LEFT JOIN restaurant_tables rt ON rt.id = ro.table_id AND rt.company_id = ro.company_id
+     WHERE ro.company_id = $1 AND ro.id = $2`,
     [companyId, id],
+  );
+  return result.rows[0] || null;
+}
+
+async function updateOrder(companyId, id, data) {
+  const fields = [];
+  const values = [companyId, id];
+  let idx = 3;
+
+  if (data.customerName !== undefined) {
+    fields.push(`customer_name = $${idx++}`);
+    values.push(data.customerName || null);
+  }
+  if (data.customerPhone !== undefined) {
+    fields.push(`customer_phone = $${idx++}`);
+    values.push(data.customerPhone || null);
+  }
+  if (data.deliveryAddress !== undefined) {
+    fields.push(`delivery_address = $${idx++}`);
+    values.push(data.deliveryAddress || null);
+  }
+  if (data.notes !== undefined) {
+    fields.push(`notes = $${idx++}`);
+    values.push(data.notes || null);
+  }
+  if (data.orderType !== undefined) {
+    fields.push(`order_type = $${idx++}`);
+    values.push(data.orderType);
+  }
+  if (data.tableId !== undefined) {
+    if (data.tableId) {
+      const tbl = await findTableById(companyId, data.tableId);
+      if (!tbl) {
+        const err = new Error('Table not found for this company');
+        err.code = 'VALIDATION_ERROR';
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+    fields.push(`table_id = $${idx++}`);
+    values.push(data.tableId || null);
+  }
+
+  if (fields.length === 0) {
+    return findOrderById(companyId, id);
+  }
+
+  const result = await query(
+    `UPDATE restaurant_orders
+     SET ${fields.join(', ')}
+     WHERE company_id = $1 AND id = $2
+     RETURNING *`,
+    values,
   );
   return result.rows[0] || null;
 }
@@ -257,6 +325,32 @@ const VALID_ORDER_STATUSES = ['pending', 'preparing', 'ready', 'served', 'comple
 
 async function updateOrderStatus(companyId, id, status) {
   return withTransaction(async (client) => {
+    // Lock row for update
+    const existingRes = await client.query(
+      `SELECT * FROM restaurant_orders WHERE company_id = $1 AND id = $2 FOR UPDATE`,
+      [companyId, id],
+    );
+    const existing = existingRes.rows[0];
+    if (!existing) return null;
+
+    if (status === 'completed') {
+      // 1. Preparation check: order must be ready or served
+      if (existing.status !== 'ready' && existing.status !== 'served') {
+        const err = new Error('Order is not ready yet');
+        err.code = 'ORDER_NOT_READY';
+        err.statusCode = 400;
+        throw err;
+      }
+      // 2. Payment check: must be fully paid!
+      const remaining = Number(existing.total_amount) - Number(existing.amount_paid);
+      if (existing.payment_status !== 'paid' || remaining > 0) {
+        const err = new Error('Order payment is required before completion');
+        err.code = 'ORDER_PAYMENT_REQUIRED';
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
     const result = await client.query(
       `UPDATE restaurant_orders
        SET status = $3::restaurant_order_status_enum, completed_at = CASE WHEN $3::text = 'completed' THEN now() ELSE completed_at END
@@ -267,10 +361,7 @@ async function updateOrderStatus(companyId, id, status) {
     let order = result.rows[0];
     if (!order) return null;
 
-    // Freeing the table happens the moment an order is completed or
-    // cancelled — a table shouldn't stay marked "occupied" once its
-    // only active order is done, mirroring how the queue frees itself
-    // once a consultation completes.
+    // Freeing the table happens the moment an order is completed or cancelled
     if ((status === 'completed' || status === 'cancelled') && order.table_id) {
       const stillActive = await client.query(
         `SELECT COUNT(*)::int AS count FROM restaurant_orders
@@ -285,46 +376,14 @@ async function updateOrderStatus(companyId, id, status) {
       }
     }
 
-    // Ch. 16 — consuming recipe ingredients is what turns "an order was
-    // completed" into a real COGS number instead of a guess. Runs on
-    // the SAME transaction client as the status update, so a crash
-    // between them can't leave the order completed with no stock
-    // deducted (or vice versa).
     if (status === 'completed') {
       await deductIngredientsForOrder(client, companyId, order.id);
-
-      // Auto-settle remaining unpaid balance upon order completion so revenue is captured
-      const remaining = Number(order.total_amount) - Number(order.amount_paid);
-      if (remaining > 0) {
-        await client.query(
-          `INSERT INTO restaurant_payments (company_id, order_id, amount, method, note, paid_at)
-           VALUES ($1, $2, $3, 'cash', 'Settled on completion', now())`,
-          [companyId, order.id, remaining],
-        );
-        const updatedOrderRes = await client.query(
-          `UPDATE restaurant_orders SET amount_paid = total_amount, payment_status = 'paid'
-           WHERE company_id = $1 AND id = $2 RETURNING *`,
-          [companyId, order.id],
-        );
-        order = updatedOrderRes.rows[0];
-      }
     }
 
     return order;
   });
 }
 
-/**
- * Ch. 16 idempotency: if this order already has consumption movements
- * (reference = 'order:<id>'), do nothing — covers retrying the same
- * status update, or any other path that could call this twice for one
- * order. A menu item with no recipe defined yet is silently skipped
- * (Ch. 16: "if the current application cannot calculate a metric
- * reliably because required data does not exist, display a clearly
- * defined metric rather than pretending the calculation is complete"
- * — a dish with no recipe just contributes 0 COGS, honestly, rather
- * than guessing).
- */
 async function deductIngredientsForOrder(client, companyId, orderId) {
   const reference = `order:${orderId}`;
 
@@ -355,7 +414,7 @@ async function deductIngredientsForOrder(client, companyId, orderId) {
         [companyId, line.inventory_item_id],
       );
       const inventoryItem = itemResult.rows[0];
-      if (!inventoryItem) continue; // ingredient archived/deleted since the recipe was set — skip rather than fail the whole order
+      if (!inventoryItem) continue;
 
       const newQuantity = Number(inventoryItem.quantity) - totalDeduction;
       await client.query(
@@ -380,18 +439,38 @@ async function findMenuItemIngredients(companyId, menuItemId) {
   const result = await query(
     `SELECT mi.id, mi.inventory_item_id, mi.quantity_required, ii.name AS inventory_item_name, ii.unit
      FROM restaurant_menu_item_ingredients mi
-     JOIN restaurant_inventory_items ii ON ii.id = mi.inventory_item_id
+     JOIN restaurant_inventory_items ii ON ii.id = mi.inventory_item_id AND ii.company_id = mi.company_id
      WHERE mi.company_id = $1 AND mi.menu_item_id = $2`,
     [companyId, menuItemId],
   );
   return result.rows;
 }
 
-/** Replaces the full recipe for one menu item in a single transaction
- * — simpler and safer than a piecemeal add/remove API for something
- * the user edits as one screen ("here's everything this dish needs"). */
 async function setMenuItemIngredients(companyId, menuItemId, lines) {
   return withTransaction(async (client) => {
+    const menuCheck = await client.query(
+      'SELECT id FROM restaurant_menu_items WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL',
+      [companyId, menuItemId],
+    );
+    if (menuCheck.rows.length === 0) {
+      const ApiError = require('../../utils/ApiError');
+      throw ApiError.notFound('Menu item not found');
+    }
+
+    for (const line of lines) {
+      const invCheck = await client.query(
+        'SELECT id FROM restaurant_inventory_items WHERE company_id = $1 AND id = $2 AND archived_at IS NULL',
+        [companyId, line.inventoryItemId],
+      );
+      if (invCheck.rows.length === 0) {
+        const ApiError = require('../../utils/ApiError');
+        throw ApiError.badRequest(
+          'Inventory item not found for this company',
+          'VALIDATION_ERROR',
+        );
+      }
+    }
+
     await client.query(
       `DELETE FROM restaurant_menu_item_ingredients WHERE company_id = $1 AND menu_item_id = $2`,
       [companyId, menuItemId],
@@ -411,28 +490,18 @@ async function findMenuItemIngredientsInTransaction(client, companyId, menuItemI
   const result = await client.query(
     `SELECT mi.id, mi.inventory_item_id, mi.quantity_required, ii.name AS inventory_item_name, ii.unit
      FROM restaurant_menu_item_ingredients mi
-     JOIN restaurant_inventory_items ii ON ii.id = mi.inventory_item_id
+     JOIN restaurant_inventory_items ii ON ii.id = mi.inventory_item_id AND ii.company_id = mi.company_id
      WHERE mi.company_id = $1 AND mi.menu_item_id = $2`,
     [companyId, menuItemId],
   );
   return result.rows;
 }
 
-/**
- * Ch. 16 "Cost of goods sold = relevant commodity/product costs" —
- * summed from the SAME auto-deducted consumption movements
- * deductIngredientsForOrder writes (reference LIKE 'order:%',
- * distinguishing them from manual/AI-scan consumption entries, which
- * are not COGS), valued at each inventory item's CURRENT purchase
- * price (this schema does not track historical cost-at-time-of-use —
- * documented limitation, not a silent approximation pretending to be
- * exact).
- */
 async function costOfGoodsSoldForRange(companyId, rangeStart, rangeEnd) {
   const result = await query(
     `SELECT COALESCE(SUM(-m.quantity_change * ii.purchase_price), 0) AS total
      FROM restaurant_inventory_movements m
-     JOIN restaurant_inventory_items ii ON ii.id = m.item_id
+     JOIN restaurant_inventory_items ii ON ii.id = m.item_id AND ii.company_id = m.company_id
      WHERE m.company_id = $1
        AND m.movement_type = 'consumption'
        AND m.reference LIKE 'order:%'
@@ -450,16 +519,6 @@ function derivePaymentStatus(totalAmount, amountPaid) {
   return 'paid';
 }
 
-/**
- * Ch. 11 "Prevent duplicate payment" — the FOR UPDATE lock below already
- * exists to keep amount_paid consistent under concurrent calls; the
- * "is this order already fully paid?" check is added INSIDE that same
- * locked read rather than as a separate pre-check in the service layer,
- * so two simultaneous "Mark as Paid" taps on the same order can't both
- * pass the check before either commits (the second request blocks on
- * the lock, then sees the first request's already-updated
- * payment_status once it acquires it).
- */
 async function recordPayment(companyId, orderId, { amount, method, note, paidAt }) {
   return withTransaction(async (client) => {
     const orderResult = await client.query(
@@ -528,8 +587,6 @@ async function refundOrder(companyId, orderId, note) {
   });
 }
 
-/** Net revenue actually collected in [rangeStart, rangeEnd] — sums the
- * ledger by paid_at, exactly like clinic's revenueForRange. */
 async function revenueForRange(companyId, rangeStart, rangeEnd) {
   const result = await query(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM restaurant_payments
@@ -549,14 +606,11 @@ async function outstandingTotal(companyId) {
   return Number(result.rows[0].total);
 }
 
-/** Best-selling dishes (Ch. 17's "Best-selling dishes") — units sold,
- * grouped by item name so it still works even for items whose
- * menu_item_id was later deleted (name snapshot survives). */
 async function bestSellingDishes(companyId, rangeStart, rangeEnd, limit = 5) {
   const result = await query(
     `SELECT roi.item_name, SUM(roi.quantity)::int AS units_sold, SUM(roi.subtotal) AS revenue
      FROM restaurant_order_items roi
-     JOIN restaurant_orders ro ON ro.id = roi.order_id
+     JOIN restaurant_orders ro ON ro.id = roi.order_id AND ro.company_id = roi.company_id
      WHERE roi.company_id = $1
        AND ro.status != 'cancelled'
        AND ro.created_at::date BETWEEN $2::date AND $3::date
@@ -573,6 +627,13 @@ async function bestSellingDishes(companyId, rangeStart, rangeEnd, limit = 5) {
 // ---------------------------------------------------------------------
 
 async function createReservation(companyId, data) {
+  if (data.tableId) {
+    const tbl = await findTableById(companyId, data.tableId);
+    if (!tbl) {
+      const ApiError = require('../../utils/ApiError');
+      throw ApiError.badRequest('Table not found for this company', 'VALIDATION_ERROR');
+    }
+  }
   const result = await query(
     `INSERT INTO restaurant_reservations (company_id, customer_name, phone, party_size, table_id, reserved_at, notes)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -595,7 +656,7 @@ async function findReservations(companyId, { from, to } = {}) {
     const result = await query(
       `SELECT rr.*, rt.name AS table_name
        FROM restaurant_reservations rr
-       LEFT JOIN restaurant_tables rt ON rt.id = rr.table_id
+       LEFT JOIN restaurant_tables rt ON rt.id = rr.table_id AND rt.company_id = rr.company_id
        WHERE rr.company_id = $1 AND rr.reserved_at BETWEEN $2 AND $3
        ORDER BY rr.reserved_at`,
       [companyId, from, to],
@@ -605,7 +666,7 @@ async function findReservations(companyId, { from, to } = {}) {
   const result = await query(
     `SELECT rr.*, rt.name AS table_name
      FROM restaurant_reservations rr
-     LEFT JOIN restaurant_tables rt ON rt.id = rr.table_id
+     LEFT JOIN restaurant_tables rt ON rt.id = rr.table_id AND rt.company_id = rr.company_id
      WHERE rr.company_id = $1 AND rr.reserved_at >= CURRENT_DATE
      ORDER BY rr.reserved_at
      LIMIT 100`,
@@ -623,29 +684,52 @@ async function updateReservationStatus(companyId, id, status) {
 }
 
 async function updateReservation(companyId, id, data) {
+  if (data.tableId) {
+    const tbl = await findTableById(companyId, data.tableId);
+    if (!tbl) {
+      const ApiError = require('../../utils/ApiError');
+      throw ApiError.badRequest('Table not found for this company', 'VALIDATION_ERROR');
+    }
+  }
+  const fields = ['updated_at = NOW()'];
+  const values = [companyId, id];
+  let idx = 3;
+
+  if (data.customerName !== undefined) {
+    fields.push(`customer_name = $${idx++}`);
+    values.push(data.customerName ? data.customerName.trim() : null);
+  }
+  if (data.phone !== undefined) {
+    fields.push(`phone = $${idx++}`);
+    values.push(data.phone ? data.phone.trim() : null);
+  }
+  if (data.partySize !== undefined) {
+    fields.push(`party_size = $${idx++}`);
+    values.push(data.partySize ? Number(data.partySize) : 1);
+  }
+  if (data.tableId !== undefined) {
+    fields.push(`table_id = $${idx++}`);
+    values.push(data.tableId || null);
+  }
+  if (data.reservedAt !== undefined) {
+    fields.push(`reserved_at = $${idx++}`);
+    values.push(data.reservedAt);
+  }
+  if (data.notes !== undefined) {
+    fields.push(`notes = $${idx++}`);
+    values.push(data.notes || null);
+  }
+  if (data.status !== undefined) {
+    fields.push(`status = $${idx++}`);
+    values.push(data.status);
+  }
+
   const result = await query(
     `UPDATE restaurant_reservations
-     SET customer_name = COALESCE($3, customer_name),
-         phone = COALESCE($4, phone),
-         party_size = COALESCE($5, party_size),
-         table_id = COALESCE($6, table_id),
-         reserved_at = COALESCE($7, reserved_at),
-         notes = COALESCE($8, notes),
-         status = COALESCE($9, status),
-         updated_at = NOW()
+     SET ${fields.join(', ')}
      WHERE company_id = $1 AND id = $2
      RETURNING *`,
-    [
-      companyId,
-      id,
-      data.customerName || null,
-      data.phone || null,
-      data.partySize ? Number(data.partySize) : null,
-      data.tableId || null,
-      data.reservedAt || null,
-      data.notes || null,
-      data.status || null,
-    ],
+    values,
   );
   return result.rows[0] || null;
 }
@@ -917,6 +1001,7 @@ module.exports = {
   getActiveOrders,
   findOrders,
   findOrderById,
+  updateOrder,
   updateOrderStatus,
   recordPayment,
   refundOrder,

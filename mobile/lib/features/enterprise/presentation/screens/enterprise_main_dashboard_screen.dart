@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -17,6 +18,7 @@ import '../../../reports/presentation/screens/reports_screen.dart';
 import '../../data/enterprise_repository.dart';
 import '../../domain/enterprise_models.dart';
 import 'enterprise_projects_screen.dart';
+import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 
 /// Enterprise / Company specialization of the MAIN Dashboard tab
 /// (business-specialization brief Ch. 19; SPECIALIZED_MODULES.md §3's
@@ -104,6 +106,13 @@ class EnterpriseMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const FadeSlideIn(
+                      delay: Duration(milliseconds: 30),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: DashboardPagesSection(),
+                      ),
+                    ),
                     FadeSlideIn(
                       delay: const Duration(milliseconds: 60),
                       child: Row(
@@ -461,7 +470,7 @@ class _ProjectsCard extends StatelessWidget {
             children: [
               Text(l10n.projectsTitle, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const ForwardChevron(),
                 tooltip: l10n.projectsTitle,
                 onPressed: onOpenProjects,
               ),
@@ -546,7 +555,7 @@ class _UnpaidInvoicesCard extends StatelessWidget {
             children: [
               Text(l10n.unpaidInvoicesTitle, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const ForwardChevron(),
                 tooltip: l10n.moreInvoices,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const InvoicesScreen()),

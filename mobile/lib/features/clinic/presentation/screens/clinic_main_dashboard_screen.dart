@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -16,6 +17,7 @@ import '../../domain/clinic_models.dart';
 import 'clinic_dashboard_screen.dart' show clinicDashboardProvider;
 import 'clinic_queue_screen.dart';
 import 'clinic_patients_screen.dart';
+import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Clinic specialization of the MAIN Dashboard tab (business-specialization
@@ -96,6 +98,13 @@ class ClinicMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const FadeSlideIn(
+                      delay: Duration(milliseconds: 30),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: DashboardPagesSection(),
+                      ),
+                    ),
                     // Second KPI row — clinic's own analytics beyond the
                     // top-of-header three, same money-card / stat-card
                     // visual language already used on ClinicDashboardScreen
@@ -386,7 +395,7 @@ class _PatientQueueCard extends StatelessWidget {
             children: [
               Text(l10n.clinicQueueTitle, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const ForwardChevron(),
                 tooltip: l10n.clinicQueueTitle,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ClinicQueueScreen()),

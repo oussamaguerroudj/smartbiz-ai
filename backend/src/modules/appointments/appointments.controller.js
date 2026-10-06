@@ -10,9 +10,14 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json({ data: appointment });
 });
 
+const update = asyncHandler(async (req, res) => {
+  const updated = await service.updateAppointment(req.user.companyId, req.params.id, req.body);
+  res.json({ data: updated });
+});
+
 const updateStatus = asyncHandler(async (req, res) => {
   const updated = await service.updateStatus(req.user.companyId, req.params.id, req.body.status);
   res.json({ data: updated });
 });
 
-module.exports = { list, create, updateStatus };
+module.exports = { list, create, update, updateStatus };

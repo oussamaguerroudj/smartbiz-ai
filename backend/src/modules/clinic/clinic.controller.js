@@ -93,8 +93,12 @@ const getPrescription = asyncHandler(async (req, res) => {
 const downloadDocument = asyncHandler(async (req, res) => {
   const file = await service.getDocumentFile(req.user.companyId, req.params.id);
   const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+  const safeName = String(file.fileName || 'document')
+    .replace(/[\r\n"\\]/g, '_')
+    .slice(0, 180);
   res.setHeader('Content-Type', file.mimeType);
-  res.setHeader('Content-Disposition', `${disposition}; filename="${file.fileName}"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
   fs.createReadStream(file.absolutePath).pipe(res);
 });
 

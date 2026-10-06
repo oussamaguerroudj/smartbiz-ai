@@ -34,7 +34,7 @@ class Session {
   final String? avatarUrl;
   final String? role;
 
-  bool get isLoggedIn => accessToken != null;
+  bool get isLoggedIn => accessToken != null || refreshToken != null;
 
   static const empty = Session();
 

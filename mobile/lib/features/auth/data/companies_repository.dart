@@ -1,5 +1,10 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
+import '../../../core/connectivity/connectivity_service.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/session.dart';
 
 /// Backs the Business Setup screen (Ch. 8.4) — persists the real
 /// business name/type/currency/phone/address onto the placeholder
@@ -9,14 +14,64 @@ class CompaniesRepository {
   final Ref _ref;
 
   /// Real company name/business type for the Dashboard header
-  /// ("Amine · Grocery Store") — added alongside the existing [updateMe]
-  /// write method rather than as a new feature: the data already exists
-  /// server-side (Setup writes it via PUT below), this just reads it
-  /// back, the same pattern as every other GET in this app.
+  /// Reads from local SQLite sync_metadata when offline, and caches network responses.
   Future<CompanyInfo> getMe() async {
-    final client = _ref.read(apiClientProvider);
-    final response = await client.get('/companies/me');
-    return CompanyInfo.fromJson(response['data'] as Map<String, dynamic>);
+    final session = _ref.read(sessionProvider);
+    final companyId = session.companyId;
+    if (companyId == null) {
+      throw Exception('Not logged in');
+    }
+    final metadataKey = 'company_info_$companyId';
+
+    // 1. Try tenant-scoped local cache first
+    CompanyInfo? cached;
+    try {
+      final db = await AppDatabase.instance.database;
+      final rows = await db.query(
+        'sync_metadata',
+        where: 'key = ?',
+        whereArgs: [metadataKey],
+      );
+      if (rows.isNotEmpty && rows.first['value'] != null) {
+        final json = jsonDecode(rows.first['value'] as String) as Map<String, dynamic>;
+        cached = CompanyInfo.fromJson(json);
+      }
+    } catch (_) {}
+
+    // 2. Only attempt network if logged in and online
+    final status = _ref.read(connectionStatusProvider);
+    if (!session.isLoggedIn || status != ConnectionStatus.online) {
+      if (cached != null) return cached;
+      throw Exception('Not logged in or offline');
+    }
+
+    // 3. Fetch fresh from backend
+    try {
+      final client = _ref.read(apiClientProvider);
+      final response = await client.get('/companies/me');
+      final data = response['data'] as Map<String, dynamic>;
+      final info = CompanyInfo.fromJson(data);
+
+      try {
+        final db = await AppDatabase.instance.database;
+        await db.insert(
+          'sync_metadata',
+          {
+            'key': metadataKey,
+            'value': jsonEncode(data),
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      } catch (_) {}
+
+      return info;
+    } catch (e) {
+      if (cached != null) {
+        return cached;
+      }
+      rethrow;
+    }
   }
 
   Future<CompanyInfo> updateMe({
@@ -34,8 +89,27 @@ class CompaniesRepository {
       if (phone != null && phone.isNotEmpty) 'phone': phone,
       if (address != null && address.isNotEmpty) 'address': address,
     });
+    final data = response['data'] as Map<String, dynamic>;
+    final info = CompanyInfo.fromJson(data);
+
+    final companyId = _ref.read(sessionProvider).companyId;
+    if (companyId != null) {
+      try {
+        final db = await AppDatabase.instance.database;
+        await db.insert(
+          'sync_metadata',
+          {
+            'key': 'company_info_$companyId',
+            'value': jsonEncode(data),
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      } catch (_) {}
+    }
+
     _ref.invalidate(companyInfoProvider);
-    return CompanyInfo.fromJson(response['data'] as Map<String, dynamic>);
+    return info;
   }
 }
 
@@ -64,25 +138,8 @@ class CompanyInfo {
 
 final companiesRepositoryProvider = Provider<CompaniesRepository>((ref) => CompaniesRepository(ref));
 
-/// Loaded once per session for the Dashboard header. Deliberately
-/// tolerant of failure (endpoint might 404 on older backends) — Dashboard
-/// falls back to just the user's name with no business-type suffix
-/// rather than crashing or showing fake text.
-///
-/// FIX (multi-user data isolation bug): this used to be a plain
-/// FutureProvider, which Riverpod never disposes on its own. It fetched
-/// once for whichever account was logged in first and then kept that
-/// value cached for the lifetime of the app process — so logging out
-/// and logging back in as a *different* account on the same device (no
-/// full app restart) could show the *previous* user's business type on
-/// the Dashboard/MainShell header. autoDispose ties this provider's
-/// lifetime to whether anything is actually watching it: MainShell only
-/// exists while `_AppPhase.main` is active, so logging out tears the
-/// whole authenticated subtree down (see main.dart's AnimatedSwitcher +
-/// KeyedSubtree), which disposes this provider; the next login rebuilds
-/// MainShell and this refetches fresh for whichever account is now
-/// signed in.
 final companyInfoProvider = FutureProvider.autoDispose<CompanyInfo?>((ref) async {
+  ref.watch(sessionProvider.select((s) => s.companyId));
   try {
     return await ref.read(companiesRepositoryProvider).getMe();
   } catch (_) {
