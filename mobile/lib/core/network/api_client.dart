@@ -21,8 +21,10 @@ class ApiClient {
 
   final Ref _ref;
 
-  static const String _envApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
-  static const String defaultBaseUrl = _envApiUrl.isNotEmpty ? _envApiUrl : 'http://127.0.0.1:4000/api';
+  static const String defaultBaseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://smartbiz-ai-backend.onrender.com/api',
+  );
   static const String lanFallbackBaseUrl = 'http://10.33.166.30:4000/api';
   static String baseUrl = defaultBaseUrl;
 
