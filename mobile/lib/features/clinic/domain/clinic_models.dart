@@ -1,7 +1,7 @@
-/// Clinic specialized module domain models (Ch. 3). Kept in one file
-/// since they're small and always used together, matching this
-/// codebase's existing pattern for simpler features (e.g. Customer
-/// living directly inside customers_screen.dart).
+// Clinic specialized module domain models (Ch. 3). Kept in one file
+// since they're small and always used together, matching this
+// codebase's existing pattern for simpler features (e.g. Customer
+// living directly inside customers_screen.dart).
 
 /// Postgres NUMERIC columns (consultation_price, amount_paid, every
 /// revenue figure below) come back over JSON as strings, not numbers —

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'l10n/app_localizations.dart';
 import 'core/theme/app_theme.dart';
+import 'core/database/app_database.dart';
 import 'core/network/session.dart';
 import 'core/network/api_client.dart';
 import 'features/settings/data/settings_providers.dart';
@@ -18,8 +19,9 @@ import 'features/auth/presentation/screens/business_setup_screen.dart';
 import 'features/shell/presentation/main_shell.dart';
 
 Future<void> main() async {
-  // Needed before touching secure storage / SharedPreferences pre-runApp.
+  // Needed before touching secure storage / SharedPreferences / SQLite pre-runApp.
   WidgetsFlutterBinding.ensureInitialized();
+  await AppDatabase.instance.database;
   await ApiClient.initBaseUrl();
 
   final container = ProviderContainer();

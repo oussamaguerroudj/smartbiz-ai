@@ -20,6 +20,11 @@ function formatDate(date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function safeFilename(raw, fallback = 'document') {
+  const cleaned = String(raw || fallback).replace(/[^a-zA-Z0-9._-]/g, '_');
+  return cleaned.length > 0 ? cleaned.slice(0, 120) : fallback;
+}
+
 function drawHeader(doc, company) {
   doc.fontSize(18).font('Helvetica-Bold').text(company.name || '', { align: 'left' });
   doc.fontSize(9).font('Helvetica').fillColor('#555');
@@ -41,9 +46,10 @@ function drawHeader(doc, company) {
 function streamPrescriptionPdf(res, { company, patient, prescription }) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader(
     'Content-Disposition',
-    `inline; filename="${prescription.prescription_number}.pdf"`,
+    `inline; filename="${safeFilename(prescription.prescription_number, 'prescription')}.pdf"`,
   );
   doc.pipe(res);
 
@@ -97,7 +103,8 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
 function streamClinicInvoicePdf(res, { company, invoice }) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${invoice.invoiceNumber}.pdf"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoiceNumber, 'clinic-invoice')}.pdf"`);
   doc.pipe(res);
 
   drawHeader(doc, company);
@@ -150,7 +157,8 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
 function streamRestaurantInvoicePdf(res, { company, invoice }) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${invoice.invoiceNumber}.pdf"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoiceNumber, 'restaurant-invoice')}.pdf"`);
   doc.pipe(res);
 
   drawHeader(doc, company);
@@ -158,7 +166,11 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
   doc.fontSize(14).font('Helvetica-Bold').text('Facture / Invoice');
   doc.fontSize(10).font('Helvetica');
   doc.text(`${invoice.invoiceNumber}    ${formatDate(invoice.date)}`);
+  if (invoice.orderType) doc.text(`Type: ${invoice.orderType === 'delivery' ? 'Livraison / Delivery' : 'Sur Place / Dine-in'}`);
   if (invoice.tableName) doc.text(`Table: ${invoice.tableName}`);
+  if (invoice.customerName) doc.text(`Client: ${invoice.customerName}`);
+  if (invoice.customerPhone) doc.text(`Tél / Phone: ${invoice.customerPhone}`);
+  if (invoice.deliveryAddress) doc.text(`Adresse / Address: ${invoice.deliveryAddress}`);
   doc.moveDown(1);
 
   const tableTop = doc.y;
@@ -200,7 +212,8 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
 function streamStandardInvoicePdf(res, { company, invoice }) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${invoice.invoice_number || 'invoice'}.pdf"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoice_number, 'invoice')}.pdf"`);
   doc.pipe(res);
 
   drawHeader(doc, company);

@@ -312,13 +312,13 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
               color: const Color(0x597A6EFF),
             ),
             boxShadow: [
-              BoxShadow(
-                color: const Color(0x472D3CB4),
+              const BoxShadow(
+                color: Color(0x472D3CB4),
                 blurRadius: 60,
-                offset: const Offset(0, 25),
+                offset: Offset(0, 25),
               ),
-              BoxShadow(
-                color: const Color(0x474369FF),
+              const BoxShadow(
+                color: Color(0x474369FF),
                 blurRadius: 35,
               ),
               BoxShadow(
@@ -356,8 +356,7 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
                         top: 35 - _orbSize / 2,
                         child: Transform(
                           alignment: Alignment.center,
-                          transform: Matrix4.identity()
-                            ..scale(_scaleX, _scaleY),
+                          transform: Matrix4.diagonal3Values(_scaleX, _scaleY, 1.0),
                           child: _Orb(
                             size: _orbSize,
                             breathe: breathe,
@@ -584,7 +583,7 @@ class _Orb extends StatelessWidget {
             center: const Alignment(-0.30, -0.35),
             radius: 0.95,
             colors: [
-              Color(0xFF3A4668).withValues(
+              const Color(0xFF3A4668).withValues(
                 alpha: (0.95 * brightness)
                     .clamp(0, 1.0)
                     .toDouble(),

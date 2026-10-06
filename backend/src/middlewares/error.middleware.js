@@ -49,6 +49,18 @@ function errorMiddleware(err, req, res, next) { // eslint-disable-line no-unused
   }
 
   /*
+   * PostgreSQL invalid input syntax (e.g. malformed UUID) or numeric overflow.
+   * Return 400 Bad Request without leaking raw SQL/driver error details.
+   */
+  if (err && (err.code === '22P02' || err.code === '22003')) {
+    return res.status(400).json({
+      error: true,
+      message: 'Invalid parameter format or numeric value out of range',
+      code: 'VALIDATION_ERROR',
+    });
+  }
+
+  /*
    * Unexpected errors.
    *
    * Development:

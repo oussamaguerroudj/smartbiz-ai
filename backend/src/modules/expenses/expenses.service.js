@@ -46,7 +46,14 @@ async function list(companyId) {
 }
 
 async function createExpense(companyId, data = {}) {
-  const { category, amount, periodType, employeeId, salaryPeriod, duration, confirmedDuplicate } = data;
+  const { category, amount, periodType, employeeId, salaryPeriod, duration, confirmedDuplicate, clientId } = data;
+
+  if (clientId) {
+    const existing = await repo.findByClientId(companyId, clientId);
+    if (existing) {
+      return existing;
+    }
+  }
 
   if (typeof category !== 'string' || category.trim().length === 0) {
     throw ApiError.badRequest('category is required', 'VALIDATION_ERROR');
@@ -117,6 +124,7 @@ async function createExpense(companyId, data = {}) {
     employeeId: employeeId || null,
     salaryPeriod: salaryPeriod || null,
     duration: duration || null,
+    clientId: clientId || null,
   });
 }
 

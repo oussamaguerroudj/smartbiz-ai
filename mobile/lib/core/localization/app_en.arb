@@ -943,6 +943,176 @@
   "salaryPaidSuccess": "Salary payment recorded successfully",
   "dailyReportTitle": "Daily Report",
   "monthlyReportTitle": "Monthly Report",
-  "yearlyReportTitle": "Yearly Report"
+  "yearlyReportTitle": "Yearly Report",
+  "connectionOnline": "Connected",
+  "connectionOffline": "Offline — Data saved on device",
+  "connectionServerUnavailable": "Server unavailable — Working offline",
+  "syncingPending": "Syncing {count} pending operations...",
+  "@syncingPending": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "syncSuccess": "All operations synchronized",
+  "syncFailed": "Some operations failed to sync",
+  "syncNow": "Sync Now",
+  "pendingOperations": "Pending Operations",
+  "syncedOperations": "Synced Operations",
+  "failedOperations": "Failed Operations",
+  "syncDetails": "Sync Details",
+  "lastSynced": "Last synced: {time}",
+  "@lastSynced": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "noPendingOperations": "No pending operations to sync",
+  "firstTimeAuthInternetRequired": "Internet connection is required for first-time account authentication.",
+  "firstTimeRegisterInternetRequired": "Internet connection is required to create a new account.",
+  "activeClients": "Active Carts ({count})",
+  "@activeClients": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "newClientAction": "+ New Customer",
+  "holdCartAction": "Hold Cart",
+  "resumeCartAction": "Resume",
+  "clearCartAction": "Clear Cart",
+  "cartOnHoldStatus": "On Hold",
+  "cartItemCount": "{count} items",
+  "@cartItemCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "openCartsTitle": "Open Carts",
+  "newCartAction": "+ New Cart",
+  "noOpenCarts": "No open carts — tap + to start",
+  "cartLabel": "Cart {index}",
+  "@cartLabel": {
+    "placeholders": {
+      "index": {}
+    }
+  },
+  "cartProductCount": "{count} products",
+  "@cartProductCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "deleteCartTooltip": "Delete cart",
+  "deleteCartTitle": "Delete Cart",
+  "deleteCartConfirm": "Delete cart for {name}? This cannot be undone.",
+  "@deleteCartConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderNumberLabel": "ORDER #{number}",
+  "@orderNumberLabel": {
+    "placeholders": {
+      "number": {}
+    }
+  },
+  "dineInOption": "Dine-in",
+  "takeawayOption": "Takeaway",
+  "deliveryOption": "Delivery",
+  "paymentStatusPaidBadge": "PAID",
+  "paymentStatusUnpaidBadge": "UNPAID",
+  "paymentStatusPartiallyPaidBadge": "PARTIALLY PAID",
+  "orderNotReadyMessage": "Order is not ready yet.",
+  "paymentRequiredMessage": "Payment is required before completing the order.",
+  "completeOrderAction": "Complete Order",
+  "payNowAction": "Pay Now",
+  "payFullAmountAction": "Pay Full Amount",
+  "partialPaymentAction": "Partial Payment",
+  "remainingAmountLabel": "Remaining",
+  "paymentCompletedTitle": "Payment",
+  "tableStatusAvailable": "AVAILABLE",
+  "tableStatusOccupied": "OCCUPIED",
+  "tableStatusOrderReady": "ORDER READY",
+  "tableStatusPaymentPending": "PAYMENT PENDING",
+  "tableStatusCompleted": "COMPLETED",
+  "switchOrderAction": "Switch Order",
+  "elapsedMinutes": "{minutes} min ago",
+  "@elapsedMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "elapsedJustNow": "Just now",
+  "preparationStatusLabel": "Preparation",
+  "orderTypeLabel": "Order Type",
+  "anonymousWalkInCustomer": "Walk-in",
+  "dashboardPagesTitle": "Pages",
+  "allPagesTitle": "All Pages",
+  "allPagesSubtitle": "All business tools and modules",
+  "extraPagesTitle": "Extra Pages",
+  "salesPosTitle": "Sales POS",
+  "cashPaymentMethod": "Cash",
+  "cardPaymentMethod": "Card",
+  "editItemTooltip": "Edit item",
+  "previousDayTooltip": "Previous Day",
+  "nextDayTooltip": "Next Day",
+  "previousMonthTooltip": "Previous Month",
+  "nextMonthTooltip": "Next Month",
+  "previousYearTooltip": "Previous Year",
+  "nextYearTooltip": "Next Year",
+  "customerHasUnpaidDebt": "Cannot delete customer with unpaid debt ({amount} DZD)",
+  "@customerHasUnpaidDebt": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "customerDeletedSuccess": "Customer \"{name}\" deleted",
+  "@customerDeletedSuccess": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "employeeDeletedSuccess": "Employee \"{name}\" deleted",
+  "@employeeDeletedSuccess": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "supplierDeletedSuccess": "Supplier \"{name}\" deleted",
+  "@supplierDeletedSuccess": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "invalidBarcodeChecksum": "Invalid barcode checksum (corrupt or unreadable)",
+  "invalidBarcodeFormat": "Invalid barcode format",
+  "configureServerUrlHint": "Configure backend API address:",
+  "appTagline": "AI-Powered Business Management",
+  "clientPhoneNumberLabel": "Client phone number",
+  "clientPhoneRequired": "Phone number is required for delivery",
+  "invalidPhoneNumber": "Invalid phone number format",
+  "deliveryAddressLabel": "Delivery address",
+  "deliveryAddressHint": "Street, building, floor, apartment...",
+  "deliveryAddressRequired": "Delivery address is required",
+  "noTableSelected": "No table (optional)",
+  "selectRestaurantTable": "Restaurant table (optional)",
+  "assignedTableLabel": "Table: {name}",
+  "@assignedTableLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "editAppointmentTitle": "Edit Appointment",
+  "updateAppointmentAction": "Update Appointment",
+  "editReservationTitle": "Edit Reservation",
+  "updateReservationAction": "Update Reservation",
+  "callClientTooltip": "Call client",
+  "copyPhoneTooltip": "Copy phone number",
+  "phoneCopiedMessage": "Phone number copied to clipboard",
+  "selectExistingCustomerHint": "Or select registered customer",
+  "editOrderTitle": "Edit Order",
+  "updateOrderAction": "Update Order",
+  "orderUpdatedMessage": "Order updated successfully"
 }
 

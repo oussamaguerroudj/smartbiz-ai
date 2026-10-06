@@ -3987,6 +3987,594 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yearly Report'**
   String get yearlyReportTitle;
+
+  /// No description provided for @connectionOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connectionOnline;
+
+  /// No description provided for @connectionOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline — Data saved on device'**
+  String get connectionOffline;
+
+  /// No description provided for @connectionServerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Server unavailable — Working offline'**
+  String get connectionServerUnavailable;
+
+  /// No description provided for @syncingPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing {count} pending operations...'**
+  String syncingPending(Object count);
+
+  /// No description provided for @syncSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'All operations synchronized'**
+  String get syncSuccess;
+
+  /// No description provided for @syncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Some operations failed to sync'**
+  String get syncFailed;
+
+  /// No description provided for @syncNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Now'**
+  String get syncNow;
+
+  /// No description provided for @pendingOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Operations'**
+  String get pendingOperations;
+
+  /// No description provided for @syncedOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Synced Operations'**
+  String get syncedOperations;
+
+  /// No description provided for @failedOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed Operations'**
+  String get failedOperations;
+
+  /// No description provided for @syncDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Details'**
+  String get syncDetails;
+
+  /// No description provided for @lastSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced: {time}'**
+  String lastSynced(Object time);
+
+  /// No description provided for @noPendingOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending operations to sync'**
+  String get noPendingOperations;
+
+  /// No description provided for @firstTimeAuthInternetRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet connection is required for first-time account authentication.'**
+  String get firstTimeAuthInternetRequired;
+
+  /// No description provided for @firstTimeRegisterInternetRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet connection is required to create a new account.'**
+  String get firstTimeRegisterInternetRequired;
+
+  /// No description provided for @activeClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Carts ({count})'**
+  String activeClients(Object count);
+
+  /// No description provided for @newClientAction.
+  ///
+  /// In en, this message translates to:
+  /// **'+ New Customer'**
+  String get newClientAction;
+
+  /// No description provided for @holdCartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold Cart'**
+  String get holdCartAction;
+
+  /// No description provided for @resumeCartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resumeCartAction;
+
+  /// No description provided for @clearCartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Cart'**
+  String get clearCartAction;
+
+  /// No description provided for @cartOnHoldStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'On Hold'**
+  String get cartOnHoldStatus;
+
+  /// No description provided for @cartItemCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items'**
+  String cartItemCount(Object count);
+
+  /// No description provided for @openCartsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Carts'**
+  String get openCartsTitle;
+
+  /// No description provided for @newCartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'+ New Cart'**
+  String get newCartAction;
+
+  /// No description provided for @noOpenCarts.
+  ///
+  /// In en, this message translates to:
+  /// **'No open carts — tap + to start'**
+  String get noOpenCarts;
+
+  /// No description provided for @cartLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cart {index}'**
+  String cartLabel(Object index);
+
+  /// No description provided for @cartProductCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} products'**
+  String cartProductCount(Object count);
+
+  /// No description provided for @deleteCartTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete cart'**
+  String get deleteCartTooltip;
+
+  /// No description provided for @deleteCartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Cart'**
+  String get deleteCartTitle;
+
+  /// No description provided for @deleteCartConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete cart for {name}? This cannot be undone.'**
+  String deleteCartConfirm(Object name);
+
+  /// No description provided for @orderNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDER #{number}'**
+  String orderNumberLabel(Object number);
+
+  /// No description provided for @dineInOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Dine-in'**
+  String get dineInOption;
+
+  /// No description provided for @takeawayOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Takeaway'**
+  String get takeawayOption;
+
+  /// No description provided for @deliveryOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get deliveryOption;
+
+  /// No description provided for @paymentStatusPaidBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'PAID'**
+  String get paymentStatusPaidBadge;
+
+  /// No description provided for @paymentStatusUnpaidBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'UNPAID'**
+  String get paymentStatusUnpaidBadge;
+
+  /// No description provided for @paymentStatusPartiallyPaidBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'PARTIALLY PAID'**
+  String get paymentStatusPartiallyPaidBadge;
+
+  /// No description provided for @orderNotReadyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Order is not ready yet.'**
+  String get orderNotReadyMessage;
+
+  /// No description provided for @paymentRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment is required before completing the order.'**
+  String get paymentRequiredMessage;
+
+  /// No description provided for @completeOrderAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Order'**
+  String get completeOrderAction;
+
+  /// No description provided for @payNowAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Now'**
+  String get payNowAction;
+
+  /// No description provided for @payFullAmountAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Full Amount'**
+  String get payFullAmountAction;
+
+  /// No description provided for @partialPaymentAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial Payment'**
+  String get partialPaymentAction;
+
+  /// No description provided for @remainingAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get remainingAmountLabel;
+
+  /// No description provided for @paymentCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get paymentCompletedTitle;
+
+  /// No description provided for @tableStatusAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'AVAILABLE'**
+  String get tableStatusAvailable;
+
+  /// No description provided for @tableStatusOccupied.
+  ///
+  /// In en, this message translates to:
+  /// **'OCCUPIED'**
+  String get tableStatusOccupied;
+
+  /// No description provided for @tableStatusOrderReady.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDER READY'**
+  String get tableStatusOrderReady;
+
+  /// No description provided for @tableStatusPaymentPending.
+  ///
+  /// In en, this message translates to:
+  /// **'PAYMENT PENDING'**
+  String get tableStatusPaymentPending;
+
+  /// No description provided for @tableStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'COMPLETED'**
+  String get tableStatusCompleted;
+
+  /// No description provided for @switchOrderAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Order'**
+  String get switchOrderAction;
+
+  /// No description provided for @elapsedMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min ago'**
+  String elapsedMinutes(Object minutes);
+
+  /// No description provided for @elapsedJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get elapsedJustNow;
+
+  /// No description provided for @preparationStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparation'**
+  String get preparationStatusLabel;
+
+  /// No description provided for @orderTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Type'**
+  String get orderTypeLabel;
+
+  /// No description provided for @anonymousWalkInCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Walk-in'**
+  String get anonymousWalkInCustomer;
+
+  /// No description provided for @dashboardPagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pages'**
+  String get dashboardPagesTitle;
+
+  /// No description provided for @allPagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All Pages'**
+  String get allPagesTitle;
+
+  /// No description provided for @allPagesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All business tools and modules'**
+  String get allPagesSubtitle;
+
+  /// No description provided for @extraPagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra Pages'**
+  String get extraPagesTitle;
+
+  /// No description provided for @salesPosTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales POS'**
+  String get salesPosTitle;
+
+  /// No description provided for @cashPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get cashPaymentMethod;
+
+  /// No description provided for @cardPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Card'**
+  String get cardPaymentMethod;
+
+  /// No description provided for @editItemTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit item'**
+  String get editItemTooltip;
+
+  /// No description provided for @previousDayTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Day'**
+  String get previousDayTooltip;
+
+  /// No description provided for @nextDayTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Day'**
+  String get nextDayTooltip;
+
+  /// No description provided for @previousMonthTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Month'**
+  String get previousMonthTooltip;
+
+  /// No description provided for @nextMonthTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Month'**
+  String get nextMonthTooltip;
+
+  /// No description provided for @previousYearTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Year'**
+  String get previousYearTooltip;
+
+  /// No description provided for @nextYearTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Year'**
+  String get nextYearTooltip;
+
+  /// No description provided for @customerHasUnpaidDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot delete customer with unpaid debt ({amount} DZD)'**
+  String customerHasUnpaidDebt(Object amount);
+
+  /// No description provided for @customerDeletedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer \"{name}\" deleted'**
+  String customerDeletedSuccess(Object name);
+
+  /// No description provided for @employeeDeletedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee \"{name}\" deleted'**
+  String employeeDeletedSuccess(Object name);
+
+  /// No description provided for @supplierDeletedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier \"{name}\" deleted'**
+  String supplierDeletedSuccess(Object name);
+
+  /// No description provided for @invalidBarcodeChecksum.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid barcode checksum (corrupt or unreadable)'**
+  String get invalidBarcodeChecksum;
+
+  /// No description provided for @invalidBarcodeFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid barcode format'**
+  String get invalidBarcodeFormat;
+
+  /// No description provided for @configureServerUrlHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure backend API address:'**
+  String get configureServerUrlHint;
+
+  /// No description provided for @appTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-Powered Business Management'**
+  String get appTagline;
+
+  /// No description provided for @clientPhoneNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Client phone number'**
+  String get clientPhoneNumberLabel;
+
+  /// No description provided for @clientPhoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number is required for delivery'**
+  String get clientPhoneRequired;
+
+  /// No description provided for @invalidPhoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid phone number format'**
+  String get invalidPhoneNumber;
+
+  /// No description provided for @deliveryAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery address'**
+  String get deliveryAddressLabel;
+
+  /// No description provided for @deliveryAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Street, building, floor, apartment...'**
+  String get deliveryAddressHint;
+
+  /// No description provided for @deliveryAddressRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery address is required'**
+  String get deliveryAddressRequired;
+
+  /// No description provided for @noTableSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No table (optional)'**
+  String get noTableSelected;
+
+  /// No description provided for @selectRestaurantTable.
+  ///
+  /// In en, this message translates to:
+  /// **'Restaurant table (optional)'**
+  String get selectRestaurantTable;
+
+  /// No description provided for @assignedTableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Table: {name}'**
+  String assignedTableLabel(Object name);
+
+  /// No description provided for @editAppointmentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Appointment'**
+  String get editAppointmentTitle;
+
+  /// No description provided for @updateAppointmentAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Appointment'**
+  String get updateAppointmentAction;
+
+  /// No description provided for @editReservationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Reservation'**
+  String get editReservationTitle;
+
+  /// No description provided for @updateReservationAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Reservation'**
+  String get updateReservationAction;
+
+  /// No description provided for @callClientTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Call client'**
+  String get callClientTooltip;
+
+  /// No description provided for @copyPhoneTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy phone number'**
+  String get copyPhoneTooltip;
+
+  /// No description provided for @phoneCopiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number copied to clipboard'**
+  String get phoneCopiedMessage;
+
+  /// No description provided for @selectExistingCustomerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Or select registered customer'**
+  String get selectExistingCustomerHint;
+
+  /// No description provided for @editOrderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Order'**
+  String get editOrderTitle;
+
+  /// No description provided for @updateOrderAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Order'**
+  String get updateOrderAction;
+
+  /// No description provided for @orderUpdatedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Order updated successfully'**
+  String get orderUpdatedMessage;
 }
 
 class _AppLocalizationsDelegate

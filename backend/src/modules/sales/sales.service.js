@@ -100,6 +100,7 @@ async function createSale(
     items,
     discount = 0,
     paymentStatus = 'paid',
+    clientTransactionId,
   },
 ) {
   validateSaleInput({
@@ -108,7 +109,44 @@ async function createSale(
     paymentStatus,
   });
 
+  // Idempotency check: if clientTransactionId already exists for this company,
+  // return the existing sale and invoice immediately to prevent double charges.
+  if (clientTransactionId) {
+    const existing = await salesRepo.findByClientTransactionId(companyId, clientTransactionId);
+    if (existing) {
+      return existing;
+    }
+  }
+
   return withTransaction(async (client) => {
+    // Check again inside transaction to prevent race conditions
+    if (clientTransactionId) {
+      const existing = await salesRepo.findByClientTransactionId(companyId, clientTransactionId);
+      if (existing) {
+        return existing;
+      }
+    }
+
+    if (customerId) {
+      const custCheck = await client.query(
+        'SELECT id FROM customers WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL',
+        [companyId, customerId],
+      );
+      if (custCheck.rows.length === 0) {
+        throw ApiError.badRequest('Customer not found for this company', 'VALIDATION_ERROR');
+      }
+    }
+
+    if (employeeId) {
+      const empCheck = await client.query(
+        'SELECT id FROM employees WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL',
+        [companyId, employeeId],
+      );
+      if (empCheck.rows.length === 0) {
+        throw ApiError.badRequest('Employee not found for this company', 'VALIDATION_ERROR');
+      }
+    }
+
     const productIds = items.map((item) => item.productId);
 
     const products = await productsRepo.findManyForUpdate(
@@ -162,6 +200,7 @@ async function createSale(
       discount,
       total,
       paymentStatus,
+      clientTransactionId,
     });
 
     const savedItems = [];

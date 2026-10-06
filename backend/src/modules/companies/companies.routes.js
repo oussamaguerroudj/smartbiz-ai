@@ -177,6 +177,7 @@ const updateMe = asyncHandler(async (req, res) => {
 });
 
 const router = express.Router();
+const { requireRole } = require('../../middlewares/auth.middleware');
 
 /*
  * All company endpoints are tenant-scoped through req.user.companyId.
@@ -184,6 +185,6 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get('/me', getMe);
-router.put('/me', updateMe);
+router.put('/me', requireRole('owner'), updateMe);
 
 module.exports = router;

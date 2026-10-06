@@ -14,6 +14,7 @@ const notificationsRoutes = require('../modules/notifications/notifications.rout
 const dashboardRoutes = require('../modules/dashboard/dashboard.routes');
 const aiRoutes = require('../modules/ai/ai.routes');
 const creditRoutes = require('../modules/credit/credit.routes');
+const syncRoutes = require('../modules/sync/sync.routes');
 const imagesRoutes = require('../modules/images/images.routes');
 const clinicRoutes = require('../modules/clinic/clinic.routes');
 const restaurantRoutes = require('../modules/restaurant/restaurant.routes');
@@ -39,6 +40,7 @@ router.use('/notifications', notificationsRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/ai', aiRoutes);
 router.use('/credit', creditRoutes);
+router.use('/sync', syncRoutes);
 // Ch. 17/18 — shared image upload/serve, reused by products,
 // restaurant menu items, and restaurant inventory (see
 // images.routes.js's header comment); not tied to any one

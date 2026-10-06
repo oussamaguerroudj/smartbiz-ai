@@ -61,8 +61,17 @@ const upload = asyncHandler(async (req, res) => {
   res.status(201).json({ data: { imageUrl: stored.storageKey } });
 });
 
+const SAFE_STORAGE_KEY_REGEX = /^([a-z0-9-]+)\/([a-f0-9-]{36})\/([a-zA-Z0-9._-]+)$/;
+
 /**
  * Serves an image by storage key.
+ *
+ * SECURITY FIX (SEC-IMAGE-001):
+ * 1. Requires authentication (`authMiddleware`) — mobile uses
+ *    `AuthenticatedImage` with Bearer token.
+ * 2. Validates strict 3-segment key `<namespace>/<companyId>/<filename>`
+ *    with no `..` traversal segments.
+ * 3. Enforces tenant isolation (`keyCompanyId === req.user.companyId`).
  */
 const file = asyncHandler(async (req, res) => {
   const key = req.query.key;
@@ -70,10 +79,18 @@ const file = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('key is required', 'VALIDATION_ERROR');
   }
 
-  const segments = key.split('/');
-  const [namespace] = segments;
-  if (!ALLOWED_NAMESPACES.has(namespace)) {
+  const match = SAFE_STORAGE_KEY_REGEX.exec(key);
+  if (!match) {
+    throw ApiError.badRequest('Invalid storage key format', 'INVALID_STORAGE_KEY');
+  }
+
+  const [, namespace, keyCompanyId, fileName] = match;
+  if (!ALLOWED_NAMESPACES.has(namespace) || fileName.includes('..')) {
     throw ApiError.notFound('Image not found');
+  }
+
+  if (!req.user || keyCompanyId !== req.user.companyId) {
+    throw ApiError.forbidden('Access denied to cross-tenant file');
   }
 
   let absolutePath;
@@ -89,10 +106,13 @@ const file = asyncHandler(async (req, res) => {
   const ext = absolutePath.split('.').pop();
   const mimeByExt = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
   res.setHeader('Content-Type', mimeByExt[ext.toLowerCase()] || 'application/octet-stream');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'private, max-age=3600');
   fs.createReadStream(absolutePath).pipe(res);
 });
 
-router.post('/', authMiddleware, upload);
+router.use(authMiddleware);
+router.post('/', upload);
 router.get('/file', file);
 
 module.exports = router;

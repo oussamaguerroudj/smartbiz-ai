@@ -2097,4 +2097,331 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get yearlyReportTitle => 'Yearly Report';
+
+  @override
+  String get connectionOnline => 'Connected';
+
+  @override
+  String get connectionOffline => 'Offline — Data saved on device';
+
+  @override
+  String get connectionServerUnavailable =>
+      'Server unavailable — Working offline';
+
+  @override
+  String syncingPending(Object count) {
+    return 'Syncing $count pending operations...';
+  }
+
+  @override
+  String get syncSuccess => 'All operations synchronized';
+
+  @override
+  String get syncFailed => 'Some operations failed to sync';
+
+  @override
+  String get syncNow => 'Sync Now';
+
+  @override
+  String get pendingOperations => 'Pending Operations';
+
+  @override
+  String get syncedOperations => 'Synced Operations';
+
+  @override
+  String get failedOperations => 'Failed Operations';
+
+  @override
+  String get syncDetails => 'Sync Details';
+
+  @override
+  String lastSynced(Object time) {
+    return 'Last synced: $time';
+  }
+
+  @override
+  String get noPendingOperations => 'No pending operations to sync';
+
+  @override
+  String get firstTimeAuthInternetRequired =>
+      'Internet connection is required for first-time account authentication.';
+
+  @override
+  String get firstTimeRegisterInternetRequired =>
+      'Internet connection is required to create a new account.';
+
+  @override
+  String activeClients(Object count) {
+    return 'Active Carts ($count)';
+  }
+
+  @override
+  String get newClientAction => '+ New Customer';
+
+  @override
+  String get holdCartAction => 'Hold Cart';
+
+  @override
+  String get resumeCartAction => 'Resume';
+
+  @override
+  String get clearCartAction => 'Clear Cart';
+
+  @override
+  String get cartOnHoldStatus => 'On Hold';
+
+  @override
+  String cartItemCount(Object count) {
+    return '$count items';
+  }
+
+  @override
+  String get openCartsTitle => 'Open Carts';
+
+  @override
+  String get newCartAction => '+ New Cart';
+
+  @override
+  String get noOpenCarts => 'No open carts — tap + to start';
+
+  @override
+  String cartLabel(Object index) {
+    return 'Cart $index';
+  }
+
+  @override
+  String cartProductCount(Object count) {
+    return '$count products';
+  }
+
+  @override
+  String get deleteCartTooltip => 'Delete cart';
+
+  @override
+  String get deleteCartTitle => 'Delete Cart';
+
+  @override
+  String deleteCartConfirm(Object name) {
+    return 'Delete cart for $name? This cannot be undone.';
+  }
+
+  @override
+  String orderNumberLabel(Object number) {
+    return 'ORDER #$number';
+  }
+
+  @override
+  String get dineInOption => 'Dine-in';
+
+  @override
+  String get takeawayOption => 'Takeaway';
+
+  @override
+  String get deliveryOption => 'Delivery';
+
+  @override
+  String get paymentStatusPaidBadge => 'PAID';
+
+  @override
+  String get paymentStatusUnpaidBadge => 'UNPAID';
+
+  @override
+  String get paymentStatusPartiallyPaidBadge => 'PARTIALLY PAID';
+
+  @override
+  String get orderNotReadyMessage => 'Order is not ready yet.';
+
+  @override
+  String get paymentRequiredMessage =>
+      'Payment is required before completing the order.';
+
+  @override
+  String get completeOrderAction => 'Complete Order';
+
+  @override
+  String get payNowAction => 'Pay Now';
+
+  @override
+  String get payFullAmountAction => 'Pay Full Amount';
+
+  @override
+  String get partialPaymentAction => 'Partial Payment';
+
+  @override
+  String get remainingAmountLabel => 'Remaining';
+
+  @override
+  String get paymentCompletedTitle => 'Payment';
+
+  @override
+  String get tableStatusAvailable => 'AVAILABLE';
+
+  @override
+  String get tableStatusOccupied => 'OCCUPIED';
+
+  @override
+  String get tableStatusOrderReady => 'ORDER READY';
+
+  @override
+  String get tableStatusPaymentPending => 'PAYMENT PENDING';
+
+  @override
+  String get tableStatusCompleted => 'COMPLETED';
+
+  @override
+  String get switchOrderAction => 'Switch Order';
+
+  @override
+  String elapsedMinutes(Object minutes) {
+    return '$minutes min ago';
+  }
+
+  @override
+  String get elapsedJustNow => 'Just now';
+
+  @override
+  String get preparationStatusLabel => 'Preparation';
+
+  @override
+  String get orderTypeLabel => 'Order Type';
+
+  @override
+  String get anonymousWalkInCustomer => 'Walk-in';
+
+  @override
+  String get dashboardPagesTitle => 'Pages';
+
+  @override
+  String get allPagesTitle => 'All Pages';
+
+  @override
+  String get allPagesSubtitle => 'All business tools and modules';
+
+  @override
+  String get extraPagesTitle => 'Extra Pages';
+
+  @override
+  String get salesPosTitle => 'Sales POS';
+
+  @override
+  String get cashPaymentMethod => 'Cash';
+
+  @override
+  String get cardPaymentMethod => 'Card';
+
+  @override
+  String get editItemTooltip => 'Edit item';
+
+  @override
+  String get previousDayTooltip => 'Previous Day';
+
+  @override
+  String get nextDayTooltip => 'Next Day';
+
+  @override
+  String get previousMonthTooltip => 'Previous Month';
+
+  @override
+  String get nextMonthTooltip => 'Next Month';
+
+  @override
+  String get previousYearTooltip => 'Previous Year';
+
+  @override
+  String get nextYearTooltip => 'Next Year';
+
+  @override
+  String customerHasUnpaidDebt(Object amount) {
+    return 'Cannot delete customer with unpaid debt ($amount DZD)';
+  }
+
+  @override
+  String customerDeletedSuccess(Object name) {
+    return 'Customer \"$name\" deleted';
+  }
+
+  @override
+  String employeeDeletedSuccess(Object name) {
+    return 'Employee \"$name\" deleted';
+  }
+
+  @override
+  String supplierDeletedSuccess(Object name) {
+    return 'Supplier \"$name\" deleted';
+  }
+
+  @override
+  String get invalidBarcodeChecksum =>
+      'Invalid barcode checksum (corrupt or unreadable)';
+
+  @override
+  String get invalidBarcodeFormat => 'Invalid barcode format';
+
+  @override
+  String get configureServerUrlHint => 'Configure backend API address:';
+
+  @override
+  String get appTagline => 'AI-Powered Business Management';
+
+  @override
+  String get clientPhoneNumberLabel => 'Client phone number';
+
+  @override
+  String get clientPhoneRequired => 'Phone number is required for delivery';
+
+  @override
+  String get invalidPhoneNumber => 'Invalid phone number format';
+
+  @override
+  String get deliveryAddressLabel => 'Delivery address';
+
+  @override
+  String get deliveryAddressHint => 'Street, building, floor, apartment...';
+
+  @override
+  String get deliveryAddressRequired => 'Delivery address is required';
+
+  @override
+  String get noTableSelected => 'No table (optional)';
+
+  @override
+  String get selectRestaurantTable => 'Restaurant table (optional)';
+
+  @override
+  String assignedTableLabel(Object name) {
+    return 'Table: $name';
+  }
+
+  @override
+  String get editAppointmentTitle => 'Edit Appointment';
+
+  @override
+  String get updateAppointmentAction => 'Update Appointment';
+
+  @override
+  String get editReservationTitle => 'Edit Reservation';
+
+  @override
+  String get updateReservationAction => 'Update Reservation';
+
+  @override
+  String get callClientTooltip => 'Call client';
+
+  @override
+  String get copyPhoneTooltip => 'Copy phone number';
+
+  @override
+  String get phoneCopiedMessage => 'Phone number copied to clipboard';
+
+  @override
+  String get selectExistingCustomerHint => 'Or select registered customer';
+
+  @override
+  String get editOrderTitle => 'Edit Order';
+
+  @override
+  String get updateOrderAction => 'Update Order';
+
+  @override
+  String get orderUpdatedMessage => 'Order updated successfully';
 }

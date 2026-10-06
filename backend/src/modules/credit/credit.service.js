@@ -200,7 +200,7 @@ async function createCreditPurchase(
  * (not tied to a specific purchase) — e.g. the customer comes back
  * later and pays some/all of what they owe.
  */
-async function recordPayment(companyId, userId, { customerId, amount, note }) {
+async function recordPayment(companyId, userId, { customerId, amount, note, clientId }) {
   if (typeof customerId !== 'string' || customerId.trim().length === 0) {
     throw ApiError.badRequest('customerId is required', 'VALIDATION_ERROR');
   }
@@ -209,7 +209,29 @@ async function recordPayment(companyId, userId, { customerId, amount, note }) {
     throw ApiError.badRequest('amount must be a positive number', 'VALIDATION_ERROR');
   }
 
+  if (clientId) {
+    const existingPayment = await repo.findPaymentByClientId(companyId, clientId);
+    if (existingPayment) {
+      const customer = await repo.findCustomerForUpdate(null, companyId, customerId).catch(() => null);
+      return {
+        payment: existingPayment,
+        customerBalance: customer ? Number(customer.balance_due) : 0,
+      };
+    }
+  }
+
   return withTransaction(async (client) => {
+    if (clientId) {
+      const existingPayment = await repo.findPaymentByClientId(companyId, clientId);
+      if (existingPayment) {
+        const customer = await repo.findCustomerForUpdate(client, companyId, customerId);
+        return {
+          payment: existingPayment,
+          customerBalance: customer ? Number(customer.balance_due) : 0,
+        };
+      }
+    }
+
     const customer = await repo.findCustomerForUpdate(client, companyId, customerId);
     if (!customer) {
       throw ApiError.notFound('Customer not found');
@@ -234,6 +256,7 @@ async function recordPayment(companyId, userId, { customerId, amount, note }) {
       amount,
       note,
       createdBy: userId,
+      clientId,
     });
 
     const runningBalance = await repo.adjustCustomerBalance(client, companyId, customerId, -amount);

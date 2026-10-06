@@ -7,7 +7,6 @@ import '../../data/settings_providers.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'profile_screen.dart';
-import 'ai_settings_screen.dart';
 
 /// Settings — Spec Ch. 23. Business profile / currency editing from
 /// Settings still needs its own dedicated edit screen — PUT /companies/me
@@ -77,14 +76,6 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           _SettingsTile(
-            icon: Icons.auto_awesome_outlined,
-            title: l10n.aiSettingsTitle,
-            subtitle: l10n.aiSettingsSubtitle,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AiSettingsScreen()),
-            ),
-          ),
-          _SettingsTile(
             icon: Icons.logout_rounded,
             title: l10n.logoutTitle,
             iconColor: AppColors.danger,
@@ -132,20 +123,24 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
-          child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ThemeMode.values
-              .map((m) => RadioListTile<ThemeMode>(
-                    title: Text(_themeLabel(l10n, m)),
-                    value: m,
-                    groupValue: current,
-                    onChanged: (v) {
-                      ref.read(themeModeProvider.notifier).state = v!;
-                      Navigator.of(context).pop();
-                    },
-                  ))
-              .toList(),
-        ),
+          child: RadioGroup<ThemeMode>(
+            groupValue: current,
+            onChanged: (v) {
+              if (v != null) {
+                ref.read(themeModeProvider.notifier).state = v;
+                Navigator.of(context).pop();
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: ThemeMode.values
+                  .map((m) => RadioListTile<ThemeMode>(
+                        title: Text(_themeLabel(l10n, m)),
+                        value: m,
+                      ))
+                  .toList(),
+            ),
+          ),
         ),
       ),
     );
@@ -156,20 +151,24 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
-          child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: supportedLocales
-              .map((l) => RadioListTile<Locale>(
-                    title: Text(_localeLabel(l)),
-                    value: l,
-                    groupValue: current,
-                    onChanged: (v) {
-                      ref.read(localeProvider.notifier).setLocale(v!);
-                      Navigator.of(context).pop();
-                    },
-                  ))
-              .toList(),
-        ),
+          child: RadioGroup<Locale>(
+            groupValue: current,
+            onChanged: (v) {
+              if (v != null) {
+                ref.read(localeProvider.notifier).setLocale(v);
+                Navigator.of(context).pop();
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: supportedLocales
+                  .map((l) => RadioListTile<Locale>(
+                        title: Text(_localeLabel(l)),
+                        value: l,
+                      ))
+                  .toList(),
+            ),
+          ),
         ),
       ),
     );

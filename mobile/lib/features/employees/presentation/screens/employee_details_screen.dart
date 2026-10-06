@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -74,7 +75,7 @@ class EmployeeDetailsScreen extends ConsumerWidget {
                     if (context.mounted) {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${l10n.employeeFallback} "${emp.name}" ${l10n.delete.toLowerCase()}')),
+                        SnackBar(content: Text(l10n.employeeDeletedSuccess(emp.name))),
                       );
                     }
                   } catch (e) {
@@ -515,12 +516,12 @@ class _RecordSalaryPaymentSheetState extends ConsumerState<_RecordSalaryPaymentS
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left),
+                    icon: const PreviousChevron(),
                     onPressed: () => setDialogState(() => tempYear--),
                   ),
                   Text('$tempYear', style: const TextStyle(fontWeight: FontWeight.bold)),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right),
+                    icon: const NextChevron(),
                     onPressed: () => setDialogState(() => tempYear++),
                   ),
                 ],

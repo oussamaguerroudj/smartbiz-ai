@@ -192,7 +192,7 @@ class RestaurantMenuScreen extends ConsumerWidget {
                         ),
                         IconButton(
                           icon: const Icon(Icons.edit_outlined),
-                          tooltip: 'Edit item',
+                          tooltip: l10n.editItemTooltip,
                           onPressed: () => _editItem(ref, context, item),
                         ),
                         IconButton(

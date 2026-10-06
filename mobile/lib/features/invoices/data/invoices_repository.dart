@@ -1,6 +1,12 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:sqflite/sqflite.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/session.dart';
+import '../../sales/domain/sale.dart';
 import '../domain/invoice.dart';
 
 class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
@@ -10,41 +16,187 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
 
   final Ref _ref;
 
+  String? get _companyId => _ref.read(sessionProvider).companyId;
+
   Future<void> load() async {
-    state = const AsyncValue.loading();
+    // 1. Read from local SQLite first
+    try {
+      final local = await _fetchFromLocal();
+      if (!mounted) return;
+      state = AsyncValue.data(local);
+    } catch (_) {}
+
+    // 2. Fetch from backend if online
     try {
       final client = _ref.read(apiClientProvider);
       final response = await client.get('/invoices');
       final invoices = (response['data'] as List)
           .map((json) => Invoice.fromJson(json as Map<String, dynamic>))
           .toList();
-      state = AsyncValue.data(invoices);
+
+      await _upsertToLocal(invoices);
+      final fresh = await _fetchFromLocal();
+      if (!mounted) return;
+      state = AsyncValue.data(fresh);
     } catch (e, st) {
+      if (!mounted) return;
+      if (state.hasValue) {
+        return;
+      }
       state = AsyncValue.error(e, st);
     }
   }
 
+  Future<List<Invoice>> _fetchFromLocal() async {
+    final companyId = _companyId;
+    // TENANT ISOLATION: return nothing when no account is active.
+    if (companyId == null) return [];
+
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'invoices',
+      where: 'company_id = ?',
+      whereArgs: [companyId],
+      orderBy: 'sold_at DESC',
+    );
+    return rows.map((r) => Invoice(
+      id: r['id'] as String,
+      invoiceNumber: r['invoice_number'] as String,
+      status: paymentStatusFromApi(r['status'] as String),
+      total: (r['total'] as num).toDouble(),
+      soldAt: DateTime.parse(r['sold_at'] as String),
+      customerName: r['customer_name'] as String?,
+    )).toList();
+  }
+
+  Future<void> _upsertToLocal(List<Invoice> invoices) async {
+    final companyId = _companyId;
+    if (companyId == null) return;
+
+    final db = await AppDatabase.instance.database;
+    final batch = db.batch();
+    for (final inv in invoices) {
+      batch.insert(
+        'invoices',
+        {
+          'id': inv.id,
+          'sale_id': inv.id, // fallback sale_id if not present
+          'company_id': companyId,
+          'invoice_number': inv.invoiceNumber,
+          'status': paymentStatusToApi(inv.status),
+          'customer_name': inv.customerName,
+          'total': inv.total,
+          'sold_at': inv.soldAt.toIso8601String(),
+          'created_at': inv.soldAt.toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<Invoice> fetchDetails(String id) async {
+    final companyId = _companyId;
+
+    // 1. Check local SQLite first (strictly scoped by company)
+    try {
+      if (companyId != null) {
+        final db = await AppDatabase.instance.database;
+        final invRows = await db.query('invoices', where: 'id = ? AND company_id = ?', whereArgs: [id, companyId]);
+
+        if (invRows.isNotEmpty) {
+          final inv = invRows.first;
+          final saleId = inv['sale_id'] as String;
+          final itemRows = await db.query(
+            'sale_items',
+            where: 'sale_id = ? AND company_id = ?',
+            whereArgs: [saleId, companyId],
+          );
+        final items = itemRows.map((ir) => InvoiceLineItem(
+          productName: (ir['product_name'] ?? 'Product') as String,
+          quantity: (ir['quantity'] as num).toInt(),
+          lineTotal: (ir['line_total'] as num).toDouble(),
+        )).toList();
+
+          return Invoice(
+            id: inv['id'] as String,
+            invoiceNumber: inv['invoice_number'] as String,
+            status: paymentStatusFromApi(inv['status'] as String),
+            total: (inv['total'] as num).toDouble(),
+            soldAt: DateTime.parse(inv['sold_at'] as String),
+            customerName: inv['customer_name'] as String?,
+            items: items,
+          );
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch from API
     final client = _ref.read(apiClientProvider);
     final response = await client.get('/invoices/$id');
     return Invoice.fromJson(response['data'] as Map<String, dynamic>);
   }
 
   Future<Uint8List> fetchInvoicePdf(String id) async {
-    final client = _ref.read(apiClientProvider);
-    return client.getBytes('/invoices/$id/pdf');
+    try {
+      final client = _ref.read(apiClientProvider);
+      return await client.getBytes('/invoices/$id/pdf');
+    } catch (_) {
+      return _generateOfflinePdf(id);
+    }
+  }
+
+  Future<Uint8List> _generateOfflinePdf(String id) async {
+    final invoice = await fetchDetails(id);
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('INVOICE / FACTURE', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Text('Invoice #: ${invoice.invoiceNumber}'),
+              pw.Text('Date: ${invoice.soldAt.toIso8601String().substring(0, 10)}'),
+              if (invoice.customerName != null) pw.Text('Customer: ${invoice.customerName}'),
+              pw.SizedBox(height: 16),
+              pw.Divider(),
+              pw.TableHelper.fromTextArray(
+                headers: ['Item', 'Qty', 'Total (DZD)'],
+                data: invoice.items.map((i) => [
+                  i.productName,
+                  i.quantity.toString(),
+                  i.lineTotal.toStringAsFixed(2),
+                ]).toList(),
+              ),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text(
+                  'Total: ${invoice.total.toStringAsFixed(2)} DZD',
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    return pdf.save();
   }
 }
 
 final invoicesRepositoryProvider =
     StateNotifierProvider.autoDispose<InvoicesRepository, AsyncValue<List<Invoice>>>(
-  (ref) => InvoicesRepository(ref),
+  (ref) {
+    ref.watch(sessionProvider.select((s) => s.companyId));
+    return InvoicesRepository(ref);
+  },
 );
 
-/// Details are fetched fresh each time a specific invoice screen opens
-/// (autoDispose: provider tears down when no longer watched, so
-/// re-opening the same invoice later re-fetches rather than showing
-/// stale cached data).
 final invoiceDetailsProvider =
     FutureProvider.autoDispose.family<Invoice, String>((ref, id) {
   return ref.read(invoicesRepositoryProvider.notifier).fetchDetails(id);

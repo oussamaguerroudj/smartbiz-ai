@@ -1,31 +1,135 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
-// FIX: this pointed at a same-directory 'clinic_models.dart' that does
-// not exist (the models actually live in ../domain/) — a pre-existing
-// broken import that would have failed at compile time the moment
-// anything here actually got analyzed/built.
+import '../../../core/network/session.dart';
 import '../domain/clinic_models.dart';
 
 class ClinicRepository {
   ClinicRepository(this._ref);
   final Ref _ref;
 
+  String? get _companyId => _ref.read(sessionProvider).companyId;
+
   Future<ClinicDashboardStats> dashboard() async {
-    final client = _ref.read(apiClientProvider);
-    final response = await client.get('/clinic/dashboard');
-    return ClinicDashboardStats.fromJson(response['data'] as Map<String, dynamic>);
+    try {
+      final client = _ref.read(apiClientProvider);
+      final response = await client.get('/clinic/dashboard');
+      return ClinicDashboardStats.fromJson(response['data'] as Map<String, dynamic>);
+    } catch (_) {
+      final companyId = _companyId;
+      if (companyId == null) {
+        return ClinicDashboardStats(
+          patientsToday: 0,
+          appointmentsToday: 0,
+          waitingCount: 0,
+          completedToday: 0,
+          noShowToday: 0,
+          newPatientsToday: 0,
+          doctorCount: 1,
+        );
+      }
+      try {
+        final db = await AppDatabase.instance.database;
+        final todayPrefix = '${DateTime.now().toIso8601String().substring(0, 10)}%';
+        final apptsToday = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM appointments WHERE company_id = ? AND scheduled_at LIKE ?',
+          [companyId, todayPrefix],
+        );
+        final completedToday = await db.rawQuery(
+          "SELECT COUNT(*) as count FROM appointments WHERE company_id = ? AND scheduled_at LIKE ? AND status = 'completed'",
+          [companyId, todayPrefix],
+        );
+        final patients = await db.rawQuery(
+          'SELECT COUNT(DISTINCT customer_id) as count FROM appointments WHERE company_id = ? AND scheduled_at LIKE ?',
+          [companyId, todayPrefix],
+        );
+        final totalPatients = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM customers WHERE company_id = ?',
+          [companyId],
+        );
+        final expensesRes = await db.rawQuery(
+          'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE company_id = ? AND expense_date LIKE ?',
+          [companyId, todayPrefix],
+        );
+
+        final apptCount = (apptsToday.first['count'] as num?)?.toInt() ?? 0;
+        final completedCount = (completedToday.first['count'] as num?)?.toInt() ?? 0;
+        final patientCount = (patients.first['count'] as num?)?.toInt() ?? 0;
+        final totalPatientCount = (totalPatients.first['count'] as num?)?.toInt() ?? 0;
+        final todayExp = (expensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
+
+        return ClinicDashboardStats(
+          patientsToday: patientCount,
+          appointmentsToday: apptCount,
+          waitingCount: apptCount - completedCount,
+          completedToday: completedCount,
+          noShowToday: 0,
+          newPatientsToday: totalPatientCount,
+          doctorCount: 1,
+          todayRevenue: 0,
+          weekRevenue: 0,
+          monthRevenue: 0,
+          todayExpenses: todayExp,
+          todayProfit: -todayExp,
+          outstandingPayments: 0,
+        );
+      } catch (_) {
+        return ClinicDashboardStats(
+          patientsToday: 0,
+          appointmentsToday: 0,
+          waitingCount: 0,
+          completedToday: 0,
+          noShowToday: 0,
+          newPatientsToday: 0,
+          doctorCount: 1,
+        );
+      }
+    }
   }
 
   Future<List<ClinicPatient>> listPatients({String? search}) async {
-    final client = _ref.read(apiClientProvider);
-    final response = await client.get(
-      '/clinic/patients',
-      query: search != null && search.isNotEmpty ? {'search': search} : null,
-    );
-    final rows = (response['data'] as List).cast<Map<String, dynamic>>();
-    return rows.map(ClinicPatient.fromJson).toList();
+    try {
+      final client = _ref.read(apiClientProvider);
+      final response = await client.get(
+        '/clinic/patients',
+        query: search != null && search.isNotEmpty ? {'search': search} : null,
+      );
+      final rows = (response['data'] as List).cast<Map<String, dynamic>>();
+      return rows.map(ClinicPatient.fromJson).toList();
+    } catch (_) {
+      final companyId = _companyId;
+      if (companyId == null) return [];
+      try {
+        final db = await AppDatabase.instance.database;
+        List<Map<String, dynamic>> rows;
+        if (search != null && search.trim().isNotEmpty) {
+          final q = '%${search.trim()}%';
+          rows = await db.query(
+            'customers',
+            where: 'company_id = ? AND (name LIKE ? OR phone LIKE ?)',
+            whereArgs: [companyId, q, q],
+            orderBy: 'name ASC',
+          );
+        } else {
+          rows = await db.query(
+            'customers',
+            where: 'company_id = ?',
+            whereArgs: [companyId],
+            orderBy: 'name ASC',
+          );
+        }
+        return rows.map((r) => ClinicPatient(
+          id: r['id'] as String,
+          fullName: r['name'] as String,
+          phone: r['phone'] as String?,
+          notes: r['address'] as String?,
+        )).toList();
+      } catch (_) {
+        return [];
+      }
+    }
   }
 
   Future<ClinicPatient> createPatient({

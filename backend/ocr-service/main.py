@@ -64,20 +64,31 @@ def health():
     return {"status": "ok"}
 
 
+MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB decoded limit
+MAX_IMAGE_PIXELS = 25_000_000  # 25 MP decompression bomb limit
+
+
 @app.post("/ocr", response_model=OcrResponse)
 def run_ocr(payload: OcrRequest):
     if not payload.imageBase64:
         raise HTTPException(status_code=400, detail="imageBase64 is required")
 
+    if len(payload.imageBase64) > (MAX_IMAGE_BYTES * 4 // 3) + 1024:
+        raise HTTPException(status_code=413, detail="Image payload exceeds maximum size limit")
+
     try:
-        image_bytes = base64.b64decode(payload.imageBase64)
+        image_bytes = base64.b64decode(payload.imageBase64, validate=True)
     except Exception as exc:  # noqa: BLE001 - surfaced as a clean 400
-        raise HTTPException(status_code=400, detail=f"Invalid base64 image: {exc}") from exc
+        raise HTTPException(status_code=400, detail="Invalid base64 image") from exc
+
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Decoded image exceeds maximum size limit")
 
     try:
         import numpy as np
         from PIL import Image
 
+        Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         image_array = np.array(image)
 
@@ -88,7 +99,7 @@ def run_ocr(payload: OcrRequest):
         # invoice scanning — the Node backend treats any non-2xx here
         # as "no OCR text available" and continues with vision-only
         # extraction.
-        raise HTTPException(status_code=500, detail=f"OCR failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail="OCR processing failed") from exc
 
     lines = []
     for page in result or []:

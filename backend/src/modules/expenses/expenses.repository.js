@@ -1,15 +1,39 @@
 const { query } = require('../../config/db');
+const ApiError = require('../../utils/ApiError');
+
+async function verifyEmployeeBelongsToCompany(companyId, employeeId) {
+  if (!employeeId) return;
+  const res = await query(
+    'SELECT id FROM employees WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL',
+    [companyId, employeeId],
+  );
+  if (res.rows.length === 0) {
+    throw ApiError.badRequest('Employee not found for this company', 'VALIDATION_ERROR');
+  }
+}
 
 async function findAll(companyId) {
   const result = await query(
     `SELECT e.*, emp.name AS employee_name
      FROM expenses e
-     LEFT JOIN employees emp ON emp.id = e.employee_id
+     LEFT JOIN employees emp ON emp.id = e.employee_id AND emp.company_id = e.company_id
      WHERE e.company_id = $1 AND e.deleted_at IS NULL
      ORDER BY e.expense_date DESC, e.created_at DESC`,
     [companyId],
   );
   return result.rows;
+}
+
+async function findByClientId(companyId, clientId) {
+  if (!clientId) return null;
+  const result = await query(
+    `SELECT e.*, emp.name AS employee_name
+     FROM expenses e
+     LEFT JOIN employees emp ON emp.id = e.employee_id AND emp.company_id = e.company_id
+     WHERE e.company_id = $1 AND e.client_id = $2 AND e.deleted_at IS NULL`,
+    [companyId, clientId],
+  );
+  return result.rows[0] || null;
 }
 
 async function create(
@@ -25,15 +49,17 @@ async function create(
     employeeId,
     salaryPeriod,
     duration,
+    clientId,
   },
 ) {
+  await verifyEmployeeBelongsToCompany(companyId, employeeId);
   const finalExpenseDate = expenseDate || periodStart || new Date().toISOString().slice(0, 10);
   const result = await query(
     `INSERT INTO expenses (
        company_id, category, description, amount, expense_date,
-       period_type, period_start, period_end, employee_id, salary_period, duration
+       period_type, period_start, period_end, employee_id, salary_period, duration, client_id
      )
-     VALUES ($1, $2, $3, $4, $5::date, $6, $7::date, $8::date, $9, $10, $11)
+     VALUES ($1, $2, $3, $4, $5::date, $6, $7::date, $8::date, $9, $10, $11, $12)
      RETURNING *`,
     [
       companyId,
@@ -47,6 +73,7 @@ async function create(
       employeeId || null,
       salaryPeriod || null,
       duration || null,
+      clientId || null,
     ],
   );
   return result.rows[0];
@@ -56,7 +83,7 @@ async function findById(companyId, id) {
   const result = await query(
     `SELECT e.*, emp.name AS employee_name
      FROM expenses e
-     LEFT JOIN employees emp ON emp.id = e.employee_id
+     LEFT JOIN employees emp ON emp.id = e.employee_id AND emp.company_id = e.company_id
      WHERE e.company_id = $1 AND e.id = $2 AND e.deleted_at IS NULL`,
     [companyId, id],
   );
@@ -95,6 +122,7 @@ async function update(
     duration,
   },
 ) {
+  await verifyEmployeeBelongsToCompany(companyId, employeeId);
   const result = await query(
     `UPDATE expenses
      SET category = COALESCE($3, category),
@@ -172,7 +200,7 @@ async function salariesBreakdownForRange(companyId, rangeStart, rangeEnd) {
        e.salary_period AS "salaryPeriod",
        e.duration
      FROM expenses e
-     LEFT JOIN employees emp ON emp.id = e.employee_id
+     LEFT JOIN employees emp ON emp.id = e.employee_id AND emp.company_id = e.company_id
      WHERE e.company_id = $1
        AND e.deleted_at IS NULL
        AND (e.category ILIKE '%salary%' OR e.category ILIKE '%salair%' OR e.category ILIKE '%payroll%' OR e.category ILIKE '%paie%' OR e.category ILIKE '%wage%' OR e.employee_id IS NOT NULL)
@@ -214,6 +242,7 @@ async function globalTotal(companyId) {
 module.exports = {
   findAll,
   findById,
+  findByClientId,
   create,
   update,
   softDelete,

@@ -96,7 +96,7 @@ async function get_sales(companyId, { period = 'today', limit = 10 } = {}) {
     `SELECT s.id, s.total, s.payment_status, s.sold_at, c.name AS customer_name,
             COUNT(si.id)::int AS items_count
      FROM sales s
-     LEFT JOIN customers c ON c.id = s.customer_id
+     LEFT JOIN customers c ON c.id = s.customer_id AND c.company_id = s.company_id
      LEFT JOIN sale_items si ON si.sale_id = s.id
      WHERE s.company_id = $1 AND s.sold_at::date BETWEEN $2::date AND $3::date
      GROUP BY s.id, c.name
@@ -129,7 +129,7 @@ async function get_top_products(companyId, { period = 'this_month', limit = 5 } 
             COALESCE(SUM(si.quantity * si.unit_price), 0) AS revenue
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id AND s.company_id = $1
-     JOIN products p ON p.id = si.product_id
+     JOIN products p ON p.id = si.product_id AND p.company_id = s.company_id
      WHERE s.sold_at::date BETWEEN $2::date AND $3::date
      GROUP BY p.id, p.name
      ORDER BY units_sold DESC
@@ -719,7 +719,7 @@ async function get_appointments(companyId, { period = 'upcoming', limit = 10 } =
   const res = await query(
     `SELECT a.id, a.title, a.scheduled_at, a.status, a.notes, c.name AS customer_name, c.phone AS customer_phone
      FROM appointments a
-     LEFT JOIN customers c ON c.id = a.customer_id
+     LEFT JOIN customers c ON c.id = a.customer_id AND c.company_id = a.company_id
      WHERE a.company_id = $1 AND ${whereDate}
      ORDER BY a.scheduled_at ASC
      LIMIT $2`,
@@ -779,7 +779,7 @@ async function get_patient_last_visit(companyId, { patientName } = {}) {
   const result = await query(
     `SELECT cv.visited_at, cv.reason, cv.diagnosis, cv.treatment, cv.follow_up_date
      FROM clinic_visits cv
-     JOIN clinic_patients cp ON cp.id = cv.patient_id
+     JOIN clinic_patients cp ON cp.id = cv.patient_id AND cp.company_id = cv.company_id
      WHERE cv.company_id = $1 AND cp.full_name ILIKE $2
      ORDER BY cv.visited_at DESC
      LIMIT 1`,
@@ -1321,10 +1321,13 @@ const TOOL_DEFINITIONS = [
  * `limit`/`days` bounds above).
  */
 async function executeTool(companyId, toolName, args) {
-  const impl = TOOL_IMPLEMENTATIONS[toolName];
-  if (!impl) {
+  if (
+    typeof toolName !== 'string' ||
+    !Object.prototype.hasOwnProperty.call(TOOL_IMPLEMENTATIONS, toolName)
+  ) {
     return { error: `Unknown tool: ${toolName}` };
   }
+  const impl = TOOL_IMPLEMENTATIONS[toolName];
   try {
     return await impl(companyId, args || {});
   } catch (err) {

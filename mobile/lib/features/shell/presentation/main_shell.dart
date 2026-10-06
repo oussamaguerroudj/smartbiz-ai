@@ -1,9 +1,12 @@
+import '../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/fade_slide_in.dart';
 import '../../../core/widgets/futuristic_nav_bar.dart';
+import '../../../core/widgets/offline_status_bar.dart';
+import '../../../core/widgets/sync_status_dialog.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../products/presentation/screens/products_list_screen.dart';
@@ -33,6 +36,8 @@ import '../../pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart'
 import '../../superette/presentation/screens/superette_main_dashboard_screen.dart';
 import '../../clothing/presentation/screens/clothing_main_dashboard_screen.dart';
 import '../../enterprise/presentation/screens/enterprise_main_dashboard_screen.dart';
+import '../../enterprise/presentation/screens/enterprise_projects_screen.dart';
+import '../../dashboard/presentation/screens/all_pages_screen.dart';
 import '../../auth/data/companies_repository.dart';
 
 /// Main App Shell — Spec Ch. 7 (Navigation)
@@ -200,14 +205,24 @@ class _MainShellState extends ConsumerState<MainShell> {
     // in main.dart's phase flow.
     return PopScope(
       canPop: _tabIndex == 0,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         setState(() => _tabIndex = 0);
       },
       child: Scaffold(
-        body: IndexedStack(
-          index: _tabIndex,
-          children: tabs,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              const OfflineStatusBar(),
+              Expanded(
+                child: IndexedStack(
+                  index: _tabIndex,
+                  children: tabs,
+                ),
+              ),
+            ],
+          ),
         ),
         bottomNavigationBar: FuturisticNavBar(
           currentIndex: _tabIndex,
@@ -271,53 +286,29 @@ class _MoreMenu extends ConsumerWidget {
   // (including `null`/not-yet-set) keeps the exact original CORE list,
   // unchanged.
   List<_MoreMenuItemData> _items(AppLocalizations l10n, String? businessType) {
-    if (businessType == 'clinic' || businessType == 'dental_clinic') {
-      return [
+    final specializedItems = <_MoreMenuItemData>[
+      if (businessType == 'clinic' || businessType == 'dental_clinic') ...[
         _MoreMenuItemData(
           l10n.clinicQueueTitle,
           Icons.groups_outlined,
           (_) => const ClinicQueueScreen(),
         ),
         _MoreMenuItemData(
-          l10n.moreExpenses,
-          Icons.payments_outlined,
-          (_) => const ExpensesScreen(),
+          l10n.clinicPatientsTitle,
+          Icons.people_alt_outlined,
+          (_) => const ClinicPatientsScreen(),
+        ),
+      ] else if (businessType == 'restaurant' || businessType == 'cafe') ...[
+        _MoreMenuItemData(
+          l10n.ordersTitle,
+          Icons.receipt_long_outlined,
+          (_) => const RestaurantOrdersScreen(),
         ),
         _MoreMenuItemData(
-          l10n.moreEmployees,
-          Icons.badge_outlined,
-          (_) => const EmployeesScreen(),
+          l10n.tablesTitle,
+          Icons.table_restaurant_outlined,
+          (_) => const RestaurantTablesScreen(),
         ),
-        _MoreMenuItemData(
-          l10n.moreReports,
-          Icons.bar_chart_outlined,
-          (_) => const ReportsScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreAiAssistant,
-          Icons.smart_toy_outlined,
-          (_) => const AiAssistantScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreAiInsights,
-          Icons.insights_outlined,
-          (_) => const AiInsightsScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreNotifications,
-          Icons.notifications_outlined,
-          (_) => const NotificationsScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreSettings,
-          Icons.settings_outlined,
-          (_) => const SettingsScreen(),
-        ),
-      ];
-    }
-
-    if (businessType == 'restaurant' || businessType == 'cafe') {
-      return [
         _MoreMenuItemData(
           l10n.menuTitle,
           Icons.restaurant_menu_outlined,
@@ -333,45 +324,22 @@ class _MoreMenu extends ConsumerWidget {
           Icons.inventory_2_outlined,
           (_) => const RestaurantInventoryScreen(),
         ),
+      ] else if (businessType == 'company') ...[
         _MoreMenuItemData(
-          l10n.moreExpenses,
-          Icons.payments_outlined,
-          (_) => const ExpensesScreen(),
+          l10n.projectsTitle,
+          Icons.work_outline_rounded,
+          (_) => const EnterpriseProjectsScreen(),
         ),
-        _MoreMenuItemData(
-          l10n.moreEmployees,
-          Icons.badge_outlined,
-          (_) => const EmployeesScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreReports,
-          Icons.bar_chart_outlined,
-          (_) => const ReportsScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreAiAssistant,
-          Icons.smart_toy_outlined,
-          (_) => const AiAssistantScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreAiInsights,
-          Icons.insights_outlined,
-          (_) => const AiInsightsScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreNotifications,
-          Icons.notifications_outlined,
-          (_) => const NotificationsScreen(),
-        ),
-        _MoreMenuItemData(
-          l10n.moreSettings,
-          Icons.settings_outlined,
-          (_) => const SettingsScreen(),
-        ),
-      ];
-    }
+      ],
+    ];
 
     return [
+      ...specializedItems,
+      _MoreMenuItemData(
+        l10n.allPagesTitle,
+        Icons.grid_view_rounded,
+        (_) => const AllPagesScreen(),
+      ),
         _MoreMenuItemData(
           l10n.moreInvoices,
           Icons.receipt_long_outlined,
@@ -435,6 +403,15 @@ class _MoreMenu extends ConsumerWidget {
           l10n.moreNotifications,
           Icons.notifications_outlined,
           (_) => const NotificationsScreen(),
+        ),
+        _MoreMenuItemData(
+          l10n.syncDetails,
+          Icons.sync_alt_rounded,
+          (_) => const SizedBox.shrink(),
+          onTapOverride: (ctx) => showDialog(
+            context: ctx,
+            builder: (_) => const SyncStatusDialog(),
+          ),
         ),
         _MoreMenuItemData(
           l10n.moreSettings,
@@ -511,8 +488,7 @@ class _MoreMenu extends ConsumerWidget {
                             fontWeight: FontWeight.w700,
                           ),
                     ),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
+                    trailing: ForwardChevron(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface

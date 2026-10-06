@@ -1,10 +1,48 @@
 const { query, withTransaction } = require('../../config/db');
+const ApiError = require('../../utils/ApiError');
+
+async function verifyDoctorBelongsToCompany(companyId, doctorId, client = null) {
+  if (!doctorId) return;
+  const runner = client ? client.query.bind(client) : query;
+  const res = await runner(
+    'SELECT id FROM employees WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL',
+    [companyId, doctorId],
+  );
+  if (res.rows.length === 0) {
+    throw ApiError.badRequest('Doctor/employee not found for this company', 'VALIDATION_ERROR');
+  }
+}
+
+async function verifyAppointmentBelongsToCompany(companyId, appointmentId, client = null) {
+  if (!appointmentId) return;
+  const runner = client ? client.query.bind(client) : query;
+  const res = await runner(
+    'SELECT id FROM clinic_appointments WHERE company_id = $1 AND id = $2',
+    [companyId, appointmentId],
+  );
+  if (res.rows.length === 0) {
+    throw ApiError.badRequest('Appointment not found for this company', 'VALIDATION_ERROR');
+  }
+}
+
+async function verifyVisitBelongsToCompany(companyId, visitId, client = null) {
+  if (!visitId) return;
+  const runner = client ? client.query.bind(client) : query;
+  const res = await runner(
+    'SELECT id FROM clinic_visits WHERE company_id = $1 AND id = $2',
+    [companyId, visitId],
+  );
+  if (res.rows.length === 0) {
+    throw ApiError.badRequest('Visit not found for this company', 'VALIDATION_ERROR');
+  }
+}
 
 // ---------------------------------------------------------------------
 // Patients
 // ---------------------------------------------------------------------
 
 async function createPatient(companyId, data) {
+  await verifyDoctorBelongsToCompany(companyId, data.assignedDoctorId);
   const result = await query(
     `INSERT INTO clinic_patients (
        company_id, full_name, date_of_birth, gender, phone, email,
@@ -101,6 +139,7 @@ async function deletePatient(companyId, id) {
 // ---------------------------------------------------------------------
 
 async function createAppointment(companyId, data) {
+  await verifyDoctorBelongsToCompany(companyId, data.doctorId);
   const result = await query(
     `INSERT INTO clinic_appointments (
        company_id, patient_id, doctor_id, scheduled_at, appointment_type, notes
@@ -117,7 +156,7 @@ async function findAppointments(companyId, { from, to } = {}) {
     const result = await query(
       `SELECT ca.*, cp.full_name AS patient_name
        FROM clinic_appointments ca
-       JOIN clinic_patients cp ON cp.id = ca.patient_id
+       JOIN clinic_patients cp ON cp.id = ca.patient_id AND cp.company_id = ca.company_id
        WHERE ca.company_id = $1 AND ca.scheduled_at BETWEEN $2 AND $3
        ORDER BY ca.scheduled_at`,
       [companyId, from, to],
@@ -127,7 +166,7 @@ async function findAppointments(companyId, { from, to } = {}) {
   const result = await query(
     `SELECT ca.*, cp.full_name AS patient_name
      FROM clinic_appointments ca
-     JOIN clinic_patients cp ON cp.id = ca.patient_id
+     JOIN clinic_patients cp ON cp.id = ca.patient_id AND cp.company_id = ca.company_id
      WHERE ca.company_id = $1
      ORDER BY ca.scheduled_at DESC
      LIMIT 100`,
@@ -149,10 +188,6 @@ async function updateAppointmentStatus(companyId, id, status) {
 // ---------------------------------------------------------------------
 
 async function nextQueuePosition(client, companyId) {
-  // Resets naturally each day since positions are only ever compared
-  // among today's still-active (non-completed/cancelled) entries —
-  // see getActiveQueue — but stays monotonically increasing within a
-  // day so "#01, #02, #03..." never repeats or collides.
   const result = await client.query(
     `SELECT COALESCE(MAX(position), 0) + 1 AS next_position
      FROM clinic_queue
@@ -162,11 +197,6 @@ async function nextQueuePosition(client, companyId) {
   return result.rows[0].next_position;
 }
 
-/** Is this patient already active in today's queue (waiting / next /
- * in_consultation)? Locks the matching rows FOR UPDATE so a double-tap
- * or two concurrent requests can't both pass the check before either
- * insert commits (spec: "Prevent accidental duplicate active queue
- * entries for the same patient"). */
 async function findActiveQueueEntryForPatient(client, companyId, patientId) {
   const result = await client.query(
     `SELECT * FROM clinic_queue
@@ -181,6 +211,9 @@ async function findActiveQueueEntryForPatient(client, companyId, patientId) {
 
 async function addToQueue(companyId, { patientId, appointmentId, doctorId, visitType }) {
   return withTransaction(async (client) => {
+    await verifyDoctorBelongsToCompany(companyId, doctorId, client);
+    await verifyAppointmentBelongsToCompany(companyId, appointmentId, client);
+
     const existing = await findActiveQueueEntryForPatient(client, companyId, patientId);
     if (existing) {
       const err = new Error('PATIENT_ALREADY_IN_QUEUE');
@@ -213,8 +246,8 @@ async function getActiveQueue(companyId) {
   const result = await query(
     `SELECT cq.*, cp.full_name AS patient_name, e.name AS doctor_name
      FROM clinic_queue cq
-     JOIN clinic_patients cp ON cp.id = cq.patient_id
-     LEFT JOIN employees e ON e.id = cq.doctor_id
+     JOIN clinic_patients cp ON cp.id = cq.patient_id AND cp.company_id = cq.company_id
+     LEFT JOIN employees e ON e.id = cq.doctor_id AND e.company_id = cq.company_id
      WHERE cq.company_id = $1
        AND cq.arrived_at::date = CURRENT_DATE
        AND cq.status IN ('waiting', 'next', 'in_consultation')
@@ -224,15 +257,6 @@ async function getActiveQueue(companyId) {
   return result.rows;
 }
 
-/**
- * "Call Next Patient" (Ch. 3.F): the earliest still-WAITING entry moves
- * to IN_CONSULTATION. Only one patient is ever IN_CONSULTATION per
- * doctor at a time is a reasonable future refinement (Ch. 34
- * mentions extensibility) — kept simple (one clinic-wide "current
- * patient" per call) for this first implementation, matching the
- * spec's own single-queue example rather than inventing multi-doctor
- * complexity that wasn't asked for.
- */
 async function callNextPatient(companyId) {
   return withTransaction(async (client) => {
     const nextResult = await client.query(
@@ -250,15 +274,15 @@ async function callNextPatient(companyId) {
     const updated = await client.query(
       `UPDATE clinic_queue
        SET status = 'in_consultation', called_at = now()
-       WHERE id = $1
+       WHERE id = $1 AND company_id = $2
        RETURNING *`,
-      [next.id],
+      [next.id, companyId],
     );
 
     if (next.appointment_id) {
       await client.query(
-        `UPDATE clinic_appointments SET status = 'in_consultation' WHERE id = $1`,
-        [next.appointment_id],
+        `UPDATE clinic_appointments SET status = 'in_consultation' WHERE id = $1 AND company_id = $2`,
+        [next.appointment_id, companyId],
       );
     }
 
@@ -298,6 +322,8 @@ async function findQueueEntryById(companyId, queueId) {
 // ---------------------------------------------------------------------
 
 async function createVisit(companyId, data) {
+  await verifyDoctorBelongsToCompany(companyId, data.doctorId);
+  await verifyAppointmentBelongsToCompany(companyId, data.appointmentId);
   const consultationPrice = Number(data.consultationPrice) || 0;
   const result = await query(
     `INSERT INTO clinic_visits (
@@ -329,7 +355,7 @@ async function findVisitsByPatient(companyId, patientId) {
   const result = await query(
     `SELECT cv.*, e.name AS doctor_name
      FROM clinic_visits cv
-     LEFT JOIN employees e ON e.id = cv.doctor_id
+     LEFT JOIN employees e ON e.id = cv.doctor_id AND e.company_id = cv.company_id
      WHERE cv.company_id = $1 AND cv.patient_id = $2
      ORDER BY cv.visited_at DESC`,
     [companyId, patientId],
@@ -472,6 +498,7 @@ async function outstandingTotal(companyId) {
 // ---------------------------------------------------------------------
 
 async function addDocument(companyId, data) {
+  await verifyVisitBelongsToCompany(companyId, data.visitId);
   const result = await query(
     `INSERT INTO clinic_documents (
        company_id, patient_id, visit_id, file_name, file_url, document_type,
@@ -499,7 +526,7 @@ async function findDocumentsByPatient(companyId, patientId) {
   const result = await query(
     `SELECT cd.*, u.name AS uploaded_by_name
      FROM clinic_documents cd
-     LEFT JOIN users u ON u.id = cd.uploaded_by
+     LEFT JOIN users u ON u.id = cd.uploaded_by AND u.company_id = cd.company_id
      WHERE cd.company_id = $1 AND cd.patient_id = $2 AND cd.deleted_at IS NULL
      ORDER BY cd.uploaded_at DESC`,
     [companyId, patientId],
@@ -515,9 +542,6 @@ async function findDocumentById(companyId, documentId) {
   return result.rows[0] || null;
 }
 
-/** Soft delete (Ch. 4 "delete"), matching clinic_patients' own
- * deleted_at pattern rather than a hard DELETE — keeps the audit trail
- * (who uploaded what, when) even after removal. */
 async function deleteDocument(companyId, documentId) {
   const result = await query(
     `UPDATE clinic_documents SET deleted_at = now()
@@ -532,9 +556,6 @@ async function deleteDocument(companyId, documentId) {
 // Prescriptions (Ch. 6)
 // ---------------------------------------------------------------------
 
-/** Same FOR UPDATE-locked, per-company sequential pattern as
- * sales.repository.nextInvoiceNumber ("INV-<n>") — reused here rather
- * than inventing a second numbering scheme. */
 async function nextPrescriptionNumber(client, companyId) {
   const companyResult = await client.query(
     `SELECT id FROM companies WHERE id = $1 FOR UPDATE`,
@@ -554,6 +575,8 @@ async function nextPrescriptionNumber(client, companyId) {
 
 async function createPrescription(companyId, data) {
   return withTransaction(async (client) => {
+    await verifyDoctorBelongsToCompany(companyId, data.doctorId, client);
+    await verifyVisitBelongsToCompany(companyId, data.visitId, client);
     const prescriptionNumber = await nextPrescriptionNumber(client, companyId);
 
     const prescriptionResult = await client.query(
@@ -606,7 +629,7 @@ async function findPrescriptionsByPatient(companyId, patientId) {
   const result = await query(
     `SELECT cp.*, e.name AS doctor_name
      FROM clinic_prescriptions cp
-     LEFT JOIN employees e ON e.id = cp.doctor_id
+     LEFT JOIN employees e ON e.id = cp.doctor_id AND e.company_id = cp.company_id
      WHERE cp.company_id = $1 AND cp.patient_id = $2
      ORDER BY cp.issued_at DESC`,
     [companyId, patientId],
@@ -618,8 +641,8 @@ async function findPrescriptionById(companyId, prescriptionId) {
   const prescriptionResult = await query(
     `SELECT cp.*, e.name AS doctor_name, p.full_name AS patient_name
      FROM clinic_prescriptions cp
-     LEFT JOIN employees e ON e.id = cp.doctor_id
-     JOIN clinic_patients p ON p.id = cp.patient_id
+     LEFT JOIN employees e ON e.id = cp.doctor_id AND e.company_id = cp.company_id
+     JOIN clinic_patients p ON p.id = cp.patient_id AND p.company_id = cp.company_id
      WHERE cp.company_id = $1 AND cp.id = $2`,
     [companyId, prescriptionId],
   );

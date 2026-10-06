@@ -48,6 +48,12 @@ if (refreshSecret.length < 32) {
   );
 }
 
+if (accessSecret === refreshSecret) {
+  throw new Error(
+    'JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be distinct',
+  );
+}
+
 module.exports = {
   nodeEnv,
 

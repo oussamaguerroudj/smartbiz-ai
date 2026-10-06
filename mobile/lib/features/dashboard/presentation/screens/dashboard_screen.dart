@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -19,6 +20,7 @@ import '../../../sales/data/sales_repository.dart';
 import '../../../sales/domain/sale.dart';
 import '../../../sales/presentation/screens/create_sale_screen.dart';
 import '../../data/dashboard_repository.dart';
+import '../widgets/dashboard_pages_section.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Dashboard — Spec Ch. 9. Real API-backed (Phase 5 wiring): every KPI
@@ -122,6 +124,13 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const FadeSlideIn(
+                      delay: Duration(milliseconds: 30),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: DashboardPagesSection(),
+                      ),
+                    ),
                     FadeSlideIn(
                       delay: const Duration(milliseconds: 60),
                       child: _SalesTrendCard(
@@ -310,7 +319,7 @@ class _ScanChoiceTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded),
+            const ForwardChevron(),
           ],
         ),
       ),
@@ -571,19 +580,26 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                l10n.salesTrend,
-                style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: Text(
+                  l10n.salesTrend,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              PillTabs(
-                labels: [
-                  l10n.rangeWeek,
-                  l10n.rangeMonth,
-                  l10n.rangeYear,
-                ],
-                selectedIndex: _range.index,
-                onChanged: (i) => setState(
-                  () => _range = _TrendRange.values[i],
+              const SizedBox(width: 8),
+              Flexible(
+                child: PillTabs(
+                  labels: [
+                    l10n.rangeWeek,
+                    l10n.rangeMonth,
+                    l10n.rangeYear,
+                  ],
+                  selectedIndex: _range.index,
+                  onChanged: (i) => setState(
+                    () => _range = _TrendRange.values[i],
+                  ),
                 ),
               ),
             ],

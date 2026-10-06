@@ -1,6 +1,6 @@
-/// Clothing Store specialized module domain models (business-
-/// specialization brief Ch. 18). Same one-file convention as
-/// superette_models.dart / pharmacy_models.dart.
+// Clothing Store specialized module domain models (business-
+// specialization brief Ch. 18). Same one-file convention as
+// superette_models.dart / pharmacy_models.dart.
 
 double _toDouble(dynamic v) {
   if (v == null) return 0;

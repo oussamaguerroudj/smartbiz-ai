@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -18,90 +19,151 @@ String _initials(String name) {
   return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
 }
 
-class EmployeesScreen extends ConsumerWidget {
+class EmployeesScreen extends ConsumerStatefulWidget {
   const EmployeesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EmployeesScreen> createState() => _EmployeesScreenState();
+}
+
+class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final employeesAsync = ref.watch(employeesRepositoryProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.employeesTitle)),
+      appBar: AppBar(
+        title: Text(l10n.employeesTitle),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: l10n.searchInventoryHint,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(employeesRepositoryProvider.notifier).load();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: AppSpacing.sm),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusInput),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (val) {
+                ref.read(employeesRepositoryProvider.notifier).load(query: val);
+                setState(() {});
+              },
+            ),
+          ),
+        ),
+      ),
       body: employeesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, st) => Center(child: Text(l10n.errorPrefix(err))),
-        data: (employees) => RefreshIndicator(
-          onRefresh: () => ref.read(employeesRepositoryProvider.notifier).load(),
-          child: ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            itemCount: employees.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
-            itemBuilder: (context, i) {
-              final emp = employees[i];
-              return FadeSlideIn(
-                delay: Duration(milliseconds: 40 * i),
-                child: InkWell(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => EmployeeDetailsScreen(employeeId: emp.id)),
-                  ),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                      boxShadow: AppSpacing.cardElevation,
+        data: (employees) => employees.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.badge_outlined, size: 64, color: Theme.of(context).disabledColor),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(l10n.noEmployeesFound, style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: () => ref.read(employeesRepositoryProvider.notifier).load(
+                      query: _searchController.text,
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [AppColors.primaryLight.withValues(alpha: 0.35), AppColors.primary],
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            _initials(emp.name),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-                          ),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  itemCount: employees.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                  itemBuilder: (context, i) {
+                    final emp = employees[i];
+                    return FadeSlideIn(
+                      delay: Duration(milliseconds: 40 * i),
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => EmployeeDetailsScreen(employeeId: emp.id)),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                        child: Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                            boxShadow: AppSpacing.cardElevation,
+                          ),
+                          child: Row(
                             children: [
-                              Text(emp.name, style: Theme.of(context).textTheme.titleMedium),
-                              Text(emp.position),
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [AppColors.primaryLight.withValues(alpha: 0.35), AppColors.primary],
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  _initials(emp.name),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(emp.name, style: Theme.of(context).textTheme.titleMedium),
+                                    Text(emp.position),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${emp.baseSalary.toStringAsFixed(0)} DZD',
+                                    style: AppTypography.bodyStrong(AppColors.primaryDark),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  ForwardChevron(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35)),
+                                ],
+                              ),
                             ],
                           ),
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${emp.baseSalary.toStringAsFixed(0)} DZD',
-                              style: AppTypography.bodyStrong(AppColors.primaryDark),
-                            ),
-                            const SizedBox(height: 2),
-                            Icon(Icons.chevron_right_rounded,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
+              ),
       ),
       floatingActionButton: AppFab(
         onPressed: () => showModalBottomSheet(
@@ -127,15 +189,23 @@ class _AddEmployeeSheetState extends ConsumerState<_AddEmployeeSheet> {
   final _salaryController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _positionController.dispose();
+    _salaryController.dispose();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _isLoading = true);
     try {
       await ref.read(employeesRepositoryProvider.notifier).addEmployee(
-            name: _nameController.text,
-            position: _positionController.text.isEmpty ? l10n.staffDefault : _positionController.text,
-            baseSalary: double.parse(_salaryController.text),
+            name: _nameController.text.trim(),
+            position: _positionController.text.trim().isEmpty ? l10n.staffDefault : _positionController.text.trim(),
+            baseSalary: double.parse(_salaryController.text.trim()),
           );
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {

@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -130,7 +131,7 @@ class _LanguageOptionCard extends StatelessWidget {
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
               ),
               const Spacer(),
-              const Icon(Icons.chevron_right_rounded),
+              const ForwardChevron(),
             ],
           ),
         ),

@@ -168,7 +168,16 @@ async function createOrder(companyId, data) {
     }
   }
 
-  return repo.createOrder(companyId, { tableId: data.tableId, items: resolvedItems, notes: data.notes });
+  return repo.createOrder(companyId, {
+    tableId: data.tableId,
+    items: resolvedItems,
+    notes: data.notes,
+    customerName: data.customerName,
+    customerId: data.customerId,
+    orderType: data.orderType,
+    customerPhone: data.customerPhone,
+    deliveryAddress: data.deliveryAddress,
+  });
 }
 
 async function getOrderDetail(companyId, orderId) {
@@ -185,10 +194,34 @@ async function listOrders(companyId, range) {
   return repo.findOrders(companyId, range);
 }
 
+async function updateOrder(companyId, id, data) {
+  await requireOrder(companyId, id);
+  if (data.tableId) {
+    const table = await repo.findTableById(companyId, data.tableId);
+    if (!table) {
+      throw ApiError.badRequest('Table not found', 'VALIDATION_ERROR');
+    }
+  }
+  return repo.updateOrder(companyId, id, data);
+}
+
 async function updateOrderStatus(companyId, id, status) {
   if (!repo.VALID_ORDER_STATUSES.includes(status)) {
     throw ApiError.badRequest(`status must be one of: ${repo.VALID_ORDER_STATUSES.join(', ')}`, 'VALIDATION_ERROR');
   }
+  const order = await requireOrder(companyId, id);
+
+  if (status === 'completed') {
+    // Preparation rule: preparation must be finished (ready or served)
+    if (order.status !== 'ready' && order.status !== 'served') {
+      throw ApiError.badRequest('Order is not ready yet', 'ORDER_NOT_READY');
+    }
+    // Critical payment rule: payment_status must be paid
+    if (order.payment_status !== 'paid' || Number(order.amount_paid) < Number(order.total_amount)) {
+      throw ApiError.badRequest('Order payment is required before completion', 'ORDER_PAYMENT_REQUIRED');
+    }
+  }
+
   const updated = await repo.updateOrderStatus(companyId, id, status);
   if (!updated) {
     throw ApiError.notFound('Order not found');
@@ -275,6 +308,10 @@ async function getOrderInvoice(companyId, orderId) {
     invoiceNumber: `RS-${new Date(order.created_at).getFullYear()}-${order.order_number}`,
     date: order.created_at,
     tableName: order.table_id ? (await repo.findTableById(companyId, order.table_id))?.name : null,
+    customerName: order.customer_name || null,
+    customerPhone: order.customer_phone || null,
+    deliveryAddress: order.delivery_address || null,
+    orderType: order.order_type || 'dine_in',
     items: items.map((it) => ({
       itemName: it.item_name,
       quantity: it.quantity,
@@ -571,6 +608,7 @@ module.exports = {
   updateMenuItem,
   deleteMenuItem,
   createOrder,
+  updateOrder,
   getOrderDetail,
   getActiveOrders,
   listOrders,

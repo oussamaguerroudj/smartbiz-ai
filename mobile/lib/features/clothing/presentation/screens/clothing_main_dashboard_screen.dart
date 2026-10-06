@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -19,6 +20,7 @@ import '../../../products/data/products_repository.dart';
 import '../widgets/clothing_product_card.dart';
 import '../../data/clothing_repository.dart';
 import '../../domain/clothing_models.dart';
+import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 
 /// Clothing Store specialization of the MAIN Dashboard tab (business-
 /// specialization brief Ch. 18; SPECIALIZED_MODULES.md §3's documented
@@ -100,6 +102,13 @@ class ClothingMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const FadeSlideIn(
+                      delay: Duration(milliseconds: 30),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: DashboardPagesSection(),
+                      ),
+                    ),
                     FadeSlideIn(
                       delay: const Duration(milliseconds: 60),
                       child: Row(
@@ -401,7 +410,7 @@ class _StockAlertsCard extends StatelessWidget {
             children: [
               Text(l10n.stockAlertsTitle, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const ForwardChevron(),
                 tooltip: l10n.productsTitle,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ProductsListScreen()),
@@ -546,7 +555,7 @@ class _CustomerDebtCard extends StatelessWidget {
             children: [
               Text(l10n.customerDebtTitle, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const ForwardChevron(),
                 tooltip: l10n.creditPageTitle,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const CreditScreen()),

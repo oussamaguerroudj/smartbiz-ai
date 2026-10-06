@@ -22,7 +22,15 @@ function authMiddleware(req, res, next) {
   const token = header.slice('Bearer '.length);
 
   try {
-    const payload = jwt.verify(token, env.jwt.accessSecret);
+    const payload = jwt.verify(token, env.jwt.accessSecret, {
+      algorithms: ['HS256'],
+    });
+    if (payload.type && payload.type !== 'access') {
+      return next(ApiError.unauthorized('Invalid token type'));
+    }
+    if (!payload.sub || !payload.companyId) {
+      return next(ApiError.unauthorized('Invalid token payload'));
+    }
     req.user = {
       id: payload.sub,
       companyId: payload.companyId,

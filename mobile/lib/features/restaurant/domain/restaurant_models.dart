@@ -1,5 +1,5 @@
-/// Restaurant specialized module domain models (business-specialization
-/// brief Ch. 17). Same one-file convention as clinic_models.dart.
+// Restaurant specialized module domain models (business-specialization
+// brief Ch. 17). Same one-file convention as clinic_models.dart.
 
 /// Postgres NUMERIC columns come back over JSON as strings, not
 /// numbers — parsed centrally here exactly like clinic_models.dart's
@@ -108,6 +108,7 @@ String restaurantOrderStatusToJson(RestaurantOrderStatus status) => switch (stat
 class RestaurantOrderItem {
   RestaurantOrderItem({
     required this.id,
+    this.menuItemId,
     required this.itemName,
     required this.unitPrice,
     required this.quantity,
@@ -115,13 +116,26 @@ class RestaurantOrderItem {
   });
 
   final String id;
+  final String? menuItemId;
   final String itemName;
   final double unitPrice;
   final int quantity;
   final double subtotal;
 
+  Map<String, dynamic> toMap(String companyId, String orderId) => {
+        'id': id,
+        'order_id': orderId,
+        'company_id': companyId,
+        'menu_item_id': menuItemId,
+        'item_name': itemName,
+        'unit_price': unitPrice,
+        'quantity': quantity,
+        'subtotal': subtotal,
+      };
+
   factory RestaurantOrderItem.fromJson(Map<String, dynamic> json) => RestaurantOrderItem(
         id: json['id'] as String,
+        menuItemId: json['menu_item_id'] as String?,
         itemName: json['item_name'] as String,
         unitPrice: _toDouble(json['unit_price']),
         quantity: json['quantity'] as int,
@@ -134,39 +148,137 @@ class RestaurantOrder {
     required this.id,
     required this.orderNumber,
     required this.status,
+    this.tableId,
     this.tableName,
+    this.customerName,
+    this.customerId,
+    this.orderType = 'dine_in',
+    this.customerPhone,
+    this.deliveryAddress,
     required this.totalAmount,
     required this.amountPaid,
     required this.paymentStatus,
+    this.notes,
     required this.createdAt,
+    this.completedAt,
     this.items = const [],
   });
 
   final String id;
   final int orderNumber;
   final RestaurantOrderStatus status;
+  final String? tableId;
   final String? tableName;
+  final String? customerName;
+  final String? customerId;
+  final String orderType;
+  final String? customerPhone;
+  final String? deliveryAddress;
   final double totalAmount;
   final double amountPaid;
   final RestaurantPaymentStatus paymentStatus;
+  final String? notes;
   final DateTime createdAt;
+  final DateTime? completedAt;
   final List<RestaurantOrderItem> items;
 
   double get remaining => (totalAmount - amountPaid).clamp(0, double.infinity);
+
+  bool get isPaid => paymentStatus == RestaurantPaymentStatus.paid;
+  bool get isPartiallyPaid => paymentStatus == RestaurantPaymentStatus.partiallyPaid;
+  bool get isUnpaid => paymentStatus == RestaurantPaymentStatus.unpaid;
+  bool get isPreparationReady =>
+      status == RestaurantOrderStatus.ready || status == RestaurantOrderStatus.served;
+  bool get canComplete => isPreparationReady && isPaid;
+
+  Map<String, dynamic> toMap(String companyId, {int synced = 1}) => {
+        'id': id,
+        'company_id': companyId,
+        'table_id': tableId,
+        'table_name': tableName,
+        'order_number': orderNumber,
+        'status': restaurantOrderStatusToJson(status),
+        'total_amount': totalAmount,
+        'amount_paid': amountPaid,
+        'payment_status': paymentStatus == RestaurantPaymentStatus.paid
+            ? 'paid'
+            : paymentStatus == RestaurantPaymentStatus.partiallyPaid
+                ? 'partially_paid'
+                : paymentStatus == RestaurantPaymentStatus.refunded
+                    ? 'refunded'
+                    : 'unpaid',
+        'notes': notes,
+        'customer_name': customerName,
+        'customer_id': customerId,
+        'order_type': orderType,
+        'customer_phone': customerPhone,
+        'delivery_address': deliveryAddress,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+        'completed_at': completedAt?.toIso8601String(),
+        'synced': synced,
+      };
 
   factory RestaurantOrder.fromJson(Map<String, dynamic> json) => RestaurantOrder(
         id: json['id'] as String,
         orderNumber: json['order_number'] as int,
         status: _orderStatusFromJson(json['status'] as String),
+        tableId: json['table_id'] as String?,
         tableName: json['table_name'] as String?,
+        customerName: json['customer_name'] as String?,
+        customerId: json['customer_id'] as String?,
+        orderType: json['order_type'] as String? ?? (json['table_id'] != null ? 'dine_in' : 'takeaway'),
+        customerPhone: json['customer_phone'] as String? ?? json['customerPhone'] as String?,
+        deliveryAddress: json['delivery_address'] as String? ?? json['deliveryAddress'] as String?,
         totalAmount: _toDouble(json['total_amount']),
         amountPaid: _toDouble(json['amount_paid']),
         paymentStatus: _paymentStatusFromJson(json['payment_status'] as String?),
+        notes: json['notes'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
+        completedAt: json['completed_at'] != null ? DateTime.tryParse(json['completed_at'] as String) : null,
         items: (json['items'] as List? ?? [])
             .cast<Map<String, dynamic>>()
             .map(RestaurantOrderItem.fromJson)
             .toList(),
+      );
+
+  RestaurantOrder copyWith({
+    String? id,
+    int? orderNumber,
+    RestaurantOrderStatus? status,
+    String? tableId,
+    String? tableName,
+    String? customerName,
+    String? customerId,
+    String? orderType,
+    String? customerPhone,
+    String? deliveryAddress,
+    double? totalAmount,
+    double? amountPaid,
+    RestaurantPaymentStatus? paymentStatus,
+    String? notes,
+    DateTime? createdAt,
+    DateTime? completedAt,
+    List<RestaurantOrderItem>? items,
+  }) =>
+      RestaurantOrder(
+        id: id ?? this.id,
+        orderNumber: orderNumber ?? this.orderNumber,
+        status: status ?? this.status,
+        tableId: tableId ?? this.tableId,
+        tableName: tableName ?? this.tableName,
+        customerName: customerName ?? this.customerName,
+        customerId: customerId ?? this.customerId,
+        orderType: orderType ?? this.orderType,
+        customerPhone: customerPhone ?? this.customerPhone,
+        deliveryAddress: deliveryAddress ?? this.deliveryAddress,
+        totalAmount: totalAmount ?? this.totalAmount,
+        amountPaid: amountPaid ?? this.amountPaid,
+        paymentStatus: paymentStatus ?? this.paymentStatus,
+        notes: notes ?? this.notes,
+        createdAt: createdAt ?? this.createdAt,
+        completedAt: completedAt ?? this.completedAt,
+        items: items ?? this.items,
       );
 }
 
@@ -223,11 +335,19 @@ class RestaurantInvoice {
     required this.remaining,
     required this.paymentStatus,
     this.tableName,
+    this.customerName,
+    this.customerPhone,
+    this.deliveryAddress,
+    this.orderType,
   });
 
   final String invoiceNumber;
   final DateTime date;
   final String? tableName;
+  final String? customerName;
+  final String? customerPhone;
+  final String? deliveryAddress;
+  final String? orderType;
   final List<RestaurantInvoiceItem> items;
   final double totalAmount;
   final double amountPaid;
@@ -238,6 +358,10 @@ class RestaurantInvoice {
         invoiceNumber: json['invoiceNumber'] as String,
         date: DateTime.parse(json['date'] as String),
         tableName: json['tableName'] as String?,
+        customerName: json['customerName'] as String? ?? json['customer_name'] as String?,
+        customerPhone: json['customerPhone'] as String? ?? json['customer_phone'] as String?,
+        deliveryAddress: json['deliveryAddress'] as String? ?? json['delivery_address'] as String?,
+        orderType: json['orderType'] as String? ?? json['order_type'] as String?,
         items: (json['items'] as List? ?? [])
             .cast<Map<String, dynamic>>()
             .map(RestaurantInvoiceItem.fromJson)
@@ -333,6 +457,7 @@ class RestaurantReservation {
     required this.customerName,
     this.phone,
     required this.partySize,
+    this.tableId,
     this.tableName,
     required this.reservedAt,
     required this.status,
@@ -342,6 +467,7 @@ class RestaurantReservation {
   final String customerName;
   final String? phone;
   final int partySize;
+  final String? tableId;
   final String? tableName;
   final DateTime reservedAt;
   final RestaurantReservationStatus status;
@@ -351,6 +477,7 @@ class RestaurantReservation {
         customerName: json['customer_name'] as String,
         phone: json['phone'] as String?,
         partySize: json['party_size'] as int,
+        tableId: json['table_id'] as String? ?? json['tableId'] as String?,
         tableName: json['table_name'] as String?,
         reservedAt: DateTime.parse(json['reserved_at'] as String),
         status: _reservationStatusFromJson(json['status'] as String),

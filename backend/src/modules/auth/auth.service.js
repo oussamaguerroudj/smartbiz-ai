@@ -4,7 +4,7 @@ const { withTransaction, query } = require('../../config/db');
 const env = require('../../config/env');
 const ApiError = require('../../utils/ApiError');
 const { sendMail } = require('../../utils/email');
-const { generateCode, hashCode } = require('../../utils/otp');
+const { generateCode, hashCode, verifyCodeHash } = require('../../utils/otp');
 
 const BCRYPT_ROUNDS = 10;
 // Verification codes are intentionally very short-lived: 1 minute. After
@@ -25,20 +25,30 @@ function escapeHtml(value) {
 }
 
 function signTokens(user) {
-  const payload = {
+  const basePayload = {
     sub: user.id,
     companyId: user.company_id,
     role: user.role,
     emailVerified: user.email_verified === true,
   };
 
-  const accessToken = jwt.sign(payload, env.jwt.accessSecret, {
-    expiresIn: env.jwt.accessExpires,
-  });
+  const accessToken = jwt.sign(
+    { ...basePayload, type: 'access' },
+    env.jwt.accessSecret,
+    {
+      algorithm: 'HS256',
+      expiresIn: env.jwt.accessExpires,
+    },
+  );
 
-  const refreshToken = jwt.sign(payload, env.jwt.refreshSecret, {
-    expiresIn: env.jwt.refreshExpires,
-  });
+  const refreshToken = jwt.sign(
+    { ...basePayload, type: 'refresh' },
+    env.jwt.refreshSecret,
+    {
+      algorithm: 'HS256',
+      expiresIn: env.jwt.refreshExpires,
+    },
+  );
 
   return {
     accessToken,
@@ -125,21 +135,6 @@ async function register({ name, email, password }) {
     [name, email, passwordHash, codeHash, expires],
   );
 
-  // FIX (bug: "verification codes are sometimes never received" with
-  // no visible error): this used to catch a send failure here, log it
-  // server-side only, and still return 201 { pendingVerification: true
-  // } — so the client had no idea the email never went out and the
-  // user was just left staring at a code screen with nothing to enter.
-  // The pending_registrations row above is already committed at this
-  // point (code + expiry stored), so resend-verification can still
-  // recover from this without the user re-entering their details — but
-  // the *initial* failure must not be reported to the client as
-  // success. sendMail() (utils/email.js) already throws a real Error
-  // for both "SMTP not configured" and an actual provider failure.
-  // Wrap it as a typed ApiError (matching every other failure mode in
-  // this file) instead of letting a bare 500 through, so the client
-  // gets an actionable message + code and can offer "tap resend"
-  // rather than this looking like registration itself failed.
   try {
     await sendVerificationCodeEmail({ name, email, code });
   } catch (err) {
@@ -227,9 +222,15 @@ async function refresh({ refreshToken }) {
   let payload;
 
   try {
-    payload = jwt.verify(refreshToken, env.jwt.refreshSecret);
+    payload = jwt.verify(refreshToken, env.jwt.refreshSecret, {
+      algorithms: ['HS256'],
+    });
   } catch (err) {
     throw ApiError.unauthorized('Invalid or expired refresh token');
+  }
+
+  if (payload.type && payload.type !== 'refresh') {
+    throw ApiError.unauthorized('Invalid refresh token type');
   }
 
   const result = await query(
@@ -319,11 +320,15 @@ async function resendVerification({ email }) {
  * actually creates the company + user rows. This is the point at which
  * the account starts to exist.
  *
- * Unauthenticated by design (email + code only) — same reasoning as
- * resendVerification().
+ * SECURITY FIX (SEC-AUTH-001 & SEC-AUTH-002):
+ * 1. Never issue tokens for an existing user when no pending_registrations
+ *    row exists — doing so allowed zero-click account takeover of any
+ *    verified account by submitting their email with any 6-digit code.
+ * 2. Commit the `attempts = attempts + 1` increment before throwing
+ *    INVALID_CODE so failed brute-force attempts are not rolled back.
  */
 async function verifyEmail({ email, code }) {
-  return withTransaction(async (client) => {
+  const txResult = await withTransaction(async (client) => {
     const pendingResult = await client.query(
       `SELECT *
        FROM pending_registrations
@@ -336,21 +341,15 @@ async function verifyEmail({ email, code }) {
 
     if (!pending) {
       const existingUserResult = await client.query(
-        'SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL',
+        'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
         [email],
       );
 
-      const existingUser = existingUserResult.rows[0];
-
-      if (existingUser) {
-        // Already verified (e.g. a duplicate/late request) — treat as
-        // success and hand back a session rather than erroring.
-        const tokens = signTokens(existingUser);
-
-        return {
-          user: toPublicUser(existingUser),
-          ...tokens,
-        };
+      if (existingUserResult.rows.length > 0) {
+        throw ApiError.badRequest(
+          'Invalid or expired verification code',
+          'INVALID_CODE',
+        );
       }
 
       throw ApiError.notFound(
@@ -373,18 +372,16 @@ async function verifyEmail({ email, code }) {
       );
     }
 
-    if (hashCode(code) !== pending.code_hash) {
+    if (!verifyCodeHash(code, pending.code_hash)) {
       await client.query(
         `UPDATE pending_registrations
-         SET attempts = attempts + 1
+         SET attempts = attempts + 1,
+             updated_at = now()
          WHERE email = $1`,
         [email],
       );
 
-      throw ApiError.badRequest(
-        'Incorrect code',
-        'INVALID_CODE',
-      );
+      return { __invalidCode: true };
     }
 
     // Correct code — the account is created right now, for the first
@@ -427,6 +424,15 @@ async function verifyEmail({ email, code }) {
       ...tokens,
     };
   });
+
+  if (txResult && txResult.__invalidCode) {
+    throw ApiError.badRequest(
+      'Incorrect code',
+      'INVALID_CODE',
+    );
+  }
+
+  return txResult;
 }
 
 async function requestPasswordReset({ email }) {
@@ -470,7 +476,17 @@ async function requestPasswordReset({ email }) {
 }
 
 async function resetPassword({ email, code, newPassword }) {
-  return withTransaction(async (client) => {
+  if (
+    typeof newPassword !== 'string' ||
+    newPassword.length < 6
+  ) {
+    throw ApiError.badRequest(
+      'password must be at least 6 characters',
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const txResult = await withTransaction(async (client) => {
     const userResult = await client.query(
       `SELECT *
        FROM users
@@ -523,7 +539,7 @@ async function resetPassword({ email, code, newPassword }) {
       );
     }
 
-    if (hashCode(code) !== reset.code_hash) {
+    if (!verifyCodeHash(code, reset.code_hash)) {
       await client.query(
         `UPDATE password_resets
          SET attempts = attempts + 1
@@ -531,20 +547,7 @@ async function resetPassword({ email, code, newPassword }) {
         [reset.id],
       );
 
-      throw ApiError.badRequest(
-        'Incorrect code',
-        'INVALID_CODE',
-      );
-    }
-
-    if (
-      typeof newPassword !== 'string' ||
-      newPassword.length < 6
-    ) {
-      throw ApiError.badRequest(
-        'password must be at least 6 characters',
-        'VALIDATION_ERROR',
-      );
+      return { __invalidCode: true };
     }
 
     const passwordHash = await bcrypt.hash(
@@ -553,15 +556,24 @@ async function resetPassword({ email, code, newPassword }) {
     );
 
     await client.query(
-      'UPDATE users SET password_hash = $2 WHERE id = $1',
+      'UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1',
       [user.id, passwordHash],
     );
 
     await client.query(
-      'UPDATE password_resets SET used_at = now() WHERE id = $1',
+      'UPDATE password_resets SET used_at = now() WHERE id = $1 AND used_at IS NULL',
       [reset.id],
     );
+
+    return { success: true };
   });
+
+  if (txResult && txResult.__invalidCode) {
+    throw ApiError.badRequest(
+      'Incorrect code',
+      'INVALID_CODE',
+    );
+  }
 }
 
 async function getProfile(userId) {
@@ -591,7 +603,20 @@ async function getProfile(userId) {
   };
 }
 
-async function updateProfile(userId, { name, email, phone, avatarUrl }) {
+async function updateProfile(userId, { name, email, phone, avatarUrl } = {}) {
+  if (name !== undefined && (typeof name !== 'string' || name.trim().length < 2)) {
+    throw ApiError.badRequest('name must be a string of at least 2 characters', 'VALIDATION_ERROR');
+  }
+  if (email !== undefined && (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()))) {
+    throw ApiError.badRequest('A valid email is required', 'VALIDATION_ERROR');
+  }
+  if (phone !== undefined && phone !== null && typeof phone !== 'string') {
+    throw ApiError.badRequest('phone must be a string', 'VALIDATION_ERROR');
+  }
+  if (avatarUrl !== undefined && avatarUrl !== null && typeof avatarUrl !== 'string') {
+    throw ApiError.badRequest('avatarUrl must be a string', 'VALIDATION_ERROR');
+  }
+
   const checkUser = await query(
     `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
     [userId],
@@ -622,15 +647,18 @@ async function updateProfile(userId, { name, email, phone, avatarUrl }) {
       userId,
       name !== undefined ? name.trim() : null,
       email !== undefined ? email.trim() : null,
-      phone !== undefined ? phone.trim() : null,
-      avatarUrl !== undefined ? avatarUrl.trim() : null,
+      phone !== undefined && phone !== null ? phone.trim() : null,
+      avatarUrl !== undefined && avatarUrl !== null ? avatarUrl.trim() : null,
     ],
   );
 
   return toPublicUser(updatedResult.rows[0]);
 }
 
-async function changePassword(userId, { currentPassword, newPassword }) {
+async function changePassword(userId, { currentPassword, newPassword } = {}) {
+  if (typeof currentPassword !== 'string' || currentPassword.length === 0) {
+    throw ApiError.badRequest('currentPassword is required', 'VALIDATION_ERROR');
+  }
   if (typeof newPassword !== 'string' || newPassword.length < 6) {
     throw ApiError.badRequest('newPassword must be at least 6 characters', 'VALIDATION_ERROR');
   }
@@ -656,7 +684,11 @@ async function changePassword(userId, { currentPassword, newPassword }) {
   return { success: true };
 }
 
-async function deleteAccount(userId, { password }) {
+async function deleteAccount(userId, { password } = {}) {
+  if (typeof password !== 'string' || password.length === 0) {
+    throw ApiError.badRequest('password is required to confirm account deletion', 'VALIDATION_ERROR');
+  }
+
   const userRes = await query(
     `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
     [userId],
