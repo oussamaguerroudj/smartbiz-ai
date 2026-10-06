@@ -4,9 +4,15 @@ const env = require('./env');
 // Single shared pool for the whole app. All queries MUST go through this
 // (or a client checked out from it for transactions) — never a second
 // ad-hoc connection — so pool sizing/limits stay predictable.
-const pool = new Pool({
+const poolConfig = {
   connectionString: env.databaseUrl,
-});
+};
+
+if (env.nodeEnv === 'production' && !env.databaseUrl.includes('localhost') && !env.databaseUrl.includes('127.0.0.1')) {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {
   // Unexpected errors on idle clients (e.g. connection dropped by DB).

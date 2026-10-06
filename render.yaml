@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: smartbiz-ai-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node run_migrations.js && node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartbiz-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES
+        value: 30m
+      - key: JWT_REFRESH_EXPIRES
+        value: 30d
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: AI_BASE_URL
+        value: http://localhost:11434/v1
+      - key: AI_API_KEY
+        value: not-needed
+      - key: AI_VISION_MODEL
+        value: qwen2.5vl:7b
+      - key: AI_CHAT_MODEL
+        value: qwen2.5:7b
+      - key: AI_OCR_MODEL
+        value: glm-ocr:latest
+
+databases:
+  - name: smartbiz-db
+    plan: free
+    databaseName: smartbiz
+    user: smartbiz

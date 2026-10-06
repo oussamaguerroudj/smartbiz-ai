@@ -3,8 +3,13 @@ const path = require('path');
 const { Client } = require('pg');
 
 async function runMigrations() {
-  const dbUrl = 'postgresql://smartbiz:smartbiz_dev_password@localhost:5432/smartbiz';
-  const client = new Client({ connectionString: dbUrl });
+  require('dotenv').config();
+  const dbUrl = process.env.DATABASE_URL || 'postgresql://smartbiz:smartbiz_dev_password@localhost:5432/smartbiz';
+  const clientConfig = { connectionString: dbUrl };
+  if (process.env.NODE_ENV === 'production' && !dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1')) {
+    clientConfig.ssl = { rejectUnauthorized: false };
+  }
+  const client = new Client(clientConfig);
   await client.connect();
   console.log('Connected to PostgreSQL database successfully.');
 
