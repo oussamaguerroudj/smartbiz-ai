@@ -1,3 +1,4 @@
+import '../../../../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
@@ -13,6 +14,7 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: GradientHero(
         child: Center(
@@ -29,7 +31,7 @@ class SplashScreen extends StatelessWidget {
                 Text('Modiri AI', style: AppTypography.screenTitle(Colors.white).copyWith(fontSize: 24)),
                 const SizedBox(height: 6),
                 Text(
-                  'AI-Powered Business Management',
+                  l10n.appTagline,
                   style: AppTypography.body(Colors.white.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 36),

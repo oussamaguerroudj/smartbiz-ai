@@ -24,8 +24,10 @@ class Sale {
     required this.paymentStatus,
     required this.soldAt,
     required this.itemCount,
+    this.margin,
     this.customerName,
     this.invoiceNumber,
+    this.invoiceId,
   });
 
   final String id;
@@ -35,8 +37,10 @@ class Sale {
   final PaymentStatus paymentStatus;
   final DateTime soldAt;
   final int itemCount;
+  final double? margin;
   final String? customerName;
   final String? invoiceNumber;
+  final String? invoiceId;
 
   factory Sale.fromJson(Map<String, dynamic> json) => Sale(
         id: json['id'] as String,
@@ -46,8 +50,10 @@ class Sale {
         paymentStatus: paymentStatusFromApi(json['payment_status'] as String),
         soldAt: DateTime.parse(json['sold_at'] as String),
         itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
+        margin: json['margin'] != null ? double.tryParse(json['margin'].toString()) : null,
         customerName: json['customer_name'] as String?,
         invoiceNumber: json['invoice_number'] as String?,
+        invoiceId: json['invoice_id'] as String?,
       );
 }
 

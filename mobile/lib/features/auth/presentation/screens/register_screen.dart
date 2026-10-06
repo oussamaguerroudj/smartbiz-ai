@@ -70,6 +70,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
+    final l10n = AppLocalizations.of(context)!;
     try {
       final email = _emailController.text.trim();
       await ref.read(authRepositoryProvider).register(
@@ -80,12 +81,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) widget.onRegisterSuccess(email);
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        if (e.statusCode == 0 ||
+            e.code == 'CONNECTION_ERROR' ||
+            e.code == 'NETWORK_ERROR' ||
+            e.code == 'TIMEOUT' ||
+            e.code == 'CLIENT_ERROR') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.firstTimeRegisterInternetRequired)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        }
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.networkError)),
+          SnackBar(content: Text(l10n.firstTimeRegisterInternetRequired)),
         );
       }
     } finally {

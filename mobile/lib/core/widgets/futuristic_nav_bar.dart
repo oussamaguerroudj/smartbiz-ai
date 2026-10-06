@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Data for a single nav destination.
 class PillNavItem {
@@ -311,13 +312,13 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
               color: const Color(0x597A6EFF),
             ),
             boxShadow: [
-              BoxShadow(
-                color: const Color(0x472D3CB4),
+              const BoxShadow(
+                color: Color(0x472D3CB4),
                 blurRadius: 60,
-                offset: const Offset(0, 25),
+                offset: Offset(0, 25),
               ),
-              BoxShadow(
-                color: const Color(0x474369FF),
+              const BoxShadow(
+                color: Color(0x474369FF),
                 blurRadius: 35,
               ),
               BoxShadow(
@@ -355,8 +356,7 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
                         top: 35 - _orbSize / 2,
                         child: Transform(
                           alignment: Alignment.center,
-                          transform: Matrix4.identity()
-                            ..scale(_scaleX, _scaleY),
+                          transform: Matrix4.diagonal3Values(_scaleX, _scaleY, 1.0),
                           child: _Orb(
                             size: _orbSize,
                             breathe: breathe,
@@ -390,20 +390,12 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
     final isActive = _active == i;
     final isPressed = _pressedIndex == i;
 
-    final iconType =
-        i < _iconTypes.length
-            ? _iconTypes[i]
-            : _FnbIconType.more;
-
-    final iconSize =
-        i < _iconSizes.length
-            ? _iconSizes[i]
-            : 26.0;
+    final iconData = isActive ? item.activeIcon : item.icon;
 
     final scale =
         isPressed
             ? 0.96
-            : (isActive ? 1.1 : 1.0);
+            : (isActive ? 1.08 : 1.0);
 
     return Tooltip(
       message: item.label,
@@ -429,7 +421,7 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
             minWidth: 44,
             minHeight: 44,
           ),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           alignment: Alignment.center,
           child: AnimatedBuilder(
             animation: _pulseCtrl,
@@ -442,16 +434,25 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
                 curve: Curves.easeOutCubic,
                 child: SizedBox(
                   key: _itemKeys[i],
-                  width: iconSize,
-                  height: iconSize,
-                  child: CustomPaint(
-                    painter: _FnbIconPainter(
-                      type: iconType,
-                      active: isActive,
-                      glow: isActive
-                          ? _pulseCtrl.value
-                          : 0,
-                    ),
+                  width: 26,
+                  height: 26,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (isActive)
+                        Icon(
+                          iconData,
+                          size: 26,
+                          color: const Color(0x8045B8FF),
+                        ),
+                      Icon(
+                        iconData,
+                        size: 24,
+                        color: isActive
+                            ? const Color(0xFFF8FAFF)
+                            : const Color(0xFFF8FAFF).withValues(alpha: 0.58),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -464,7 +465,7 @@ class _FuturisticNavBarState extends State<FuturisticNavBar>
 
   Widget _buildAiItem() {
     return Tooltip(
-      message: 'AI Assistant',
+      message: AppLocalizations.of(context).moreAiAssistant,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onAiAssistant,
@@ -582,7 +583,7 @@ class _Orb extends StatelessWidget {
             center: const Alignment(-0.30, -0.35),
             radius: 0.95,
             colors: [
-              Color(0xFF3A4668).withValues(
+              const Color(0xFF3A4668).withValues(
                 alpha: (0.95 * brightness)
                     .clamp(0, 1.0)
                     .toDouble(),

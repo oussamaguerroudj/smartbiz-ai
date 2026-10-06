@@ -3,9 +3,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'l10n/app_localizations.dart';
 import 'core/theme/app_theme.dart';
+import 'core/database/app_database.dart';
 import 'core/network/session.dart';
+import 'core/network/api_client.dart';
 import 'features/settings/data/settings_providers.dart';
 import 'features/onboarding/presentation/screens/video_splash_screen.dart';
+import 'features/onboarding/presentation/screens/language_select_screen.dart';
 import 'features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/auth/presentation/screens/register_screen.dart';
@@ -15,11 +18,28 @@ import 'features/auth/presentation/screens/business_type_screen.dart';
 import 'features/auth/presentation/screens/business_setup_screen.dart';
 import 'features/shell/presentation/main_shell.dart';
 
-void main() {
-  // ProviderScope is Riverpod's root — required for every provider used
-  // throughout the app (ProductsRepository, SalesRepository, etc. —
-  // introduced in Phase 4 as the Local/Data Layer).
-  runApp(const ProviderScope(child: ModiriApp()));
+Future<void> main() async {
+  // Needed before touching secure storage / SharedPreferences / SQLite pre-runApp.
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppDatabase.instance.database;
+  await ApiClient.initBaseUrl();
+
+  final container = ProviderContainer();
+
+  // FIX (reported bug): both awaited here, before the first frame, so
+  // the very first thing drawn already reflects the real answer to
+  // "is this user logged in?" and "has this device picked a language
+  // before?" — rather than the UI briefly showing (and this async work
+  // then invisibly racing to correct) the wrong initial screen.
+  await container.read(sessionProvider.notifier).restore();
+  await container.read(localeProvider.notifier).ready;
+
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const ModiriApp(),
+    ),
+  );
 }
 
 class ModiriApp extends ConsumerWidget {
@@ -84,6 +104,7 @@ class ModiriApp extends ConsumerWidget {
 /// data/auth layer exists (Phase 4/5), as already noted in core/routing/.
 enum _AppPhase {
   splash,
+  languageSelect,
   onboarding,
   login,
   register,
@@ -159,7 +180,31 @@ class _AppFlowState extends ConsumerState<_AppFlow> {
     switch (_phase) {
       case _AppPhase.splash:
         return VideoSplashScreen(
-          onFinished: () => setState(() => _phase = _AppPhase.onboarding),
+          // FIX (reported bug — asked to verify again after closing the
+          // app): this used to unconditionally go to onboarding next,
+          // regardless of session state — main() now awaits
+          // sessionProvider's restore() before this widget is ever
+          // built, so by the time the user sees this, `ref.read
+          // (sessionProvider).isLoggedIn` already reflects a real,
+          // possibly-persisted-from-days-ago session.
+          onFinished: () => setState(() {
+            if (ref.read(sessionProvider).isLoggedIn) {
+              _phase = _AppPhase.main;
+            } else {
+              _phase = _AppPhase.languageSelect;
+            }
+          }),
+        );
+
+      case _AppPhase.languageSelect:
+        return LanguageSelectScreen(
+          onSelected: () => setState(() {
+            if (ref.read(sessionProvider).isLoggedIn) {
+              _phase = _AppPhase.main;
+            } else {
+              _phase = _AppPhase.onboarding;
+            }
+          }),
         );
 
       case _AppPhase.onboarding:

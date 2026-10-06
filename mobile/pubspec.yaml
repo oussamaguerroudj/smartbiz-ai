@@ -21,6 +21,31 @@ dependencies:
   # actively maintained, works on Android + iOS without extra native
   # setup beyond the camera permission strings already required.
   mobile_scanner: ^6.0.2
+  # Real camera/gallery capture for the AI Invoice Scanner (Phase 6).
+  image_picker: ^1.1.2
+  # Clinic Ch. 4/7/9 (remaining-issues pass) — image_picker alone can
+  # only pick photos, but medical documents are mostly PDFs (reports,
+  # analyses, prescriptions), and printing a prescription/invoice needs
+  # a way to hand raw PDF bytes to the OS print/share sheet. Neither
+  # capability existed anywhere in this app before; these are the
+  # standard, actively-maintained Flutter packages for each — not a
+  # placeholder, genuinely new infrastructure. Requires `flutter pub get`.
+  file_picker: ^8.1.2
+  printing: ^5.13.3
+  pdf: ^3.11.1
+  # Persistent, secure session storage (Keychain on iOS, Keystore-backed
+  # EncryptedSharedPreferences on Android) — fixes the "asked to verify
+  # again after closing the app" bug: tokens now survive app restarts.
+  flutter_secure_storage: ^9.2.2
+  # Lightweight persisted preferences — used for the chosen app language
+  # (and whether the first-launch language picker has been shown yet).
+  shared_preferences: ^2.3.2
+  # Offline-First local database & synchronization
+  sqflite: ^2.3.3+1
+  sqflite_common_ffi: ^2.3.3
+  path: ^1.9.0
+  connectivity_plus: ^6.0.5
+  uuid: ^4.4.0
 
 dev_dependencies:
   flutter_test:
@@ -66,8 +91,8 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   # Matches the new logo artwork's own background exactly.
-  color: "#000000"
-  image: assets/images/logo_splash.png
+  color: "#ffffff"
+  # image omitted for direct video splash
   android: true
-  ios: true
+  ios: false
   web: false

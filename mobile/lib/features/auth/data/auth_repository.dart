@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/session.dart';
+import '../../../core/sync/sync_service.dart';
+import 'companies_repository.dart';
 
 class AuthRepository {
   AuthRepository(this._ref);
@@ -27,7 +30,7 @@ class AuthRepository {
       'email': email,
       'password': password,
     });
-    _applySession(data);
+    await _applySession(data as Map<String, dynamic>);
   }
 
   /// Confirms the 6-digit code emailed to [email]. This is the moment the
@@ -40,7 +43,7 @@ class AuthRepository {
       'email': email,
       'code': code,
     });
-    _applySession(data as Map<String, dynamic>);
+    await _applySession(data as Map<String, dynamic>);
   }
 
   /// Asks the backend to (re)send a fresh verification code to [email].
@@ -74,21 +77,82 @@ class AuthRepository {
     });
   }
 
-  void logout() {
-    _ref.read(sessionProvider.notifier).state = Session.empty;
+  Future<Map<String, dynamic>> getProfile() async {
+    final client = _ref.read(apiClientProvider);
+    final data = await client.get('/auth/profile');
+    return data['data'] as Map<String, dynamic>;
   }
 
-  void _applySession(Map<String, dynamic> data) {
-    final user = data['user'] as Map<String, dynamic>;
-    _ref.read(sessionProvider.notifier).state = Session(
-      accessToken: data['accessToken'] as String,
-      refreshToken: data['refreshToken'] as String,
-      userId: user['id'] as String,
-      companyId: user['companyId'] as String,
-      userName: user['name'] as String,
-      email: user['email'] as String,
-      role: user['role'] as String,
+  Future<void> updateProfile({
+    String? name,
+    String? email,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    final client = _ref.read(apiClientProvider);
+    final res = await client.put('/auth/profile', body: {
+      if (name != null) 'name': name,
+      if (email != null) 'email': email,
+      if (phone != null) 'phone': phone,
+      if (avatarUrl != null) 'avatarUrl': avatarUrl,
+    });
+    final updated = res['data'] as Map<String, dynamic>;
+    await _ref.read(sessionProvider.notifier).updateUser(
+      name: updated['name'] as String?,
+      email: updated['email'] as String?,
+      phone: updated['phone'] as String?,
+      avatarUrl: updated['avatarUrl'] as String?,
     );
+    _ref.invalidate(companyInfoProvider);
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final client = _ref.read(apiClientProvider);
+    await client.put('/auth/change-password', body: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+  }
+
+  Future<void> deleteAccount({required String password}) async {
+    final client = _ref.read(apiClientProvider);
+    await client.delete('/auth/account', body: {'password': password});
+    await logout();
+  }
+
+  /// Ends the current session. SQLite data is intentionally NOT deleted.
+  ///
+  /// DATA ISOLATION is achieved through company_id scoping in every
+  /// repository's _fetchFromLocal(), not by wiping the database.
+  ///
+  /// When Account A logs out:
+  ///   - Session is cleared (companyId becomes null)
+  ///   - All repository reads check companyId == null → return []
+  ///   - A's local data survives in SQLite tagged with A's companyId
+  ///
+  /// When Account B logs in next:
+  ///   - Session is set to B's companyId
+  ///   - All repository reads return only WHERE company_id = B's id
+  ///   - A's data is invisible to B (still in DB, not deleted)
+  ///
+  /// When A logs back in:
+  ///   - A's rows reappear because company_id = A matches again
+  ///   - A's offline work and sync queue are fully preserved
+  Future<void> logout() async {
+    await _ref.read(sessionProvider.notifier).clear();
+    _ref.invalidate(companyInfoProvider);
+    // DO NOT call AppDatabase.instance.clearAllData() here.
+    // Isolation is enforced by company_id scoping in all repository reads.
+  }
+
+  Future<void> _applySession(Map<String, dynamic> data) async {
+    await _ref.read(sessionProvider.notifier).apply(data);
+    _ref.invalidate(companyInfoProvider);
+    // Background pull all company data into local SQLite so app is instantly ready offline!
+    unawaited(_ref.read(syncServiceProvider.notifier).pullInitialData());
   }
 }
 

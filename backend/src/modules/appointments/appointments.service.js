@@ -63,8 +63,28 @@ async function updateStatus(companyId, id, status) {
   return updated;
 }
 
+async function updateAppointment(companyId, id, data = {}) {
+  if (data.scheduledAt !== undefined) {
+    validateScheduledAt(data.scheduledAt);
+    data.scheduledAt = data.scheduledAt.trim();
+  }
+  if (data.status !== undefined && !VALID_STATUSES.includes(data.status)) {
+    throw ApiError.badRequest(
+      `status must be one of: ${VALID_STATUSES.join(', ')}`,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const updated = await repo.update(companyId, id, data);
+  if (!updated) {
+    throw ApiError.notFound('Appointment not found');
+  }
+  return updated;
+}
+
 module.exports = {
   list,
   createAppointment,
+  updateAppointment,
   updateStatus,
 };

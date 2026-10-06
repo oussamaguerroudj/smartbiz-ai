@@ -6,7 +6,10 @@ async function findAll(companyId) {
             i.id AS invoice_id, i.invoice_number, i.status AS invoice_status,
             (SELECT COUNT(*)::int
              FROM sale_items si
-             WHERE si.sale_id = s.id) AS item_count
+             WHERE si.sale_id = s.id) AS item_count,
+            (SELECT COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0)
+             FROM sale_items si
+             WHERE si.sale_id = s.id) AS margin
      FROM sales s
      LEFT JOIN customers c
        ON c.id = s.customer_id
@@ -24,7 +27,10 @@ async function findAll(companyId) {
 
 async function findById(companyId, id) {
   const saleResult = await query(
-    `SELECT s.*, c.name AS customer_name
+    `SELECT s.*, c.name AS customer_name,
+            (SELECT COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0)
+             FROM sale_items si
+             WHERE si.sale_id = s.id) AS margin
      FROM sales s
      LEFT JOIN customers c
        ON c.id = s.customer_id
@@ -56,6 +62,49 @@ async function findById(companyId, id) {
   };
 }
 
+async function findByClientTransactionId(companyId, clientTransactionId) {
+  if (!clientTransactionId) return null;
+  const saleResult = await query(
+    `SELECT s.*, c.name AS customer_name,
+            (SELECT COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0)
+             FROM sale_items si
+             WHERE si.sale_id = s.id) AS margin
+     FROM sales s
+     LEFT JOIN customers c
+       ON c.id = s.customer_id
+      AND c.company_id = s.company_id
+     WHERE s.company_id = $1
+       AND s.client_transaction_id = $2`,
+    [companyId, clientTransactionId],
+  );
+
+  const sale = saleResult.rows[0];
+  if (!sale) {
+    return null;
+  }
+
+  const itemsResult = await query(
+    `SELECT si.*, p.name AS product_name
+     FROM sale_items si
+     JOIN products p
+       ON p.id = si.product_id
+      AND p.company_id = $1
+     WHERE si.sale_id = $2`,
+    [companyId, sale.id],
+  );
+
+  const invoiceResult = await query(
+    `SELECT * FROM invoices WHERE company_id = $1 AND sale_id = $2`,
+    [companyId, sale.id],
+  );
+
+  return {
+    sale,
+    items: itemsResult.rows,
+    invoice: invoiceResult.rows[0] || null,
+  };
+}
+
 // Transactional writes below take `client` from withTransaction.
 // They must never use the shared pool.
 
@@ -69,12 +118,13 @@ async function insertSale(
     discount,
     total,
     paymentStatus,
+    clientTransactionId,
   },
 ) {
   const result = await client.query(
     `INSERT INTO sales
-       (company_id, customer_id, employee_id, subtotal, discount, total, payment_status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+       (company_id, customer_id, employee_id, subtotal, discount, total, payment_status, client_transaction_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
     [
       companyId,
@@ -84,6 +134,7 @@ async function insertSale(
       discount,
       total,
       paymentStatus,
+      clientTransactionId || null,
     ],
   );
 
@@ -180,6 +231,7 @@ async function nextInvoiceNumber(client, companyId) {
 module.exports = {
   findAll,
   findById,
+  findByClientTransactionId,
   insertSale,
   insertSaleItem,
   insertInvoice,

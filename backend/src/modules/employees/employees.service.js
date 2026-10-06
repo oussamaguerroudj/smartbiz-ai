@@ -1,4 +1,5 @@
 const repo = require('./employees.repository');
+const expensesService = require('../expenses/expenses.service');
 const ApiError = require('../../utils/ApiError');
 
 function currentPeriodMonth() {
@@ -41,23 +42,20 @@ async function getOne(companyId, id) {
     throw ApiError.notFound('Employee not found');
   }
 
-  const attendance = await repo.attendanceSummary(
-    companyId,
-    id,
-  );
-
-  const salary = await repo.netSalary(
-    companyId,
-    id,
-    currentPeriodMonth(),
-  );
+  const [attendance, salary, salaryPayments] = await Promise.all([
+    repo.attendanceSummary(companyId, id),
+    repo.netSalary(companyId, id, currentPeriodMonth()),
+    repo.findSalaryPayments(companyId, id),
+  ]);
 
   return {
     ...employee,
     attendance,
     salary,
+    salaryPayments,
   };
 }
+
 
 async function createEmployee(companyId, data = {}) {
   const { name, baseSalary } = data;
@@ -81,6 +79,41 @@ async function createEmployee(companyId, data = {}) {
     ...data,
     name: name.trim(),
   });
+}
+
+async function updateEmployee(companyId, id, data = {}) {
+  const { name, baseSalary, position, phone } = data;
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || name.trim().length < 2) {
+      throw ApiError.badRequest('name must be at least 2 characters', 'VALIDATION_ERROR');
+    }
+  }
+
+  if (baseSalary !== undefined) {
+    validateFiniteNonNegativeNumber(baseSalary, 'baseSalary');
+  }
+
+  const updated = await repo.update(companyId, id, {
+    name: typeof name === 'string' ? name.trim() : undefined,
+    position: typeof position === 'string' ? position.trim() : position,
+    phone: typeof phone === 'string' ? phone.trim() : phone,
+    baseSalary: baseSalary !== undefined ? baseSalary : undefined,
+  });
+
+  if (!updated) {
+    throw ApiError.notFound('Employee not found');
+  }
+
+  return updated;
+}
+
+async function deleteEmployee(companyId, id) {
+  const deleted = await repo.softDelete(companyId, id);
+  if (!deleted) {
+    throw ApiError.notFound('Employee not found');
+  }
+  return { id };
 }
 
 async function markAttendance(
@@ -171,10 +204,53 @@ async function addSalaryAdjustment(
   );
 }
 
+async function paySalary(companyId, employeeId, data = {}) {
+  const employee = await repo.findById(companyId, employeeId);
+  if (!employee) {
+    throw ApiError.notFound('Employee not found');
+  }
+
+  const amount = data.amount !== undefined ? Number(data.amount) : Number(employee.base_salary);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw ApiError.badRequest('Amount must be a positive number', 'VALIDATION_ERROR');
+  }
+
+  const paymentDate = data.paymentDate || currentLocalDate();
+  const salaryPeriod = data.salaryPeriod || currentPeriodMonth().slice(0, 7); // e.g. '2026-09'
+  const duration = data.duration || '1 month';
+  const description = (data.description && data.description.trim().length > 0)
+    ? data.description.trim()
+    : `${employee.name} - ${salaryPeriod} salary`;
+
+  // Creates an actual expense transaction stored in the expenses table
+  return expensesService.createExpense(companyId, {
+    category: 'Salary',
+    amount,
+    expenseDate: paymentDate,
+    description,
+    employeeId,
+    salaryPeriod,
+    duration,
+    confirmedDuplicate: Boolean(data.confirmedDuplicate),
+  });
+}
+
+async function getSalaryPayments(companyId, employeeId) {
+  const employee = await repo.findById(companyId, employeeId);
+  if (!employee) {
+    throw ApiError.notFound('Employee not found');
+  }
+  return repo.findSalaryPayments(companyId, employeeId);
+}
+
 module.exports = {
   list,
   getOne,
   createEmployee,
+  updateEmployee,
+  deleteEmployee,
   markAttendance,
   addSalaryAdjustment,
+  paySalary,
+  getSalaryPayments,
 };

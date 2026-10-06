@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// A small set of gradient bars that grow in from zero, staggered by
@@ -117,14 +118,27 @@ class _DelayedBarState extends State<_DelayedBar> {
     if (oldWidget.fraction != widget.fraction) _schedule();
   }
 
+  Timer? _timer;
+
   void _schedule() {
+    _timer?.cancel();
     if (widget.fraction == 0) {
       setState(() => _target = 0);
       return;
     }
-    Future.delayed(widget.delay, () {
-      if (mounted) setState(() => _target = widget.fraction);
-    });
+    if (widget.delay == Duration.zero) {
+      setState(() => _target = widget.fraction);
+    } else {
+      _timer = Timer(widget.delay, () {
+        if (mounted) setState(() => _target = widget.fraction);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override

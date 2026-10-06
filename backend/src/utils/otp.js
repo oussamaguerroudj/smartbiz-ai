@@ -14,7 +14,22 @@ function generateCode() {
  * caller.
  */
 function hashCode(code) {
-  return crypto.createHash('sha256').update(code).digest('hex');
+  return crypto.createHash('sha256').update(String(code)).digest('hex');
 }
 
-module.exports = { generateCode, hashCode };
+/**
+ * Constant-time comparison of a plaintext OTP code against a stored SHA-256 hex digest.
+ */
+function verifyCodeHash(code, expectedHash) {
+  if (typeof code !== 'string' || typeof expectedHash !== 'string') {
+    return false;
+  }
+  const actualBuf = Buffer.from(hashCode(code), 'hex');
+  const expectedBuf = Buffer.from(expectedHash, 'hex');
+  if (actualBuf.length !== expectedBuf.length || actualBuf.length === 0) {
+    return false;
+  }
+  return crypto.timingSafeEqual(actualBuf, expectedBuf);
+}
+
+module.exports = { generateCode, hashCode, verifyCodeHash };

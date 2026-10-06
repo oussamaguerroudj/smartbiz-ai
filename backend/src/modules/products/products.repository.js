@@ -28,11 +28,25 @@ async function findById(companyId, id) {
   return result.rows[0] || null;
 }
 
+const ApiError = require('../../utils/ApiError');
+
+async function verifySupplierBelongsToCompany(companyId, supplierId) {
+  if (!supplierId) return;
+  const res = await query(
+    'SELECT id FROM suppliers WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL',
+    [companyId, supplierId],
+  );
+  if (res.rows.length === 0) {
+    throw ApiError.badRequest('Supplier not found for this company', 'VALIDATION_ERROR');
+  }
+}
+
 async function create(companyId, data) {
+  await verifySupplierBelongsToCompany(companyId, data.supplierId);
   const result = await query(
     `INSERT INTO products
-       (company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       (company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id, size, color, brand)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING *`,
     [
       companyId,
@@ -45,12 +59,18 @@ async function create(companyId, data) {
       data.minimumStock ?? 5,
       data.expirationDate || null,
       data.supplierId || null,
+      // Ch. 18 (Clothing) attributes — optional for every business
+      // type, NULL for anyone who doesn't set them (migration 020).
+      data.size || null,
+      data.color || null,
+      data.brand || null,
     ],
   );
   return result.rows[0];
 }
 
 async function update(companyId, id, data) {
+  await verifySupplierBelongsToCompany(companyId, data.supplierId);
   const result = await query(
     `UPDATE products SET
        name = COALESCE($3, name),
@@ -60,7 +80,11 @@ async function update(companyId, id, data) {
        selling_price = COALESCE($7, selling_price),
        quantity = COALESCE($8, quantity),
        minimum_stock = COALESCE($9, minimum_stock),
-       expiration_date = COALESCE($10, expiration_date)
+       expiration_date = COALESCE($10, expiration_date),
+       size = COALESCE($11, size),
+       color = COALESCE($12, color),
+       brand = COALESCE($13, brand),
+       image_url = COALESCE($14, image_url)
      WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL
      RETURNING *`,
     [
@@ -74,6 +98,10 @@ async function update(companyId, id, data) {
       data.quantity,
       data.minimumStock,
       data.expirationDate,
+      data.size,
+      data.color,
+      data.brand,
+      data.imageUrl,
     ],
   );
   return result.rows[0] || null;

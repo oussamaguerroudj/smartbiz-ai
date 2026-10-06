@@ -10,19 +10,28 @@ const {
   validateResetPassword,
 } = require('./auth.validators');
 
+const { authMiddleware } = require('../../middlewares/auth.middleware');
+const {
+  authAccountLimiter,
+  otpVerifyLimiter,
+} = require('../../middlewares/rateLimit.middleware');
+
 const router = express.Router();
 
-// No authMiddleware on any of these — none of them require an existing
-// session. Registration doesn't create an account until the code is
-// confirmed (see auth.service.js), so verify/resend are identified by
-// email, not a Bearer token — there is no token to send until the code
-// is confirmed and the account actually exists.
-router.post('/register', validateRegister, controller.register);
-router.post('/login', validateLogin, controller.login);
+// Public auth endpoints (protected by per-account/IP rate limiters)
+router.post('/register', authAccountLimiter, validateRegister, controller.register);
+router.post('/login', authAccountLimiter, validateLogin, controller.login);
 router.post('/refresh', validateRefresh, controller.refresh);
-router.post('/verify-email', validateVerifyEmail, controller.verifyEmail);
-router.post('/resend-verification', validateResendVerification, controller.resendVerification);
-router.post('/forgot-password', validateForgotPassword, controller.requestPasswordReset);
-router.post('/reset-password', validateResetPassword, controller.resetPassword);
+router.post('/verify-email', otpVerifyLimiter, validateVerifyEmail, controller.verifyEmail);
+router.post('/resend-verification', otpVerifyLimiter, validateResendVerification, controller.resendVerification);
+router.post('/forgot-password', otpVerifyLimiter, validateForgotPassword, controller.requestPasswordReset);
+router.post('/reset-password', otpVerifyLimiter, validateResetPassword, controller.resetPassword);
+
+// Authenticated profile & account endpoints
+router.get('/profile', authMiddleware, controller.getProfile);
+router.get('/me', authMiddleware, controller.getProfile);
+router.put('/profile', authMiddleware, controller.updateProfile);
+router.put('/change-password', authMiddleware, controller.changePassword);
+router.delete('/account', authMiddleware, controller.deleteAccount);
 
 module.exports = router;

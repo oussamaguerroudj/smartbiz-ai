@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -83,11 +82,12 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
     try {
       await ref.read(companiesRepositoryProvider).updateMe(
             name: _nameController.text.trim(),
-            businessType: widget.businessType.name, // enum names match backend's VALID_TYPES exactly
+            businessType: widget.businessType.apiValue, // matches backend business_type_enum exactly (see BusinessTypeApi)
             currency: _currencyController.text.trim(),
             phone: _phoneController.text.trim(),
             address: _addressController.text.trim(),
           );
+      ref.invalidate(companyInfoProvider);
       // Only reachable if the PUT above actually succeeded (didn't throw).
       if (mounted) widget.onFinish();
     } on ApiException catch (e) {

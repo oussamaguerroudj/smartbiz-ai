@@ -74,7 +74,17 @@ async function updateStatus(companyId, id, status) {
     [companyId, id, status],
   );
 
-  return result.rows[0] || null;
+  const invoice = result.rows[0];
+  if (invoice && status === 'paid' && invoice.sale_id) {
+    await query(
+      `UPDATE sales
+       SET payment_status = 'paid', updated_at = now()
+       WHERE company_id = $1 AND id = $2`,
+      [companyId, invoice.sale_id],
+    );
+  }
+
+  return invoice || null;
 }
 
 module.exports = {

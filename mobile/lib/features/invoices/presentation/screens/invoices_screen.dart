@@ -1,5 +1,8 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:printing/printing.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/status_pill.dart';
@@ -8,10 +11,8 @@ import '../../data/invoices_repository.dart';
 import '../../domain/invoice.dart';
 import '../../../sales/domain/sale.dart';
 
-/// Invoices — Spec Ch. 13/14. Real API-backed (Phase 5 wiring): reads
-/// from GET /invoices / GET /invoices/:id. PDF export / WhatsApp share
-/// still stubbed — the backend endpoint exists but returns 501
-/// (NOT_IMPLEMENTED) until a PDF library is wired in a future batch.
+/// Invoices — Spec Ch. 13/14. Real API-backed: reads from GET /invoices,
+/// GET /invoices/:id, and streams binary PDF via GET /invoices/:id/pdf.
 class InvoicesScreen extends ConsumerWidget {
   const InvoicesScreen({super.key});
 
@@ -54,20 +55,55 @@ class InvoicesScreen extends ConsumerWidget {
                         ),
                         child: Row(
                           children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.receipt_long_rounded, size: 18, color: AppColors.primary),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(invoice.invoiceNumber,
-                                      style: Theme.of(context).textTheme.titleMedium),
-                                  Text(invoice.customerName ?? l10n.walkInCustomer),
+                                  Text(
+                                    invoice.invoiceNumber,
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    invoice.customerName ?? l10n.walkInCustomer,
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ],
                               ),
                             ),
-                            StatusPill(
-                              label: isUnpaid ? l10n.statusUnpaid : l10n.statusPaid,
-                              tone: isUnpaid ? PillTone.danger : PillTone.brand,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${invoice.total.toStringAsFixed(0)} DZD',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: isUnpaid ? AppColors.danger : AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                StatusPill(
+                                  label: isUnpaid ? l10n.statusUnpaid : l10n.statusPaid,
+                                  tone: isUnpaid ? PillTone.danger : PillTone.brand,
+                                ),
+                              ],
                             ),
+                            const SizedBox(width: 8),
+                            const ForwardChevron(size: 18, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -115,8 +151,18 @@ class InvoiceDetailsScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(l10n.lineItemLabel(item.productName, item.quantity)),
-                            Text('${item.lineTotal.toStringAsFixed(0)} DZD'),
+                            Expanded(
+                              child: Text(
+                                l10n.lineItemLabel(item.productName, item.quantity),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              '${item.lineTotal.toStringAsFixed(0)} DZD',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
                           ],
                         ),
                       ),
@@ -137,14 +183,61 @@ class InvoiceDetailsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.pdfExportNotImplemented),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      try {
+                        await Printing.layoutPdf(
+                          onLayout: (_) => ref
+                              .read(invoicesRepositoryProvider.notifier)
+                              .fetchInvoicePdf(invoice.id),
+                          name: 'invoice_${invoice.invoiceNumber}.pdf',
+                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString())),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.print_outlined),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(l10n.exportAsPdf),
+                    ),
+                  ),
                 ),
-              ),
-              icon: const Icon(Icons.share_outlined),
-              label: Text(l10n.shareViaWhatsapp),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final bytes = await ref
+                            .read(invoicesRepositoryProvider.notifier)
+                            .fetchInvoicePdf(invoice.id);
+                        await Printing.sharePdf(
+                          bytes: bytes,
+                          filename: 'invoice_${invoice.invoiceNumber}.pdf',
+                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString())),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.share_outlined),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(l10n.shareViaWhatsapp),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

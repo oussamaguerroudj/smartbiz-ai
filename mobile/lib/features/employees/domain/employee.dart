@@ -53,11 +53,47 @@ class SalarySummary {
       );
 }
 
+class SalaryPayment {
+  SalaryPayment({
+    required this.id,
+    required this.amount,
+    required this.expenseDate,
+    this.salaryPeriod,
+    this.duration,
+    this.description,
+    this.createdAt,
+  });
+
+  final String id;
+  final double amount;
+  final String expenseDate;
+  final String? salaryPeriod;
+  final String? duration;
+  final String? description;
+  final String? createdAt;
+
+  factory SalaryPayment.fromJson(Map<String, dynamic> json) => SalaryPayment(
+        id: json['id'] as String,
+        amount: double.parse(json['amount'].toString()),
+        expenseDate: (json['expenseDate'] ?? json['expense_date'])?.toString() ?? '',
+        salaryPeriod: (json['salaryPeriod'] ?? json['salary_period']) as String?,
+        duration: json['duration'] as String?,
+        description: json['description'] as String?,
+        createdAt: (json['createdAt'] ?? json['created_at']) as String?,
+      );
+}
+
 class EmployeeDetails {
-  EmployeeDetails({required this.employee, required this.attendance, this.salary});
+  EmployeeDetails({
+    required this.employee,
+    required this.attendance,
+    this.salary,
+    this.salaryPayments = const [],
+  });
   final Employee employee;
   final AttendanceSummary attendance;
   final SalarySummary? salary;
+  final List<SalaryPayment> salaryPayments;
 
   factory EmployeeDetails.fromJson(Map<String, dynamic> json) => EmployeeDetails(
         employee: Employee.fromJson(json),
@@ -65,5 +101,9 @@ class EmployeeDetails {
         salary: json['salary'] != null
             ? SalarySummary.fromJson(json['salary'] as Map<String, dynamic>)
             : null,
+        salaryPayments: (json['salaryPayments'] as List?)
+                ?.map((item) => SalaryPayment.fromJson(item as Map<String, dynamic>))
+                .toList() ??
+            const [],
       );
 }

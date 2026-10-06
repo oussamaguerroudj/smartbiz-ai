@@ -1,3 +1,4 @@
+import '../../../../core/widgets/directional_chevron.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -19,6 +20,7 @@ import '../../../sales/data/sales_repository.dart';
 import '../../../sales/domain/sale.dart';
 import '../../../sales/presentation/screens/create_sale_screen.dart';
 import '../../data/dashboard_repository.dart';
+import '../widgets/dashboard_pages_section.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Dashboard — Spec Ch. 9. Real API-backed (Phase 5 wiring): every KPI
@@ -122,11 +124,29 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const FadeSlideIn(
+                      delay: Duration(milliseconds: 30),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: DashboardPagesSection(),
+                      ),
+                    ),
                     FadeSlideIn(
                       delay: const Duration(milliseconds: 60),
                       child: _SalesTrendCard(
                         salesAsync: ref.watch(
                           salesRepositoryProvider,
+                        ),
+                      ),
+                    ),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 90),
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          top: AppSpacing.sm,
+                        ),
+                        child: _InventoryValueCard(
+                          value: dashboard.inventoryValue,
                         ),
                       ),
                     ),
@@ -209,32 +229,34 @@ Future<void> showScanInvoiceChooser(BuildContext context) async {
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusCard)),
     ),
     builder: (sheetContext) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.scanInvoiceChooserTitle,
-              style: Theme.of(sheetContext).textTheme.titleMedium,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _ScanChoiceTile(
-              icon: Icons.point_of_sale_rounded,
-              title: l10n.scanSalesInvoiceOption,
-              subtitle: l10n.scanSalesInvoiceSubtitle,
-              onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.sales),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            _ScanChoiceTile(
-              icon: Icons.inventory_2_rounded,
-              title: l10n.scanStockInvoiceOption,
-              subtitle: l10n.scanStockInvoiceSubtitle,
-              onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.stock),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-          ],
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.scanInvoiceChooserTitle,
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ScanChoiceTile(
+                icon: Icons.point_of_sale_rounded,
+                title: l10n.scanSalesInvoiceOption,
+                subtitle: l10n.scanSalesInvoiceSubtitle,
+                onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.sales),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _ScanChoiceTile(
+                icon: Icons.inventory_2_rounded,
+                title: l10n.scanStockInvoiceOption,
+                subtitle: l10n.scanStockInvoiceSubtitle,
+                onTap: () => Navigator.of(sheetContext).pop(InvoiceScanMode.stock),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+          ),
         ),
       ),
     ),
@@ -297,7 +319,7 @@ class _ScanChoiceTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded),
+            const ForwardChevron(),
           ],
         ),
       ),
@@ -373,7 +395,7 @@ class _DashboardHeader extends StatelessWidget {
                       Icons.bar_chart_rounded,
                       color: Colors.white,
                     ),
-                    tooltip: 'Reports',
+                    tooltip: l10n.moreReports,
                     onPressed: onOpenReports,
                   ),
 
@@ -383,7 +405,7 @@ class _DashboardHeader extends StatelessWidget {
                       Icons.smart_toy_outlined,
                       color: Colors.white,
                     ),
-                    tooltip: 'AI Assistant',
+                    tooltip: l10n.moreAiAssistant,
                     onPressed: onOpenAiAssistant,
                   ),
 
@@ -393,7 +415,7 @@ class _DashboardHeader extends StatelessWidget {
                       Icons.notifications_outlined,
                       color: Colors.white,
                     ),
-                    tooltip: 'Notifications',
+                    tooltip: l10n.moreNotifications,
                     onPressed: onOpenNotifications,
                   ),
                 ],
@@ -558,19 +580,26 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                l10n.salesTrend,
-                style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: Text(
+                  l10n.salesTrend,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              PillTabs(
-                labels: [
-                  l10n.rangeWeek,
-                  l10n.rangeMonth,
-                  l10n.rangeYear,
-                ],
-                selectedIndex: _range.index,
-                onChanged: (i) => setState(
-                  () => _range = _TrendRange.values[i],
+              const SizedBox(width: 8),
+              Flexible(
+                child: PillTabs(
+                  labels: [
+                    l10n.rangeWeek,
+                    l10n.rangeMonth,
+                    l10n.rangeYear,
+                  ],
+                  selectedIndex: _range.index,
+                  onChanged: (i) => setState(
+                    () => _range = _TrendRange.values[i],
+                  ),
                 ),
               ),
             ],
@@ -589,7 +618,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
               height: 60,
               child: Center(
                 child: Text(
-                  'Could not load sales trend',
+                  l10n.couldNotLoadSalesTrend,
                   style: AppTypography.body(
                     Theme.of(context)
                         .colorScheme
@@ -645,7 +674,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
           );
 
           if (idx != -1) {
-            totals[idx] += sale.total;
+            totals[idx] += (sale.margin ?? sale.total);
           }
         }
 
@@ -700,7 +729,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
             );
 
             if (!d.isBefore(weekStarts[i]) && d.isBefore(weekEnd)) {
-              totals[i] += sale.total;
+              totals[i] += (sale.margin ?? sale.total);
               break;
             }
           }
@@ -728,7 +757,7 @@ class _SalesTrendCardState extends State<_SalesTrendCard> {
           for (var i = 0; i < months.length; i++) {
             if (sale.soldAt.year == months[i].year &&
                 sale.soldAt.month == months[i].month) {
-              totals[i] += sale.total;
+              totals[i] += (sale.margin ?? sale.total);
               break;
             }
           }
@@ -884,3 +913,61 @@ class _LowStockAlert extends StatelessWidget {
     );
   }
 }
+
+class _InventoryValueCard extends StatelessWidget {
+  const _InventoryValueCard({
+    required this.value,
+  });
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(
+          AppSpacing.radiusCard,
+        ),
+        boxShadow: AppSpacing.cardElevation,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.info.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusInput),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.inventory_2_outlined, color: AppColors.info),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.inventoryValueLabel,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${value.toStringAsFixed(0)} DZD',
+                  style: AppTypography.statValue(AppColors.info),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

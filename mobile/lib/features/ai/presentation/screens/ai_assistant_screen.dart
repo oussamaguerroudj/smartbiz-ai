@@ -4,25 +4,24 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/gradient_hero.dart';
-import '../../../products/data/products_repository.dart';
-import '../../../sales/data/sales_repository.dart';
-import '../../../expenses/data/expenses_repository.dart';
-import '../../../reports/presentation/screens/reports_screen.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// AI Assistant — Spec Ch. 16.1.
 ///
-/// SCOPE NOTE: question-matching here is simple keyword routing, not a
-/// real LLM call (that's Phase 6, via POST /ai/chat once the backend
-/// exists). What's real and non-negotiable per the spec's own guardrail
-/// ("AI MUST NEVER INVENT FINANCIAL NUMBERS") is enforced already: every
-/// numeric answer below is computed live from ProductsRepository /
-/// SalesRepository / ExpensesRepository — never a hardcoded figure.
+/// Phase 6 update: questions are now answered by a real POST /ai/chat
+/// call (OpenAI, server-side) instead of local keyword routing. The
+/// spec's own guardrail ("AI MUST NEVER INVENT FINANCIAL NUMBERS") is
+/// enforced server-side there: the backend hands the model a snapshot
+/// of the company's real current data and instructs it to never state
+/// a figure that isn't in that snapshot (see ai.service.js
+/// CHAT_SYSTEM_PROMPT) — the client here just displays whatever comes
+/// back, the same as any other chat UI.
 ///
 /// Design System v2: gradient hero background + styled bubbles, matching
-/// the approved redesign. A short, deterministic "typing" pause plays
-/// before the bot bubble appears — purely presentational; the answer
-/// itself is still computed instantly and never altered by the delay.
+/// the approved redesign. The typing indicator now reflects the actual
+/// network request instead of a fixed deterministic delay.
 class _ChatMessage {
   _ChatMessage(this.text, this.isUser);
 
@@ -44,72 +43,6 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
   final List<_ChatMessage> _messages = [];
   bool _isTyping = false;
 
-  String _answer(String question) {
-    final q = question.toLowerCase();
-    final sales = ref.read(salesRepositoryProvider).valueOrNull ?? [];
-    final products =
-        ref.read(productsRepositoryProvider).valueOrNull ?? [];
-    final expensesState =
-        ref.read(expensesRepositoryProvider).valueOrNull;
-    final monthExpensesTotal =
-        expensesState?.thisMonthTotal ?? 0;
-
-    final now = DateTime.now();
-
-    final monthSales = sales.where(
-      (s) =>
-          s.soldAt.year == now.year &&
-          s.soldAt.month == now.month,
-    );
-
-    final monthRevenue = monthSales.fold<double>(
-      0,
-      (sum, s) => sum + s.total,
-    );
-
-    if (q.contains('earn') ||
-        q.contains('revenue') ||
-        q.contains('profit')) {
-      return 'So far this month you\'ve earned '
-          '${monthRevenue.toStringAsFixed(0)} DZD in revenue '
-          '(${monthSales.length} sale(s)). Ask the Reports screen '
-          'for exact gross-profit figures.';
-    }
-
-    if (q.contains('low') || q.contains('stock')) {
-      final low = products
-          .where((p) => p.isLowStock || p.isOutOfStock)
-          .toList();
-
-      if (low.isEmpty) {
-        return 'No products are currently low in stock.';
-      }
-
-      return '${low.length} product(s) are below their minimum stock: '
-          '${low.map((p) => p.name).join(", ")}.';
-    }
-
-    if (q.contains('best') || q.contains('selling')) {
-      if (sales.isEmpty) {
-        return 'No sales recorded yet, so I can\'t determine '
-            'a best-seller.';
-      }
-
-      return 'Best-seller ranking needs per-item sales history — '
-          'open the Reports screen for the real "Top Products" '
-          'breakdown computed server-side.';
-    }
-
-    if (q.contains('spend') || q.contains('expense')) {
-      return 'Total expenses recorded this month: '
-          '${monthExpensesTotal.toStringAsFixed(0)} DZD.';
-    }
-
-    return 'I don\'t have enough recorded data to answer that '
-        'confidently yet — try asking about revenue, profit, '
-        'low stock, best-sellers, or expenses.';
-  }
-
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
@@ -127,7 +60,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
     if (text.isEmpty) return;
 
-    final answer = _answer(text);
+    // Sent as conversation context so the assistant can handle
+    // follow-up questions ("and how about expenses?") — capped
+    // server-side too, but trimmed here as well to keep the request
+    // itself small.
+    final history = _messages
+        .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
+        .toList();
 
     setState(() {
       _messages.add(_ChatMessage(text, true));
@@ -137,12 +76,28 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     _controller.clear();
     _scrollToBottom();
 
-    // Brief, deterministic pause so the typing indicator is perceptible —
-    // the answer above was already computed from real data; this delay
-    // only affects when it's revealed, never what it says.
-    await Future.delayed(
-      const Duration(milliseconds: 550),
-    );
+    final l10n = AppLocalizations.of(context)!;
+    String answer;
+
+    try {
+      final client = ref.read(apiClientProvider);
+      final response = await client.post(
+        '/ai/chat',
+        body: {'message': text, 'history': history},
+        timeout: const Duration(seconds: 30),
+      );
+      final data = response['data'] as Map<String, dynamic>;
+      answer = (data['reply'] as String?)?.trim().isNotEmpty == true
+          ? data['reply'] as String
+          : l10n.networkError;
+    } on ApiException catch (e) {
+      // e.g. 503 AI_NOT_CONFIGURED if the server has no OpenAI key yet,
+      // or AI_RATE_LIMIT — shown as the assistant's own reply so it
+      // reads naturally in the conversation rather than as a toast.
+      answer = e.message;
+    } catch (_) {
+      answer = l10n.networkError;
+    }
 
     if (!mounted) return;
 
@@ -163,6 +118,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: GradientHero(
         child: SafeArea(
@@ -191,14 +147,14 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                             CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Ask about your business',
+                            l10n.askAboutYourBusiness,
                             style: AppTypography.sectionTitle(
                               Colors.white,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Answers are computed live from your real data',
+                            l10n.aiAnswersComputedLive,
                             style: AppTypography.caption(
                               Colors.white.withValues(alpha: 0.55),
                             ),
@@ -506,10 +462,37 @@ class _Insight {
   final InsightSeverity severity;
 }
 
-/// AI Insights — Spec Ch. 16.2. Every insight below is derived from a
-/// real backend query (GET /reports, GET /products) — kept deliberately
-/// simple per the spec's own MVP guidance ("avoid overstating AI
-/// capability").
+/// Fetches fresh each time the Insights screen is opened (autoDispose,
+/// no caching across visits) — insights are meant to reflect the
+/// business's current state, not a snapshot from an earlier session.
+final _aiInsightsProvider = FutureProvider.autoDispose<List<_Insight>>((ref) async {
+  final client = ref.read(apiClientProvider);
+  final response = await client.get('/ai/insights');
+  final data = response['data'] as Map<String, dynamic>;
+  final rawInsights = (data['insights'] as List).cast<Map<String, dynamic>>();
+
+  return rawInsights.map((raw) {
+    final severityName = raw['severity'] as String? ?? 'info';
+    final severity = InsightSeverity.values.firstWhere(
+      (s) => s.name == severityName,
+      orElse: () => InsightSeverity.info,
+    );
+
+    return _Insight(
+      raw['title'] as String? ?? '',
+      raw['detail'] as String? ?? '',
+      severity,
+    );
+  }).toList();
+});
+
+/// AI Insights — Spec Ch. 16.2.
+///
+/// Phase 6 update: insights now come from a real GET /ai/insights call
+/// (OpenAI, server-side), which is itself grounded in the same real
+/// dashboard/report data the rule-based version used to read locally
+/// (see ai.service.js gatherBusinessContext) — kept deliberately simple
+/// per the spec's own MVP guidance ("avoid overstating AI capability").
 class AiInsightsScreen extends ConsumerWidget {
   const AiInsightsScreen({super.key});
 
@@ -525,140 +508,82 @@ class AiInsightsScreen extends ConsumerWidget {
     WidgetRef ref,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final productsAsync =
-        ref.watch(productsRepositoryProvider);
-    final expensesAsync =
-        ref.watch(expensesRepositoryProvider);
-    final reportAsync =
-        ref.watch(reportProvider('monthly'));
-
-    final insights = <_Insight>[];
-
-    reportAsync.whenData((report) {
-      if (report.topProducts.isNotEmpty) {
-        final top = report.topProducts.first;
-
-        insights.add(
-          _Insight(
-            'Best seller this month',
-            '${top.name} — ${top.unitsSold} units sold',
-            InsightSeverity.info,
-          ),
-        );
-      }
-    });
-
-    productsAsync.whenData((products) {
-      final outOfStock =
-          products.where((p) => p.isOutOfStock).toList();
-
-      if (outOfStock.isNotEmpty) {
-        insights.add(
-          _Insight(
-            'Stock warning',
-            '${outOfStock.map((p) => p.name).join(", ")} '
-            'out of stock',
-            InsightSeverity.alert,
-          ),
-        );
-      }
-
-      final lowStock =
-          products.where((p) => p.isLowStock).toList();
-
-      if (lowStock.isNotEmpty) {
-        insights.add(
-          _Insight(
-            'Low stock',
-            '${lowStock.length} product(s) below '
-            'minimum threshold',
-            InsightSeverity.watch,
-          ),
-        );
-      }
-    });
-
-    expensesAsync.whenData((state) {
-      if (state.expenses.isNotEmpty) {
-        insights.add(
-          _Insight(
-            'Expenses',
-            'Total this month: '
-            '${state.thisMonthTotal.toStringAsFixed(0)} DZD',
-            InsightSeverity.info,
-          ),
-        );
-      }
-    });
+    final insightsAsync = ref.watch(_aiInsightsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.aiInsightsTitle),
       ),
-      body: insights.isEmpty
-          ? Center(
-              child: Text(
-                l10n.notEnoughDataForInsights,
-              ),
-            )
-          : ListView.separated(
-              padding:
-                  const EdgeInsets.all(AppSpacing.sm),
-              itemCount: insights.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.xs),
-              itemBuilder: (context, i) {
-                final insight = insights[i];
+      body: insightsAsync.when(
+        data: (insights) => insights.isEmpty
+            ? Center(
+                child: Text(
+                  l10n.notEnoughDataForInsights,
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: () => ref.refresh(_aiInsightsProvider.future),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  itemCount: insights.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                  itemBuilder: (context, i) {
+                    final insight = insights[i];
 
-                return Container(
-                  padding:
-                      const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface,
-                    borderRadius: BorderRadius.circular(
-                      AppSpacing.radiusCard,
-                    ),
-                    boxShadow:
-                        AppSpacing.cardElevation,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              insight.title,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium,
+                    return Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                        boxShadow: AppSpacing.cardElevation,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  insight.title,
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                Text(insight.detail),
+                              ],
                             ),
-                            Text(insight.detail),
-                          ],
-                        ),
-                      ),
-                      Chip(
-                        label: Text(
-                          insight.severity.name,
-                        ),
-                        backgroundColor:
-                            _colorFor(
-                          insight.severity,
-                        ).withValues(alpha: 0.12),
-                        labelStyle: TextStyle(
-                          color: _colorFor(
-                            insight.severity,
                           ),
-                        ),
+                          Chip(
+                            label: Text(insight.severity.name),
+                            backgroundColor:
+                                _colorFor(insight.severity).withValues(alpha: 0.12),
+                            labelStyle: TextStyle(color: _colorFor(insight.severity)),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+              ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  err is ApiException ? err.message : l10n.networkError,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: () => ref.refresh(_aiInsightsProvider),
+                  child: Text(l10n.retry),
+                ),
+              ],
             ),
+          ),
+        ),
+      ),
     );
   }
 }

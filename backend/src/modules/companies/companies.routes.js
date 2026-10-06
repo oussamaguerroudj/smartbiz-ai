@@ -13,6 +13,11 @@ const { authMiddleware } = require('../../middlewares/auth.middleware');
  * IMPORTANT:
  * Never accept companyId from req.body, req.query, or req.params.
  */
+// Ch. 1/16 — SPECIALIZED BUSINESS CONTENT: matches business_type_enum
+// after migration 016. Every value here works fully at the CORE level
+// regardless of whether a dedicated specialized module (clinic_*,
+// restaurant_*, ...) exists for it yet — see backend/SPECIALIZED_MODULES.md
+// for which verticals currently have one.
 const VALID_TYPES = [
   'clothing',
   'grocery',
@@ -21,6 +26,23 @@ const VALID_TYPES = [
   'restaurant',
   'company',
   'workshop',
+  'retail_store',
+  'cafe',
+  'beauty_salon',
+  'barbershop',
+  'gym',
+  'hotel',
+  'dental_clinic',
+  'medical_laboratory',
+  'car_repair',
+  'electronics_store',
+  'supermarket',
+  'bakery',
+  'law_office',
+  'accounting_office',
+  'real_estate_agency',
+  'education_center',
+  'other',
 ];
 
 const COMPANY_SELECT = `
@@ -155,6 +177,7 @@ const updateMe = asyncHandler(async (req, res) => {
 });
 
 const router = express.Router();
+const { requireRole } = require('../../middlewares/auth.middleware');
 
 /*
  * All company endpoints are tenant-scoped through req.user.companyId.
@@ -162,6 +185,6 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get('/me', getMe);
-router.put('/me', updateMe);
+router.put('/me', requireRole('owner'), updateMe);
 
 module.exports = router;
