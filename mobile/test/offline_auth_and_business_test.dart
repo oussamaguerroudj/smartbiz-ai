@@ -429,5 +429,77 @@ void main() {
       expect(report.expenses, 25000.0);
       expect(report.netProfit, 15000.0);
     });
+
+    test('Session.fromAuthResponse correctly parses all production response shapes without null cast crash', () {
+      // 1. Standard backend response: { user: {...}, accessToken, refreshToken }
+      final standardRes = {
+        'user': {
+          'id': 'usr_std_1',
+          'companyId': 'comp_std_1',
+          'name': 'Ahmed Store',
+          'email': 'ahmed@store.dz',
+          'role': 'owner',
+        },
+        'accessToken': 'jwt_access_123',
+        'refreshToken': 'jwt_refresh_456',
+      };
+      final session1 = Session.fromAuthResponse(standardRes);
+      expect(session1.isLoggedIn, isTrue);
+      expect(session1.accessToken, 'jwt_access_123');
+      expect(session1.refreshToken, 'jwt_refresh_456');
+      expect(session1.userId, 'usr_std_1');
+      expect(session1.companyId, 'comp_std_1');
+      expect(session1.userName, 'Ahmed Store');
+
+      // 2. Production flat response: { token, _id, name, email, role } (where data['user'] is NULL)
+      // This directly caused: "Unexpected error: type 'Null' is not a subtype of type 'Map<String, dynamic>' in type cast"
+      final flatProdRes = {
+        'token': 'prod_jwt_token_789',
+        '_id': '65f123456789abcdef012345',
+        'name': 'Fatima Market',
+        'email': 'fatima@market.dz',
+        'role': 'admin',
+        'business': 'biz_999',
+      };
+      final session2 = Session.fromAuthResponse(flatProdRes);
+      expect(session2.isLoggedIn, isTrue);
+      expect(session2.accessToken, 'prod_jwt_token_789');
+      expect(session2.userId, '65f123456789abcdef012345');
+      expect(session2.companyId, 'biz_999');
+      expect(session2.userName, 'Fatima Market');
+      expect(session2.email, 'fatima@market.dz');
+
+      // 3. Wrapped under `data`: { data: { token, user: { _id, ... } } }
+      final wrappedRes = {
+        'data': {
+          'token': 'wrapped_token_abc',
+          'user': {
+            '_id': 'usr_wrapped_1',
+            'name': 'Karim Pharmacy',
+            'email': 'karim@pharmacy.dz',
+            'company_id': 'comp_wrapped_1',
+          },
+        },
+      };
+      final session3 = Session.fromAuthResponse(wrappedRes);
+      expect(session3.isLoggedIn, isTrue);
+      expect(session3.accessToken, 'wrapped_token_abc');
+      expect(session3.userId, 'usr_wrapped_1');
+      expect(session3.companyId, 'comp_wrapped_1');
+      expect(session3.userName, 'Karim Pharmacy');
+
+      // 4. Response with explicit null user: { token: '...', user: null }
+      final nullUserRes = {
+        'token': 'null_user_token',
+        'user': null,
+        '_id': 'user_fallback_id',
+        'name': 'Fallback User',
+      };
+      final session4 = Session.fromAuthResponse(nullUserRes);
+      expect(session4.isLoggedIn, isTrue);
+      expect(session4.accessToken, 'null_user_token');
+      expect(session4.userId, 'user_fallback_id');
+      expect(session4.userName, 'Fallback User');
+    });
   });
 }

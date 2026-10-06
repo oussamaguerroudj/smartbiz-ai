@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
 import '../../../core/sync/sync_service.dart';
 import 'companies_repository.dart';
@@ -15,12 +16,20 @@ class AuthRepository {
   /// [verifyAccount] confirms the right code. So there is nothing to
   /// apply to the session here; the caller just moves on to the "enter
   /// your code" screen.
-  Future<void> register({required String name, required String email, required String password}) async {
+  Future<void> register({
+    required String name,
+    required String email,
+    required String password,
+    String industry = 'retail',
+    String type = 'retail_store',
+  }) async {
     final client = _ref.read(apiClientProvider);
     await client.post('/auth/register', body: {
       'name': name,
       'email': email,
       'password': password,
+      'industry': industry,
+      'type': type,
     });
   }
 
@@ -30,7 +39,17 @@ class AuthRepository {
       'email': email,
       'password': password,
     });
-    await _applySession(data as Map<String, dynamic>);
+    if (data is Map<String, dynamic>) {
+      await _applySession(data);
+    } else if (data is Map) {
+      await _applySession(Map<String, dynamic>.from(data));
+    } else {
+      throw ApiException(
+        statusCode: 200,
+        message: 'Invalid response format from server.',
+        code: 'INVALID_RESPONSE',
+      );
+    }
   }
 
   /// Confirms the 6-digit code emailed to [email]. This is the moment the
@@ -43,7 +62,17 @@ class AuthRepository {
       'email': email,
       'code': code,
     });
-    await _applySession(data as Map<String, dynamic>);
+    if (data is Map<String, dynamic>) {
+      await _applySession(data);
+    } else if (data is Map) {
+      await _applySession(Map<String, dynamic>.from(data));
+    } else {
+      throw ApiException(
+        statusCode: 200,
+        message: 'Invalid response format from server.',
+        code: 'INVALID_RESPONSE',
+      );
+    }
   }
 
   /// Asks the backend to (re)send a fresh verification code to [email].

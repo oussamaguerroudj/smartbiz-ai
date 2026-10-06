@@ -97,7 +97,7 @@ async function sendVerificationCodeEmail({ name, email, code }) {
  * The account is only ever created — inside verifyEmail() — once the
  * correct code is confirmed.
  */
-async function register({ name, email, password }) {
+async function register({ name, email, password, industry, type }) {
   const existingUser = await query(
     'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
     [email],
@@ -120,20 +120,57 @@ async function register({ name, email, password }) {
   // One pending row per email — re-registering the same (still
   // unverified) address just replaces the name/password/code instead of
   // being blocked as a duplicate.
-  await query(
-    `INSERT INTO pending_registrations (
-       name, email, password_hash, code_hash, code_expires, attempts
-     )
-     VALUES ($1, $2, $3, $4, $5, 0)
-     ON CONFLICT (email) DO UPDATE
-       SET name = EXCLUDED.name,
-           password_hash = EXCLUDED.password_hash,
-           code_hash = EXCLUDED.code_hash,
-           code_expires = EXCLUDED.code_expires,
-           attempts = 0,
-           updated_at = now()`,
-    [name, email, passwordHash, codeHash, expires],
-  );
+  try {
+    await query(
+      `INSERT INTO pending_registrations (
+         name, email, password_hash, code_hash, code_expires, attempts, industry, type
+       )
+       VALUES ($1, $2, $3, $4, $5, 0, $6, $7)
+       ON CONFLICT (email) DO UPDATE
+         SET name = EXCLUDED.name,
+             password_hash = EXCLUDED.password_hash,
+             code_hash = EXCLUDED.code_hash,
+             code_expires = EXCLUDED.code_expires,
+             attempts = 0,
+             industry = EXCLUDED.industry,
+             type = EXCLUDED.type,
+             updated_at = now()`,
+      [
+        name,
+        email,
+        passwordHash,
+        codeHash,
+        expires,
+        industry ? String(industry).trim().toLowerCase() : null,
+        type ? String(type).trim().toLowerCase() : null,
+      ],
+    );
+  } catch (err) {
+    // If pending_registrations table lacks industry/type columns in an older schema, fallback
+    if (
+      err.message &&
+      (err.message.includes('column "industry"') ||
+        err.message.includes('column "type"') ||
+        err.message.includes('does not exist'))
+    ) {
+      await query(
+        `INSERT INTO pending_registrations (
+           name, email, password_hash, code_hash, code_expires, attempts
+         )
+         VALUES ($1, $2, $3, $4, $5, 0)
+         ON CONFLICT (email) DO UPDATE
+           SET name = EXCLUDED.name,
+               password_hash = EXCLUDED.password_hash,
+               code_hash = EXCLUDED.code_hash,
+               code_expires = EXCLUDED.code_expires,
+               attempts = 0,
+               updated_at = now()`,
+        [name, email, passwordHash, codeHash, expires],
+      );
+    } else {
+      throw err;
+    }
+  }
 
   try {
     await sendVerificationCodeEmail({ name, email, code });
@@ -387,11 +424,15 @@ async function verifyEmail({ email, code }) {
     // Correct code — the account is created right now, for the first
     // time. Everything up to this point only ever touched
     // pending_registrations.
+    const businessType =
+      pending.type && typeof pending.type === 'string'
+        ? pending.type.toLowerCase()
+        : 'company';
     const companyResult = await client.query(
       `INSERT INTO companies (name, business_type, currency)
-       VALUES ($1, 'company', 'DZD')
+       VALUES ($1, $2, 'DZD')
        RETURNING id`,
-      ['New Business'],
+      ['New Business', businessType],
     );
 
     const companyId = companyResult.rows[0].id;

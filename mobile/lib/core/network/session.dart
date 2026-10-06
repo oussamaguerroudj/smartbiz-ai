@@ -86,19 +86,66 @@ class Session {
         role: json['role'] as String?,
       );
 
-  factory Session.fromAuthResponse(Map<String, dynamic> data) {
-    final user = data['user'] as Map<String, dynamic>;
+  factory Session.fromAuthResponse(Map<String, dynamic> raw) {
+    final data = (raw['data'] is Map<String, dynamic>)
+        ? (raw['data'] as Map<String, dynamic>)
+        : (raw['data'] is Map
+            ? Map<String, dynamic>.from(raw['data'] as Map)
+            : raw);
+
+    final token = (data['accessToken'] ??
+            data['token'] ??
+            data['bearer'] ??
+            raw['accessToken'] ??
+            raw['token'] ??
+            raw['bearer'])
+        ?.toString();
+
+    final refreshToken =
+        (data['refreshToken'] ?? raw['refreshToken'])?.toString();
+
+    Map<String, dynamic> userMap;
+    if (data['user'] is Map<String, dynamic>) {
+      userMap = data['user'] as Map<String, dynamic>;
+    } else if (data['user'] is Map) {
+      userMap = Map<String, dynamic>.from(data['user'] as Map);
+    } else if (raw['user'] is Map<String, dynamic>) {
+      userMap = raw['user'] as Map<String, dynamic>;
+    } else if (raw['user'] is Map) {
+      userMap = Map<String, dynamic>.from(raw['user'] as Map);
+    } else {
+      userMap = data;
+    }
+
+    final userId =
+        (userMap['id'] ?? userMap['_id'] ?? userMap['userId'])?.toString();
+    final companyId = (userMap['companyId'] ??
+            userMap['company_id'] ??
+            userMap['company'] ??
+            userMap['businessId'] ??
+            userMap['business'])
+        ?.toString();
+    final userName =
+        (userMap['name'] ?? userMap['userName'] ?? userMap['username'])
+            ?.toString();
+    final email = userMap['email']?.toString();
+    final phone = userMap['phone']?.toString();
+    final avatarUrl = (userMap['avatarUrl'] ??
+            userMap['avatar_url'] ??
+            userMap['avatar'])
+        ?.toString();
+    final role = userMap['role']?.toString();
 
     return Session(
-      accessToken: data['accessToken'] as String?,
-      refreshToken: data['refreshToken'] as String?,
-      userId: user['id'] as String?,
-      companyId: user['companyId'] as String?,
-      userName: user['name'] as String?,
-      email: user['email'] as String?,
-      phone: user['phone'] as String?,
-      avatarUrl: user['avatarUrl'] as String?,
-      role: user['role'] as String?,
+      accessToken: token,
+      refreshToken: refreshToken,
+      userId: userId,
+      companyId: companyId,
+      userName: userName,
+      email: email,
+      phone: phone,
+      avatarUrl: avatarUrl,
+      role: role,
     );
   }
 }
