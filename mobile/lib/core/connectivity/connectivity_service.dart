@@ -76,10 +76,21 @@ class ConnectivityNotifier extends StateNotifier<ConnectionStatus> {
 
   Future<bool> _probeServerHealth() async {
     try {
-      final base = ApiClient.baseUrl;
-      final uri = Uri.parse(base).replace(path: '/health');
-      final res = await http.get(uri).timeout(const Duration(seconds: 3));
-      return res.statusCode == 200;
+      final base = ApiClient.baseUrl.replaceAll(RegExp(r'/+$'), '');
+      // If base ends with /api, probe /api/health directly
+      final apiHealthUri = base.endsWith('/api')
+          ? Uri.parse('$base/health')
+          : Uri.parse('$base/api/health');
+
+      try {
+        final res = await http.get(apiHealthUri).timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200) return true;
+      } catch (_) {}
+
+      // Fallback: probe root /health
+      final rootUri = Uri.parse(base).replace(path: '/health');
+      final rootRes = await http.get(rootUri).timeout(const Duration(seconds: 5));
+      return rootRes.statusCode == 200;
     } on SocketException {
       return false;
     } on http.ClientException {

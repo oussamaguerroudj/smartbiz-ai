@@ -5,7 +5,6 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/session.dart';
-import 'package:http/http.dart' as http;
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -93,25 +92,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) widget.onLoginSuccess();
     } on ApiException catch (e) {
       if (mounted) {
-        if (e.statusCode == 0 ||
-            e.code == 'CONNECTION_ERROR' ||
-            e.code == 'NETWORK_ERROR' ||
-            e.code == 'TIMEOUT' ||
-            e.code == 'CLIENT_ERROR') {
+        if (e.code == 'EMAIL_NOT_VERIFIED') {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+          widget.onGoToVerify(_emailController.text.trim());
+        } else if (e.code == 'INVALID_CREDENTIALS' || e.statusCode == 400 || e.statusCode == 401) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        } else if (e.code == 'TIMEOUT' || e.statusCode == 408 || e.statusCode == 504) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.firstTimeAuthInternetRequired)),
+            SnackBar(
+              content: Text(
+                e.message.isNotEmpty
+                    ? e.message
+                    : 'Server connection timed out. The server may be waking up, please retry.',
+              ),
+            ),
+          );
+        } else if (e.code == 'PERMISSION_DENIED') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message)),
+          );
+        } else if (e.code == 'CONNECTION_ERROR' ||
+            e.code == 'NETWORK_ERROR' ||
+            e.code == 'CLIENT_ERROR' ||
+            e.statusCode == 0) {
+          final isFirstTime = !ref.read(sessionProvider).isLoggedIn;
+          final errorMsg = isFirstTime
+              ? '${l10n.firstTimeAuthInternetRequired}\n(${e.message})'
+              : e.message;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-          if (e.code == 'EMAIL_NOT_VERIFIED') {
-            widget.onGoToVerify(_emailController.text.trim());
-          }
         }
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.firstTimeAuthInternetRequired)),
+          SnackBar(content: Text('Unexpected error: $e')),
         );
       }
     } finally {
@@ -220,195 +238,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Text(l10n.noAccount),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Center(
-                  child: InkWell(
-                    onTap: () => _showServerConfigDialog(context),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.dns_rounded, size: 14, color: Theme.of(context).colorScheme.primary),
-                          const SizedBox(width: 6),
-                          Text(
-                            ApiClient.baseUrl.replaceFirst('http://', '').replaceFirst('/api', ''),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.settings_outlined, size: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  void _showServerConfigDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: ApiClient.baseUrl);
-    String? testResult;
-    bool isTesting = false;
-    bool isSuccess = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          Future<void> runTest() async {
-            setDialogState(() {
-              isTesting = true;
-              testResult = null;
-            });
-            try {
-              var url = controller.text.trim().replaceAll(RegExp(r'/+$'), '');
-              if (!url.endsWith('/api')) url = '$url/api';
-              final res = await http.get(Uri.parse('$url/ai/health')).timeout(const Duration(seconds: 4));
-              if (res.statusCode == 200) {
-                setDialogState(() {
-                  isTesting = false;
-                  isSuccess = true;
-                  testResult = '✓ Connected to server successfully (200 OK)!';
-                });
-              } else {
-                setDialogState(() {
-                  isTesting = false;
-                  isSuccess = false;
-                  testResult = 'Server returned HTTP ${res.statusCode}';
-                });
-              }
-            } catch (e) {
-              setDialogState(() {
-                isTesting = false;
-                isSuccess = false;
-                testResult = 'Cannot reach server: $e';
-              });
-            }
-          }
-
-          return AlertDialog(
-            title: Row(
-              children: [
-                const Icon(Icons.dns_rounded, size: 22),
-                const SizedBox(width: 8),
-                Text(l10n.serverSettingsTitle, style: const TextStyle(fontSize: 18)),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.configureServerUrlHint,
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: controller,
-                    decoration: InputDecoration(
-                      labelText: l10n.serverBaseUrlLabel,
-                      hintText: 'http://192.168.1.4:4000/api',
-                      isDense: true,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      ActionChip(
-                        label: const Text('192.168.1.4 (Wi-Fi)', style: TextStyle(fontSize: 11)),
-                        onPressed: () {
-                          controller.text = 'http://192.168.1.4:4000/api';
-                          setDialogState(() {});
-                        },
-                      ),
-                      ActionChip(
-                        label: const Text('localhost (USB)', style: TextStyle(fontSize: 11)),
-                        onPressed: () {
-                          controller.text = 'http://192.168.1.3:4000/api';
-                          setDialogState(() {});
-                        },
-                      ),
-                      ActionChip(
-                        label: const Text('10.0.2.2 (Emulator)', style: TextStyle(fontSize: 11)),
-                        onPressed: () {
-                          controller.text = 'http://10.0.2.2:4000/api';
-                          setDialogState(() {});
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  if (isTesting)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(8),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  else
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.network_check_rounded, size: 18),
-                      label: Text(l10n.testConnectionAction),
-                      onPressed: runTest,
-                    ),
-                  if (testResult != null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isSuccess
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        testResult!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isSuccess ? Colors.green.shade800 : Colors.red.shade800,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.cancel),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  await ApiClient.setBaseUrl(controller.text);
-                  setState(() {});
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                },
-                child: Text(l10n.saveAction),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

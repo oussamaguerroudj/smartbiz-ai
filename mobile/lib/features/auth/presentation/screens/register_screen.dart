@@ -81,22 +81,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) widget.onRegisterSuccess(email);
     } on ApiException catch (e) {
       if (mounted) {
-        if (e.statusCode == 0 ||
+        if (e.code == 'EMAIL_TAKEN' || e.statusCode == 409 || e.statusCode == 400) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        } else if (e.code == 'TIMEOUT' || e.statusCode == 408 || e.statusCode == 504) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                e.message.isNotEmpty
+                    ? e.message
+                    : 'Server connection timed out. The server may be waking up, please retry.',
+              ),
+            ),
+          );
+        } else if (e.code == 'PERMISSION_DENIED') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message)),
+          );
+        } else if (e.statusCode == 0 ||
             e.code == 'CONNECTION_ERROR' ||
             e.code == 'NETWORK_ERROR' ||
-            e.code == 'TIMEOUT' ||
             e.code == 'CLIENT_ERROR') {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.firstTimeRegisterInternetRequired)),
+            SnackBar(content: Text('${l10n.firstTimeRegisterInternetRequired}\n(${e.message})')),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
         }
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.firstTimeRegisterInternetRequired)),
+          SnackBar(content: Text('Unexpected error: $e')),
         );
       }
     } finally {

@@ -33,11 +33,25 @@ class ApiClient {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('server_base_url');
       if (saved != null && saved.trim().isNotEmpty) {
-        baseUrl = saved.trim();
+        final trimmed = saved.trim();
+        final isProd = defaultBaseUrl.startsWith('https://');
+        final isSavedLocal = trimmed.contains('127.0.0.1') ||
+            trimmed.contains('localhost') ||
+            trimmed.contains('10.33.166.30') ||
+            trimmed.contains('10.0.2.2');
+        if (isProd && isSavedLocal) {
+          baseUrl = defaultBaseUrl;
+          await prefs.setString('server_base_url', defaultBaseUrl);
+        } else {
+          baseUrl = trimmed;
+        }
       } else {
+        baseUrl = defaultBaseUrl;
         unawaited(detectBestBaseUrl());
       }
-    } catch (_) {}
+    } catch (_) {
+      baseUrl = defaultBaseUrl;
+    }
   }
 
   /// Automatically tests if 127.0.0.1:4000 is reachable (e.g. adb reverse over USB).
@@ -127,24 +141,27 @@ class ApiClient {
 
     try {
       response = await request().timeout(
-        timeout ?? const Duration(seconds: 15),
+        timeout ?? const Duration(seconds: 45),
       );
-    } on SocketException {
+    } on SocketException catch (e) {
+      final isPermission = e.osError?.errorCode == 13 || e.message.toLowerCase().contains('permission denied');
       throw ApiException(
         statusCode: 0,
-        message: 'Cannot connect to server ($baseUrl). Check network or server URL in Settings.',
-        code: 'CONNECTION_ERROR',
+        message: isPermission
+            ? 'Network permission denied by device (Permission denied).'
+            : 'Cannot reach server at $baseUrl. Please check internet connection or server availability.',
+        code: isPermission ? 'PERMISSION_DENIED' : 'CONNECTION_ERROR',
       );
-    } on HttpException {
+    } on HttpException catch (e) {
       throw ApiException(
         statusCode: 0,
-        message: 'Network error connecting to $baseUrl.',
+        message: 'Network error connecting to $baseUrl: ${e.message}',
         code: 'NETWORK_ERROR',
       );
     } on TimeoutException {
       throw ApiException(
         statusCode: 0,
-        message: 'Server connection timed out ($baseUrl).',
+        message: 'Server connection timed out ($baseUrl). The server may be waking up, please try again.',
         code: 'TIMEOUT',
       );
     } on FormatException {
