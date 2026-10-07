@@ -62,14 +62,6 @@ class DashboardScreen extends ConsumerWidget {
 
     final dashboard = dashboardAsync.valueOrNull ?? DashboardData.empty;
 
-    if (dashboardAsync.isLoading && dashboardAsync.valueOrNull == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () =>
