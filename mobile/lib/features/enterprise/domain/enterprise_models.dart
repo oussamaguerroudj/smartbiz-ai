@@ -200,6 +200,35 @@ class EnterpriseDashboardStats {
   final EnterpriseProjectSummary projects;
   final List<EnterpriseProject> openProjects;
 
+  static final empty = EnterpriseDashboardStats(
+    todayRevenue: 0,
+    todayExpenses: 0,
+    todayNetProfit: 0,
+    weekRevenue: 0,
+    monthRevenue: 0,
+    monthExpenses: 0,
+    monthOperatingExpenses: 0,
+    monthPayroll: 0,
+    monthNetProfit: 0,
+    unpaidInvoicesCount: 0,
+    unpaidInvoicesAmount: 0,
+    unpaidInvoices: const [],
+    clientBalancesOutstanding: 0,
+    clientsCount: 0,
+    employeesCount: 0,
+    suppliersCount: 0,
+    projects: EnterpriseProjectSummary(
+      planned: 0,
+      active: 0,
+      onHold: 0,
+      completed: 0,
+      cancelled: 0,
+      overdue: 0,
+      total: 0,
+    ),
+    openProjects: const [],
+  );
+
   factory EnterpriseDashboardStats.fromJson(Map<String, dynamic> json) => EnterpriseDashboardStats(
         todayRevenue: _toDouble(json['todayRevenue']),
         todayExpenses: _toDouble(json['todayExpenses']),

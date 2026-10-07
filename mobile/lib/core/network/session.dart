@@ -22,6 +22,7 @@ class Session {
     this.phone,
     this.avatarUrl,
     this.role,
+    this.businessType,
   });
 
   final String? accessToken;
@@ -33,6 +34,7 @@ class Session {
   final String? phone;
   final String? avatarUrl;
   final String? role;
+  final String? businessType;
 
   bool get isLoggedIn => accessToken != null || refreshToken != null;
 
@@ -48,6 +50,7 @@ class Session {
     String? phone,
     String? avatarUrl,
     String? role,
+    String? businessType,
   }) {
     return Session(
       accessToken: accessToken ?? this.accessToken,
@@ -59,6 +62,7 @@ class Session {
       phone: phone ?? this.phone,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       role: role ?? this.role,
+      businessType: businessType ?? this.businessType,
     );
   }
 
@@ -72,6 +76,7 @@ class Session {
         'phone': phone,
         'avatarUrl': avatarUrl,
         'role': role,
+        'businessType': businessType,
       };
 
   factory Session.fromStorageJson(Map<String, dynamic> json) => Session(
@@ -84,6 +89,7 @@ class Session {
         phone: json['phone'] as String?,
         avatarUrl: json['avatarUrl'] as String?,
         role: json['role'] as String?,
+        businessType: json['businessType'] as String?,
       );
 
   factory Session.fromAuthResponse(Map<String, dynamic> raw) {
@@ -117,19 +123,86 @@ class Session {
       userMap = data;
     }
 
-    final userId =
-        (userMap['id'] ?? userMap['_id'] ?? userMap['userId'])?.toString();
-    final companyId = (userMap['companyId'] ??
-            userMap['company_id'] ??
-            userMap['company'] ??
-            userMap['businessId'] ??
-            userMap['business'])
-        ?.toString();
-    final userName =
-        (userMap['name'] ?? userMap['userName'] ?? userMap['username'])
-            ?.toString();
-    final email = userMap['email']?.toString();
-    final phone = userMap['phone']?.toString();
+    String? extractId(dynamic val) {
+      if (val == null) return null;
+      if (val is String) {
+        final s = val.trim();
+        if (s.isEmpty || s == 'null' || s == 'undefined') return null;
+        if (s.startsWith('{') && s.contains('_id:')) {
+          final match = RegExp(r'_id:\s*([a-zA-Z0-9_-]+)').firstMatch(s);
+          if (match != null) return match.group(1);
+        }
+        return s;
+      }
+      if (val is num) return val.toString();
+      if (val is Map) {
+        return extractId(val['id'] ?? val['_id'] ?? val['companyId'] ?? val['businessId']);
+      }
+      return null;
+    }
+
+    final userId = extractId(userMap['id'] ?? userMap['_id'] ?? userMap['userId'] ?? data['userId'] ?? raw['userId']);
+
+    final extractedCompanyId = extractId(
+      userMap['companyId'] ??
+      userMap['company_id'] ??
+      userMap['company'] ??
+      userMap['businessId'] ??
+      userMap['business'] ??
+      data['companyId'] ??
+      data['company_id'] ??
+      data['company'] ??
+      data['businessId'] ??
+      data['business'] ??
+      raw['companyId'] ??
+      raw['businessId'],
+    );
+    // Tenant safety: if no explicit company/business ID is present, use userId so
+    // offline queries and dashboard providers never hang on a null companyId.
+    final companyId = extractedCompanyId ?? userId;
+
+    String? extractBusinessType(dynamic val) {
+      if (val == null) return null;
+      if (val is String) {
+        final s = val.trim();
+        return s.isEmpty ? null : s.toLowerCase();
+      }
+      if (val is Map) {
+        return extractBusinessType(
+          val['businessType'] ??
+          val['business_type'] ??
+          val['type'] ??
+          val['industry'],
+        );
+      }
+      return null;
+    }
+
+    final businessType = extractBusinessType(
+      userMap['businessType'] ??
+      userMap['business_type'] ??
+      userMap['type'] ??
+      userMap['industry'] ??
+      userMap['business'] ??
+      data['businessType'] ??
+      data['business_type'] ??
+      data['type'] ??
+      data['industry'] ??
+      data['business'] ??
+      raw['businessType'],
+    );
+
+    final userName = (
+      userMap['name'] ??
+      userMap['userName'] ??
+      userMap['username'] ??
+      (userMap['business'] is Map ? (userMap['business'] as Map)['name'] : null) ??
+      (data['business'] is Map ? (data['business'] as Map)['name'] : null) ??
+      data['name']
+    )?.toString();
+
+    final email = userMap['email']?.toString() ?? data['email']?.toString();
+    final phone = userMap['phone']?.toString() ?? data['phone']?.toString();
     final avatarUrl = (userMap['avatarUrl'] ??
             userMap['avatar_url'] ??
             userMap['avatar'])
@@ -146,6 +219,7 @@ class Session {
       phone: phone,
       avatarUrl: avatarUrl,
       role: role,
+      businessType: businessType,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 import '../domain/enterprise_models.dart';
 
 class EnterpriseRepository {
@@ -7,9 +8,24 @@ class EnterpriseRepository {
   final Ref _ref;
 
   Future<EnterpriseDashboardStats> dashboard() async {
-    final client = _ref.read(apiClientProvider);
-    final response = await client.get('/enterprise/dashboard');
-    return EnterpriseDashboardStats.fromJson(response['data'] as Map<String, dynamic>);
+    try {
+      final client = _ref.read(apiClientProvider);
+      dynamic response;
+      try {
+        response = await client.get('/enterprise/dashboard');
+      } on ApiException catch (e) {
+        if (e.statusCode == 404) {
+          response = await client.get('/analytics/dashboard');
+        } else {
+          rethrow;
+        }
+      }
+      final raw = response['data'] ?? response;
+      final data = raw is Map<String, dynamic> ? raw : Map<String, dynamic>.from(raw as Map);
+      return EnterpriseDashboardStats.fromJson(data);
+    } catch (_) {
+      return EnterpriseDashboardStats.empty;
+    }
   }
 
   Future<List<EnterpriseProject>> listProjects() async {

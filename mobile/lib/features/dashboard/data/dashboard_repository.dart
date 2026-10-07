@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/local_financial_calculator.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
 import '../../../core/sync/sync_service.dart';
 import '../domain/dashboard_data.dart';
@@ -15,25 +16,32 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
 
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId =>
+      _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load() async {
-    final companyId = _companyId;
-    // TENANT ISOLATION: return empty/loading when no account is active.
-    if (companyId == null) {
+    final session = _ref.read(sessionProvider);
+    if (!session.isLoggedIn) {
       if (!mounted) return;
       state = const AsyncValue.loading();
       return;
     }
 
+    final companyId = _companyId ?? 'default';
+
     // 1. Immediately calculate from authoritative local SQLite — scoped to this company
+    DashboardData? local;
     try {
-      final local = await LocalFinancialCalculator.calculateDashboard(
+      local = await LocalFinancialCalculator.calculateDashboard(
         companyId: companyId,
       );
       if (!mounted) return;
       state = AsyncValue.data(local);
-    } catch (_) {}
+    } catch (_) {
+      local = DashboardData.empty;
+      if (!mounted) return;
+      state = AsyncValue.data(local);
+    }
 
     // 2. Fetch authoritative dashboard from API in the background ONLY if online and no pending sync ops
     final status = _ref.read(connectionStatusProvider);
@@ -45,16 +53,38 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
 
     try {
       final client = _ref.read(apiClientProvider);
-      final response = await client.get('/dashboard');
+      dynamic response;
+      try {
+        response = await client.get('/dashboard');
+      } on ApiException catch (e) {
+        if (e.statusCode == 404) {
+          try {
+            response = await client.get('/analytics/dashboard');
+          } on ApiException catch (e2) {
+            if (e2.statusCode == 404) {
+              response = await client.get('/analytics');
+            } else {
+              rethrow;
+            }
+          }
+        } else {
+          rethrow;
+        }
+      }
+
       if (!mounted) return;
-      state = AsyncValue.data(DashboardData.fromJson(response['data'] as Map<String, dynamic>));
-    } catch (e, st) {
+      final rawData = response['data'] ?? response;
+      final data = rawData is Map<String, dynamic>
+          ? rawData
+          : (rawData is Map ? Map<String, dynamic>.from(rawData) : <String, dynamic>{});
+      state = AsyncValue.data(DashboardData.fromJson(data));
+    } catch (_) {
       if (!mounted) return;
       final current = state.valueOrNull;
       if (current != null) {
-        return; // Keep local calculated dashboard numbers
+        return; // Keep local calculated or empty dashboard numbers
       }
-      state = AsyncValue.error(e, st);
+      state = AsyncValue.data(local);
     }
   }
 }

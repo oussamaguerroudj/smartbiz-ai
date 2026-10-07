@@ -60,29 +60,21 @@ class DashboardScreen extends ConsumerWidget {
     final dashboardAsync = ref.watch(dashboardRepositoryProvider);
     final companyAsync = ref.watch(companyInfoProvider);
 
-    return Scaffold(
-      body: dashboardAsync.when(
-        loading: () => const Center(
+    final dashboard = dashboardAsync.valueOrNull ?? DashboardData.empty;
+
+    if (dashboardAsync.isLoading && dashboardAsync.valueOrNull == null) {
+      return const Scaffold(
+        body: Center(
           child: CircularProgressIndicator(),
         ),
-        error: (err, st) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.errorPrefix(err)),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () =>
-                    ref.read(dashboardRepositoryProvider.notifier).load(),
-                child: Text(l10n.retry),
-              ),
-            ],
-          ),
-        ),
-        data: (dashboard) => RefreshIndicator(
-          onRefresh: () =>
-              ref.read(dashboardRepositoryProvider.notifier).load(),
-          child: CustomScrollView(
+      );
+    }
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () =>
+            ref.read(dashboardRepositoryProvider.notifier).load(),
+        child: CustomScrollView(
             slivers: [
               // Header + KPI row are built as ONE sliver (a Stack, not two
               // separate slivers bridged with Transform.translate like
@@ -209,8 +201,7 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

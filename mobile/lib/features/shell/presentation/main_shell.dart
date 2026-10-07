@@ -39,6 +39,7 @@ import '../../enterprise/presentation/screens/enterprise_main_dashboard_screen.d
 import '../../enterprise/presentation/screens/enterprise_projects_screen.dart';
 import '../../dashboard/presentation/screens/all_pages_screen.dart';
 import '../../auth/data/companies_repository.dart';
+import '../../../core/network/session.dart';
 
 /// Main App Shell — Spec Ch. 7 (Navigation)
 /// 4-item bottom nav: Dashboard, Sales, Inventory, More — for CORE/retail
@@ -154,7 +155,8 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final businessType = ref.watch(companyInfoProvider).valueOrNull?.businessType;
+    final businessType = ref.watch(companyInfoProvider).valueOrNull?.businessType ??
+        ref.watch(sessionProvider).businessType;
 
     final tabs = [
       _dashboardTabFor(businessType),
