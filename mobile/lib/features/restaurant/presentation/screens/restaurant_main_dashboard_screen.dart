@@ -97,13 +97,7 @@ class RestaurantMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const FadeSlideIn(
-                      delay: Duration(milliseconds: 30),
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: DashboardPagesSection(),
-                      ),
-                    ),
+
                     // Second KPI row — tables / reservations / outstanding
                     // payments, same money-card / stat-card visual
                     // language as Clinic's own second row.

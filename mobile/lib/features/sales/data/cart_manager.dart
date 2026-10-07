@@ -82,6 +82,7 @@ class CartManager extends StateNotifier<MultiCartState> {
       loadedCarts.add(CartSession.fromMap(cRow, items: items));
     }
 
+    if (!mounted) return;
     state = MultiCartState(
       carts: loadedCarts,
       activeCartId: loadedCarts.isNotEmpty ? loadedCarts.first.id : '',

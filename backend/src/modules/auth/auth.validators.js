@@ -85,21 +85,11 @@ function validateRegister(req, res, next) {
   }
 
   if (
-    industry === undefined ||
-    industry === null ||
-    (typeof industry === 'string' && industry.trim().length === 0)
-  ) {
-    return next(
-      ApiError.badRequest(
-        'industry is required',
-        'VALIDATION_ERROR',
-      ),
-    );
-  }
-
-  if (
-    typeof industry !== 'string' ||
-    !VALID_INDUSTRIES.includes(industry.trim().toLowerCase())
+    industry !== undefined &&
+    industry !== null &&
+    (typeof industry !== 'string' ||
+      (industry.trim().length > 0 &&
+        !VALID_INDUSTRIES.includes(industry.trim().toLowerCase())))
   ) {
     return next(
       ApiError.badRequest(
@@ -110,21 +100,11 @@ function validateRegister(req, res, next) {
   }
 
   if (
-    type === undefined ||
-    type === null ||
-    (typeof type === 'string' && type.trim().length === 0)
-  ) {
-    return next(
-      ApiError.badRequest(
-        'type is required',
-        'VALIDATION_ERROR',
-      ),
-    );
-  }
-
-  if (
-    typeof type !== 'string' ||
-    !VALID_TYPES.includes(type.trim().toLowerCase())
+    type !== undefined &&
+    type !== null &&
+    (typeof type !== 'string' ||
+      (type.trim().length > 0 &&
+        !VALID_TYPES.includes(type.trim().toLowerCase())))
   ) {
     return next(
       ApiError.badRequest(

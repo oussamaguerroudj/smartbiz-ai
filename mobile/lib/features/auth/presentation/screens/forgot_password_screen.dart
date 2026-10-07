@@ -43,7 +43,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   _ForgotStep _step = _ForgotStep.requestCode;
   bool _isLoading = false;
-  bool _obscure = true;
 
   @override
   void dispose() {
@@ -228,19 +227,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               label: l10n.newPassword,
               hint: '••••••••',
               controller: _newPasswordController,
-              obscureText: _obscure,
+              isPassword: true,
               validator: _validatePassword,
-              suffixIcon: IconButton(
-                icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                onPressed: () => setState(() => _obscure = !_obscure),
-              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             AppTextField(
               label: l10n.confirmPassword,
               hint: '••••••••',
               controller: _confirmPasswordController,
-              obscureText: _obscure,
+              isPassword: true,
               validator: _validateConfirm,
             ),
             const SizedBox(height: AppSpacing.md),

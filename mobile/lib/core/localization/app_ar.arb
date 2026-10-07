@@ -1043,6 +1043,10 @@
   "selectExistingCustomerHint": "أو اختر عميلاً مسجلاً",
   "editOrderTitle": "تعديل الطلب",
   "updateOrderAction": "تحديث الطلب",
-  "orderUpdatedMessage": "تم تحديث الطلب بنجاح"
+  "orderUpdatedMessage": "تم تحديث الطلب بنجاح",
+  "moreSectionOperations": "العمليات والتجارة",
+  "moreSectionSpecialized": "النشاط المتخصص",
+  "moreSectionIntelligence": "الذكاء الاصطناعي والتحليلات",
+  "moreSectionSystem": "النظام والحساب"
 }
 

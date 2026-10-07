@@ -1043,6 +1043,10 @@
   "selectExistingCustomerHint": "Ou sélectionner un client existant",
   "editOrderTitle": "Modifier la commande",
   "updateOrderAction": "Mettre à jour la commande",
-  "orderUpdatedMessage": "Commande mise à jour avec succès"
+  "orderUpdatedMessage": "Commande mise à jour avec succès",
+  "moreSectionOperations": "Opérations et commerce",
+  "moreSectionSpecialized": "Activité spécialisée",
+  "moreSectionIntelligence": "IA et intelligence",
+  "moreSectionSystem": "Système et compte"
 }
 

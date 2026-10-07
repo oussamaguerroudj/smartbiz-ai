@@ -266,6 +266,16 @@ class SessionNotifier extends StateNotifier<Session> {
     );
   }
 
+  Future<void> updateBusinessType(String businessType) async {
+    state = state.copyWith(
+      businessType: businessType,
+    );
+    await _storage.write(
+      key: _storageKey,
+      value: jsonEncode(state.toStorageJson()),
+    );
+  }
+
   /// The ONLY way a session should end during normal use: an explicit
   /// Logout tap, or a refresh token that's genuinely dead (expired past
   /// its lifetime, or rejected by the server). This is never called

@@ -99,13 +99,7 @@ class SuperetteMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const FadeSlideIn(
-                      delay: Duration(milliseconds: 30),
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: DashboardPagesSection(),
-                      ),
-                    ),
+
                     FadeSlideIn(
                       delay: const Duration(milliseconds: 60),
                       child: Row(

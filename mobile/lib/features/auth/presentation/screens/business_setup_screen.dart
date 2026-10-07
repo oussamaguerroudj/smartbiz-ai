@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/session.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/companies_repository.dart';
@@ -88,6 +89,7 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
             address: _addressController.text.trim(),
           );
       ref.invalidate(companyInfoProvider);
+      await ref.read(sessionProvider.notifier).updateBusinessType(widget.businessType.apiValue);
       // Only reachable if the PUT above actually succeeded (didn't throw).
       if (mounted) widget.onFinish();
     } on ApiException catch (e) {

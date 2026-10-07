@@ -2417,4 +2417,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get orderUpdatedMessage => 'تم تحديث الطلب بنجاح';
+
+  @override
+  String get moreSectionOperations => 'العمليات والتجارة';
+
+  @override
+  String get moreSectionSpecialized => 'النشاط المتخصص';
+
+  @override
+  String get moreSectionIntelligence => 'الذكاء الاصطناعي والتحليلات';
+
+  @override
+  String get moreSectionSystem => 'النظام والحساب';
 }

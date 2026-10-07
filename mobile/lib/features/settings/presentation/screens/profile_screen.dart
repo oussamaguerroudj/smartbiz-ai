@@ -40,6 +40,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isChangingPassword = false;
   bool _isSavingBusiness = false;
   bool _isDeletingAccount = false;
+  bool _obscureCurrentPassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -237,26 +240,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         actionsOverflowButtonSpacing: 8,
         actionsOverflowDirection: VerticalDirection.down,
         title: Text(l10n.deleteAccountPermanently, style: const TextStyle(color: AppColors.danger)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.deleteAccountWarning,
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: passwordConfirmController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: l10n.enterPasswordToConfirm,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            bool obscure = true;
+            return StatefulBuilder(
+              builder: (context, setInnerState) {
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.deleteAccountWarning,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: passwordConfirmController,
+                        obscureText: obscure,
+                        decoration: InputDecoration(
+                          labelText: l10n.enterPasswordToConfirm,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            ),
+                            tooltip: obscure ? 'Show password' : 'Hide password',
+                            onPressed: () => setInnerState(() => obscure = !obscure),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -545,10 +564,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const Divider(height: 24),
                     TextFormField(
                       controller: _currentPasswordController,
-                      obscureText: true,
+                      obscureText: _obscureCurrentPassword,
                       decoration: InputDecoration(
                         labelText: l10n.currentPassword,
                         prefixIcon: const Icon(Icons.lock_clock_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureCurrentPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          tooltip: _obscureCurrentPassword ? 'Show password' : 'Hide password',
+                          onPressed: () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
+                        ),
                         border: const OutlineInputBorder(),
                       ),
                       validator: (val) => val == null || val.isEmpty ? l10n.enterCurrentPassword : null,
@@ -556,10 +584,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     TextFormField(
                       controller: _newPasswordController,
-                      obscureText: true,
+                      obscureText: _obscureNewPassword,
                       decoration: InputDecoration(
                         labelText: l10n.newPassword,
                         prefixIcon: const Icon(Icons.key_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureNewPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          tooltip: _obscureNewPassword ? 'Show password' : 'Hide password',
+                          onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+                        ),
                         border: const OutlineInputBorder(),
                       ),
                       validator: (val) => val == null || val.length < 6 ? l10n.passwordTooShort : null,
@@ -567,10 +604,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     TextFormField(
                       controller: _confirmPasswordController,
-                      obscureText: true,
+                      obscureText: _obscureConfirmPassword,
                       decoration: InputDecoration(
                         labelText: l10n.confirmNewPassword,
                         prefixIcon: const Icon(Icons.key_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          tooltip: _obscureConfirmPassword ? 'Show password' : 'Hide password',
+                          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                        ),
                         border: const OutlineInputBorder(),
                       ),
                       validator: (val) => val == null || val.isEmpty ? l10n.confirmYourNewPassword : null,

@@ -4575,6 +4575,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Order updated successfully'**
   String get orderUpdatedMessage;
+
+  /// No description provided for @moreSectionOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations & Commerce'**
+  String get moreSectionOperations;
+
+  /// No description provided for @moreSectionSpecialized.
+  ///
+  /// In en, this message translates to:
+  /// **'Specialized Activity'**
+  String get moreSectionSpecialized;
+
+  /// No description provided for @moreSectionIntelligence.
+  ///
+  /// In en, this message translates to:
+  /// **'AI & Intelligence'**
+  String get moreSectionIntelligence;
+
+  /// No description provided for @moreSectionSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System & Account'**
+  String get moreSectionSystem;
 }
 
 class _AppLocalizationsDelegate

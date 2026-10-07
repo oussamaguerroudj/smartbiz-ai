@@ -41,76 +41,34 @@ describe('Auth Registration Contract & Validation Tests', () => {
       expect(next).toHaveBeenCalledWith(); // No error passed
     });
 
-    // 2. missing industry
-    test('2. missing industry: rejects when industry is omitted, null, or empty', () => {
-      // Omitted
+    // 2. step 1 initial signup without industry and type
+    test('2. initial signup: accepts payload with only name, email, password (no industry or type)', () => {
       req = {
         body: {
-          name: 'Ahmed Store',
-          email: 'ahmed@store.com',
+          name: 'Ahmed Modiri',
+          email: 'ahmed@modiri.ai',
           password: 'Password123!',
-          type: 'retail_store',
         },
       };
       validateRegister(req, res, next);
       expect(next).toHaveBeenCalledTimes(1);
-      const err1 = next.mock.calls[0][0];
-      expect(err1.statusCode).toBe(400);
-      expect(err1.message).toBe('industry is required');
-
-      // Empty string
-      next.mockClear();
-      req.body.industry = '   ';
-      validateRegister(req, res, next);
-      expect(next).toHaveBeenCalledTimes(1);
-      const err2 = next.mock.calls[0][0];
-      expect(err2.statusCode).toBe(400);
-      expect(err2.message).toBe('industry is required');
-
-      // Null
-      next.mockClear();
-      req.body.industry = null;
-      validateRegister(req, res, next);
-      expect(next).toHaveBeenCalledTimes(1);
-      const err3 = next.mock.calls[0][0];
-      expect(err3.statusCode).toBe(400);
-      expect(err3.message).toBe('industry is required');
+      expect(next).toHaveBeenCalledWith(); // Clean pass
     });
 
-    // 3. missing type
-    test('3. missing type: rejects when type is omitted, null, or empty', () => {
-      // Omitted
+    // 3. allows null or empty industry/type
+    test('3. allows null or empty industry and type during step 1', () => {
       req = {
         body: {
-          name: 'Ahmed Store',
-          email: 'ahmed@store.com',
+          name: 'Ahmed Modiri',
+          email: 'ahmed@modiri.ai',
           password: 'Password123!',
-          industry: 'retail',
+          industry: null,
+          type: '',
         },
       };
       validateRegister(req, res, next);
       expect(next).toHaveBeenCalledTimes(1);
-      const err1 = next.mock.calls[0][0];
-      expect(err1.statusCode).toBe(400);
-      expect(err1.message).toBe('type is required');
-
-      // Empty string
-      next.mockClear();
-      req.body.type = '  ';
-      validateRegister(req, res, next);
-      expect(next).toHaveBeenCalledTimes(1);
-      const err2 = next.mock.calls[0][0];
-      expect(err2.statusCode).toBe(400);
-      expect(err2.message).toBe('type is required');
-
-      // Null
-      next.mockClear();
-      req.body.type = null;
-      validateRegister(req, res, next);
-      expect(next).toHaveBeenCalledTimes(1);
-      const err3 = next.mock.calls[0][0];
-      expect(err3.statusCode).toBe(400);
-      expect(err3.message).toBe('type is required');
+      expect(next).toHaveBeenCalledWith(); // Clean pass
     });
 
     // 4. invalid industry/type
@@ -148,8 +106,6 @@ describe('Auth Registration Contract & Validation Tests', () => {
         name: 'Fatima Zahra',
         email: 'fatima@pharmacy.dz',
         password: 'SecurePassword2026!',
-        industry: 'healthcare',
-        type: 'pharmacy',
       };
 
       req = { body: flutterPayload };
@@ -182,6 +138,60 @@ describe('Auth Registration Contract & Validation Tests', () => {
         expect.stringContaining('industry, type'),
         expect.arrayContaining(['retail', 'supermarket']),
       );
+    });
+
+    test('stores null industry and type for step 1 signup when omitted', async () => {
+      query.mockResolvedValueOnce({ rows: [] }); // No existing user
+      query.mockResolvedValueOnce({ rows: [] }); // insert pending_registrations
+
+      const result = await authService.register({
+        name: 'New Business Owner',
+        email: 'owner@example.com',
+        password: 'Password123!',
+      });
+
+      expect(result).toEqual({
+        email: 'owner@example.com',
+        pendingVerification: true,
+      });
+
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('industry, type'),
+        expect.arrayContaining([null, null]),
+      );
+    });
+  });
+
+  describe('authService.login business_type contract', () => {
+    test('login returns authoritative businessType on both user and company objects', async () => {
+      const bcrypt = require('bcrypt');
+      const hash = await bcrypt.hash('Password123!', 10);
+
+      query.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'usr_clinic_1',
+            company_id: 'comp_clinic_1',
+            name: 'Dr. Amine',
+            email: 'amine@clinic.dz',
+            password_hash: hash,
+            role: 'owner',
+            email_verified: true,
+            business_type: 'clinic',
+            company_name: 'Dr Amine Clinic',
+          },
+        ],
+      });
+
+      const res = await authService.login({
+        email: 'amine@clinic.dz',
+        password: 'Password123!',
+      });
+
+      expect(res.user.businessType).toBe('clinic');
+      expect(res.company.businessType).toBe('clinic');
+      expect(res.company.name).toBe('Dr Amine Clinic');
+      expect(res.accessToken).toBeDefined();
     });
   });
 });

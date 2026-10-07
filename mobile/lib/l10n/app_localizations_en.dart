@@ -2424,4 +2424,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orderUpdatedMessage => 'Order updated successfully';
+
+  @override
+  String get moreSectionOperations => 'Operations & Commerce';
+
+  @override
+  String get moreSectionSpecialized => 'Specialized Activity';
+
+  @override
+  String get moreSectionIntelligence => 'AI & Intelligence';
+
+  @override
+  String get moreSectionSystem => 'System & Account';
 }

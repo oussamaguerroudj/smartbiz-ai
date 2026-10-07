@@ -20,17 +20,18 @@ class AuthRepository {
     required String name,
     required String email,
     required String password,
-    String industry = 'retail',
-    String type = 'retail_store',
+    String? industry,
+    String? type,
   }) async {
     final client = _ref.read(apiClientProvider);
-    await client.post('/auth/register', body: {
+    final body = <String, dynamic>{
       'name': name,
       'email': email,
       'password': password,
-      'industry': industry,
-      'type': type,
-    });
+    };
+    if (industry != null && industry.isNotEmpty) body['industry'] = industry;
+    if (type != null && type.isNotEmpty) body['type'] = type;
+    await client.post('/auth/register', body: body);
   }
 
   Future<void> login({required String email, required String password}) async {

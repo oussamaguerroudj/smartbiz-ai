@@ -98,13 +98,7 @@ class ClinicMainDashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const FadeSlideIn(
-                      delay: Duration(milliseconds: 30),
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: DashboardPagesSection(),
-                      ),
-                    ),
+
                     // Second KPI row — clinic's own analytics beyond the
                     // top-of-header three, same money-card / stat-card
                     // visual language already used on ClinicDashboardScreen

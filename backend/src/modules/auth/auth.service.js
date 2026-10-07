@@ -65,6 +65,7 @@ function toPublicUser(row) {
     avatarUrl: row.avatar_url || null,
     role: row.role,
     companyId: row.company_id,
+    businessType: row.business_type || null,
     emailVerified: row.email_verified === true,
   };
 }
@@ -191,7 +192,10 @@ async function register({ name, email, password, industry, type }) {
 
 async function login({ email, password }) {
   const result = await query(
-    'SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL',
+    `SELECT u.*, c.business_type, c.name AS company_name
+     FROM users u
+     LEFT JOIN companies c ON c.id = u.company_id
+     WHERE u.email = $1 AND u.deleted_at IS NULL`,
     [email],
   );
 
@@ -251,6 +255,11 @@ async function login({ email, password }) {
 
   return {
     user: toPublicUser(user),
+    company: {
+      id: user.company_id,
+      name: user.company_name,
+      businessType: user.business_type || null,
+    },
     ...tokens,
   };
 }
@@ -271,7 +280,10 @@ async function refresh({ refreshToken }) {
   }
 
   const result = await query(
-    'SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL',
+    `SELECT u.*, c.business_type, c.name AS company_name
+     FROM users u
+     LEFT JOIN companies c ON c.id = u.company_id
+     WHERE u.id = $1 AND u.deleted_at IS NULL`,
     [payload.sub],
   );
 
@@ -292,6 +304,11 @@ async function refresh({ refreshToken }) {
 
   return {
     user: toPublicUser(user),
+    company: {
+      id: user.company_id,
+      name: user.company_name,
+      businessType: user.business_type || null,
+    },
     ...tokens,
   };
 }
@@ -431,11 +448,12 @@ async function verifyEmail({ email, code }) {
     const companyResult = await client.query(
       `INSERT INTO companies (name, business_type, currency)
        VALUES ($1, $2, 'DZD')
-       RETURNING id`,
+       RETURNING id, business_type, name`,
       ['New Business', businessType],
     );
 
-    const companyId = companyResult.rows[0].id;
+    const companyRow = companyResult.rows[0];
+    const companyId = companyRow.id;
 
     const userResult = await client.query(
       `INSERT INTO users (
@@ -452,6 +470,8 @@ async function verifyEmail({ email, code }) {
     );
 
     const user = userResult.rows[0];
+    user.business_type = companyRow.business_type;
+    user.company_name = companyRow.name;
 
     await client.query(
       'DELETE FROM pending_registrations WHERE email = $1',
@@ -462,6 +482,11 @@ async function verifyEmail({ email, code }) {
 
     return {
       user: toPublicUser(user),
+      company: {
+        id: companyId,
+        name: companyRow.name,
+        businessType: companyRow.business_type,
+      },
       ...tokens,
     };
   });

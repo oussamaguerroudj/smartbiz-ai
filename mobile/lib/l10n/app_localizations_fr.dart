@@ -2448,4 +2448,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get orderUpdatedMessage => 'Commande mise à jour avec succès';
+
+  @override
+  String get moreSectionOperations => 'Opérations et commerce';
+
+  @override
+  String get moreSectionSpecialized => 'Activité spécialisée';
+
+  @override
+  String get moreSectionIntelligence => 'IA et intelligence';
+
+  @override
+  String get moreSectionSystem => 'Système et compte';
 }

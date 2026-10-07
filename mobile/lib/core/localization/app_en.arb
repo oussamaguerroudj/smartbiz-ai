@@ -1113,6 +1113,10 @@
   "selectExistingCustomerHint": "Or select registered customer",
   "editOrderTitle": "Edit Order",
   "updateOrderAction": "Update Order",
-  "orderUpdatedMessage": "Order updated successfully"
+  "orderUpdatedMessage": "Order updated successfully",
+  "moreSectionOperations": "Operations & Commerce",
+  "moreSectionSpecialized": "Specialized Activity",
+  "moreSectionIntelligence": "AI & Intelligence",
+  "moreSectionSystem": "System & Account"
 }
 

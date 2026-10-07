@@ -6,8 +6,16 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/auth_repository.dart';
 
-/// Register Screen — Spec Ch. 8.3
-/// Now calls POST /auth/register for real (Phase 5 wiring).
+/// Register Screen — STEP 1 of Onboarding Flow
+/// Initial account creation containing ONLY:
+/// 1. Full Name
+/// 2. Email
+/// 3. Password (with show/hide eye toggle)
+/// 4. Confirm Password (with show/hide eye toggle)
+/// 5. Create Account button
+///
+/// Industry & Business Type selection is deferred strictly to STEP 3
+/// (BusinessTypeScreen / BusinessSetupScreen) after successful email verification (STEP 2).
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({
     super.key,
@@ -15,7 +23,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
     required this.onGoToLogin,
   });
 
-  /// Called with the registered email so the next screen (account
+  /// Called with the registered email so Step 2 (account
   /// verification) knows which address the code was sent to.
   final void Function(String email) onRegisterSuccess;
   final VoidCallback onGoToLogin;
@@ -30,32 +38,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
-  String _selectedIndustry = 'retail';
-  String _selectedType = 'retail_store';
   bool _isLoading = false;
-
-  static const _industries = [
-    {'value': 'retail', 'label': 'Retail & Commerce'},
-    {'value': 'food_beverage', 'label': 'Food & Beverage'},
-    {'value': 'healthcare', 'label': 'Healthcare'},
-    {'value': 'services', 'label': 'Services & Trades'},
-    {'value': 'technology', 'label': 'Technology'},
-    {'value': 'manufacturing', 'label': 'Manufacturing'},
-    {'value': 'other', 'label': 'Other'},
-  ];
-
-  static const _types = [
-    {'value': 'retail_store', 'label': 'Retail Store'},
-    {'value': 'supermarket', 'label': 'Supermarket / Grocery'},
-    {'value': 'clothing', 'label': 'Clothing & Fashion'},
-    {'value': 'pharmacy', 'label': 'Pharmacy'},
-    {'value': 'clinic', 'label': 'Clinic / Medical'},
-    {'value': 'restaurant', 'label': 'Restaurant'},
-    {'value': 'cafe', 'label': 'Café'},
-    {'value': 'workshop', 'label': 'Workshop / Craft'},
-    {'value': 'company', 'label': 'Company / Office'},
-    {'value': 'other', 'label': 'Other'},
-  ];
 
   @override
   void dispose() {
@@ -102,8 +85,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             name: _nameController.text.trim(),
             email: email,
             password: _passwordController.text,
-            industry: _selectedIndustry,
-            type: _selectedType,
           );
       if (mounted) widget.onRegisterSuccess(email);
     } on ApiException catch (e) {
@@ -178,7 +159,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: l10n.password,
                   hint: '••••••••',
                   controller: _passwordController,
-                  obscureText: true,
+                  isPassword: true,
                   validator: _validatePassword,
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -186,50 +167,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: l10n.confirmPassword,
                   hint: '••••••••',
                   controller: _confirmController,
-                  obscureText: true,
+                  isPassword: true,
                   validator: _validateConfirm,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedIndustry,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Industry',
-                    prefixIcon: Icon(Icons.business_center_outlined),
-                  ),
-                  items: _industries
-                      .map((i) => DropdownMenuItem(
-                            value: i['value'],
-                            child: Text(
-                              i['label']!,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedIndustry = val);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedType,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Business Type',
-                    prefixIcon: Icon(Icons.storefront_outlined),
-                  ),
-                  items: _types
-                      .map((t) => DropdownMenuItem(
-                            value: t['value'],
-                            child: Text(
-                              t['label']!,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedType = val);
-                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
@@ -257,4 +196,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
-
