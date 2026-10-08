@@ -16,7 +16,7 @@ BEGIN
   ) dups;
 
   IF dup_count > 0 THEN
-    RAISE EXCEPTION 'FATAL: Cannot apply migration 032 — % duplicate normalized email group(s) exist in users table. Resolve manually before migrating.', dup_count;
+    RAISE EXCEPTION 'FATAL: Cannot apply migration 032 - % duplicate normalized email group(s) exist in users table. Resolve manually before migrating.', dup_count;
   END IF;
 
   SELECT COUNT(*) INTO dup_count
@@ -28,7 +28,7 @@ BEGIN
   ) dups_pending;
 
   IF dup_count > 0 THEN
-    RAISE EXCEPTION 'FATAL: Cannot apply migration 032 — % duplicate normalized email group(s) exist in pending_registrations table. Resolve manually before migrating.', dup_count;
+    RAISE EXCEPTION 'FATAL: Cannot apply migration 032 - % duplicate normalized email group(s) exist in pending_registrations table. Resolve manually before migrating.', dup_count;
   END IF;
 END $$;
 
