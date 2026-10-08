@@ -56,6 +56,10 @@ function signTokens(user) {
   };
 }
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
 function toPublicUser(row) {
   return {
     id: row.id,
@@ -66,6 +70,7 @@ function toPublicUser(row) {
     role: row.role,
     companyId: row.company_id,
     businessType: row.business_type || null,
+    onboardingCompleted: row.onboarding_completed === true,
     emailVerified: row.email_verified === true,
   };
 }
@@ -98,10 +103,13 @@ async function sendVerificationCodeEmail({ name, email, code }) {
  * The account is only ever created — inside verifyEmail() — once the
  * correct code is confirmed.
  */
-async function register({ name, email, password, industry, type }) {
+async function register({ name, email, password }) {
+  const normalizedEmail = normalizeEmail(email);
+  const trimmedName = String(name || '').trim();
+
   const existingUser = await query(
-    'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
-    [email],
+    'SELECT id FROM users WHERE lower(trim(email)) = $1 AND deleted_at IS NULL',
+    [normalizedEmail],
   );
 
   if (existingUser.rows.length > 0) {
@@ -121,60 +129,23 @@ async function register({ name, email, password, industry, type }) {
   // One pending row per email — re-registering the same (still
   // unverified) address just replaces the name/password/code instead of
   // being blocked as a duplicate.
-  try {
-    await query(
-      `INSERT INTO pending_registrations (
-         name, email, password_hash, code_hash, code_expires, attempts, industry, type
-       )
-       VALUES ($1, $2, $3, $4, $5, 0, $6, $7)
-       ON CONFLICT (email) DO UPDATE
-         SET name = EXCLUDED.name,
-             password_hash = EXCLUDED.password_hash,
-             code_hash = EXCLUDED.code_hash,
-             code_expires = EXCLUDED.code_expires,
-             attempts = 0,
-             industry = EXCLUDED.industry,
-             type = EXCLUDED.type,
-             updated_at = now()`,
-      [
-        name,
-        email,
-        passwordHash,
-        codeHash,
-        expires,
-        industry ? String(industry).trim().toLowerCase() : null,
-        type ? String(type).trim().toLowerCase() : null,
-      ],
-    );
-  } catch (err) {
-    // If pending_registrations table lacks industry/type columns in an older schema, fallback
-    if (
-      err.message &&
-      (err.message.includes('column "industry"') ||
-        err.message.includes('column "type"') ||
-        err.message.includes('does not exist'))
-    ) {
-      await query(
-        `INSERT INTO pending_registrations (
-           name, email, password_hash, code_hash, code_expires, attempts
-         )
-         VALUES ($1, $2, $3, $4, $5, 0)
-         ON CONFLICT (email) DO UPDATE
-           SET name = EXCLUDED.name,
-               password_hash = EXCLUDED.password_hash,
-               code_hash = EXCLUDED.code_hash,
-               code_expires = EXCLUDED.code_expires,
-               attempts = 0,
-               updated_at = now()`,
-        [name, email, passwordHash, codeHash, expires],
-      );
-    } else {
-      throw err;
-    }
-  }
+  await query(
+    `INSERT INTO pending_registrations (
+       name, email, password_hash, code_hash, code_expires, attempts
+     )
+     VALUES ($1, $2, $3, $4, $5, 0)
+     ON CONFLICT (email) DO UPDATE
+       SET name = EXCLUDED.name,
+           password_hash = EXCLUDED.password_hash,
+           code_hash = EXCLUDED.code_hash,
+           code_expires = EXCLUDED.code_expires,
+           attempts = 0,
+           updated_at = now()`,
+    [trimmedName, normalizedEmail, passwordHash, codeHash, expires],
+  );
 
   try {
-    await sendVerificationCodeEmail({ name, email, code });
+    await sendVerificationCodeEmail({ name: trimmedName, email: normalizedEmail, code });
   } catch (err) {
     throw ApiError.internal(
       'We could not send the verification email. Please try resending the code.',
@@ -185,18 +156,19 @@ async function register({ name, email, password, industry, type }) {
   // No tokens, no user object — there's no account yet. The client just
   // moves on to the "enter your code" screen with this email.
   return {
-    email,
+    email: normalizedEmail,
     pendingVerification: true,
   };
 }
 
 async function login({ email, password }) {
+  const normalizedEmail = normalizeEmail(email);
   const result = await query(
-    `SELECT u.*, c.business_type, c.name AS company_name
+    `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
-     WHERE u.email = $1 AND u.deleted_at IS NULL`,
-    [email],
+     WHERE lower(trim(u.email)) = $1 AND u.deleted_at IS NULL`,
+    [normalizedEmail],
   );
 
   const user = result.rows[0];
@@ -207,8 +179,8 @@ async function login({ email, password }) {
     // (without leaking whether the email exists to someone guessing a
     // wrong password).
     const pendingResult = await query(
-      'SELECT password_hash FROM pending_registrations WHERE email = $1',
-      [email],
+      'SELECT password_hash FROM pending_registrations WHERE lower(trim(email)) = $1',
+      [normalizedEmail],
     );
 
     const pending = pendingResult.rows[0];
@@ -259,6 +231,7 @@ async function login({ email, password }) {
       id: user.company_id,
       name: user.company_name,
       businessType: user.business_type || null,
+      onboardingCompleted: user.onboarding_completed === true,
     },
     ...tokens,
   };
@@ -280,7 +253,7 @@ async function refresh({ refreshToken }) {
   }
 
   const result = await query(
-    `SELECT u.*, c.business_type, c.name AS company_name
+    `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
      WHERE u.id = $1 AND u.deleted_at IS NULL`,
@@ -308,6 +281,7 @@ async function refresh({ refreshToken }) {
       id: user.company_id,
       name: user.company_name,
       businessType: user.business_type || null,
+      onboardingCompleted: user.onboarding_completed === true,
     },
     ...tokens,
   };
@@ -324,17 +298,18 @@ async function refresh({ refreshToken }) {
  * own 1-minute expiry).
  */
 async function resendVerification({ email }) {
+  const normalizedEmail = normalizeEmail(email);
   const pendingResult = await query(
-    'SELECT * FROM pending_registrations WHERE email = $1',
-    [email],
+    'SELECT * FROM pending_registrations WHERE lower(trim(email)) = $1',
+    [normalizedEmail],
   );
 
   const pending = pendingResult.rows[0];
 
   if (!pending) {
     const existingUser = await query(
-      'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
-      [email],
+      'SELECT id FROM users WHERE lower(trim(email)) = $1 AND deleted_at IS NULL',
+      [normalizedEmail],
     );
 
     if (existingUser.rows.length > 0) {
@@ -362,11 +337,11 @@ async function resendVerification({ email }) {
          code_expires = $3,
          attempts = 0,
          updated_at = now()
-     WHERE email = $1`,
-    [email, codeHash, expires],
+     WHERE lower(trim(email)) = $1`,
+    [normalizedEmail, codeHash, expires],
   );
 
-  await sendVerificationCodeEmail({ name: pending.name, email, code });
+  await sendVerificationCodeEmail({ name: pending.name, email: normalizedEmail, code });
 }
 
 /**
@@ -382,21 +357,22 @@ async function resendVerification({ email }) {
  *    INVALID_CODE so failed brute-force attempts are not rolled back.
  */
 async function verifyEmail({ email, code }) {
+  const normalizedEmail = normalizeEmail(email);
   const txResult = await withTransaction(async (client) => {
     const pendingResult = await client.query(
       `SELECT *
        FROM pending_registrations
-       WHERE email = $1
+       WHERE lower(trim(email)) = $1
        FOR UPDATE`,
-      [email],
+      [normalizedEmail],
     );
 
     const pending = pendingResult.rows[0];
 
     if (!pending) {
       const existingUserResult = await client.query(
-        'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
-        [email],
+        'SELECT id FROM users WHERE lower(trim(email)) = $1 AND deleted_at IS NULL',
+        [normalizedEmail],
       );
 
       if (existingUserResult.rows.length > 0) {
@@ -431,25 +407,20 @@ async function verifyEmail({ email, code }) {
         `UPDATE pending_registrations
          SET attempts = attempts + 1,
              updated_at = now()
-         WHERE email = $1`,
-        [email],
+         WHERE lower(trim(email)) = $1`,
+        [normalizedEmail],
       );
 
       return { __invalidCode: true };
     }
 
-    // Correct code — the account is created right now, for the first
-    // time. Everything up to this point only ever touched
-    // pending_registrations.
-    const businessType =
-      pending.type && typeof pending.type === 'string'
-        ? pending.type.toLowerCase()
-        : 'company';
+    // Option A: verifyEmail creates company with business_type = NULL and onboarding_completed = false
+    const companyName = pending.name ? `${pending.name}'s Business` : 'New Business';
     const companyResult = await client.query(
-      `INSERT INTO companies (name, business_type, currency)
-       VALUES ($1, $2, 'DZD')
-       RETURNING id, business_type, name`,
-      ['New Business', businessType],
+      `INSERT INTO companies (name, business_type, onboarding_completed, currency)
+       VALUES ($1, NULL, false, 'DZD')
+       RETURNING id, business_type, onboarding_completed, name`,
+      [companyName],
     );
 
     const companyRow = companyResult.rows[0];
@@ -466,16 +437,17 @@ async function verifyEmail({ email, code }) {
        )
        VALUES ($1, $2, $3, $4, 'owner', true)
        RETURNING *`,
-      [companyId, pending.name, email, pending.password_hash],
+      [companyId, pending.name, normalizedEmail, pending.password_hash],
     );
 
     const user = userResult.rows[0];
-    user.business_type = companyRow.business_type;
+    user.business_type = null;
+    user.onboarding_completed = false;
     user.company_name = companyRow.name;
 
     await client.query(
-      'DELETE FROM pending_registrations WHERE email = $1',
-      [email],
+      'DELETE FROM pending_registrations WHERE lower(trim(email)) = $1',
+      [normalizedEmail],
     );
 
     const tokens = signTokens(user);
@@ -485,7 +457,8 @@ async function verifyEmail({ email, code }) {
       company: {
         id: companyId,
         name: companyRow.name,
-        businessType: companyRow.business_type,
+        businessType: null,
+        onboardingCompleted: false,
       },
       ...tokens,
     };
@@ -502,9 +475,10 @@ async function verifyEmail({ email, code }) {
 }
 
 async function requestPasswordReset({ email }) {
+  const normalizedEmail = normalizeEmail(email);
   const result = await query(
-    'SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL',
-    [email],
+    'SELECT * FROM users WHERE lower(trim(email)) = $1 AND deleted_at IS NULL',
+    [normalizedEmail],
   );
 
   const user = result.rows[0];
@@ -552,14 +526,15 @@ async function resetPassword({ email, code, newPassword }) {
     );
   }
 
+  const normalizedEmail = normalizeEmail(email);
   const txResult = await withTransaction(async (client) => {
     const userResult = await client.query(
       `SELECT *
        FROM users
-       WHERE email = $1
+       WHERE lower(trim(email)) = $1
          AND deleted_at IS NULL
        FOR UPDATE`,
-      [email],
+      [normalizedEmail],
     );
 
     const user = userResult.rows[0];
@@ -644,7 +619,7 @@ async function resetPassword({ email, code, newPassword }) {
 
 async function getProfile(userId) {
   const result = await query(
-    `SELECT u.*, c.name AS company_name, c.business_type, c.currency, c.phone AS company_phone, c.address AS company_address
+    `SELECT u.*, c.name AS company_name, c.business_type, c.onboarding_completed, c.currency, c.phone AS company_phone, c.address AS company_address
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
      WHERE u.id = $1 AND u.deleted_at IS NULL`,
@@ -661,7 +636,8 @@ async function getProfile(userId) {
     company: {
       id: user.company_id,
       name: user.company_name,
-      businessType: user.business_type,
+      businessType: user.business_type || null,
+      onboardingCompleted: user.onboarding_completed === true,
       currency: user.currency,
       phone: user.company_phone || null,
       address: user.company_address || null,
@@ -690,10 +666,11 @@ async function updateProfile(userId, { name, email, phone, avatarUrl } = {}) {
   const user = checkUser.rows[0];
   if (!user) throw ApiError.notFound('User not found');
 
-  if (email && email.trim() !== user.email) {
+  if (email && email.trim().toLowerCase() !== user.email.toLowerCase()) {
+    const normalizedEmail = normalizeEmail(email);
     const existingEmail = await query(
-      `SELECT id FROM users WHERE email = $1 AND id != $2 AND deleted_at IS NULL`,
-      [email.trim(), userId],
+      `SELECT id FROM users WHERE lower(trim(email)) = $1 AND id != $2 AND deleted_at IS NULL`,
+      [normalizedEmail, userId],
     );
     if (existingEmail.rows.length > 0) {
       throw ApiError.conflict('An account with this email already exists', 'EMAIL_TAKEN');
@@ -712,7 +689,7 @@ async function updateProfile(userId, { name, email, phone, avatarUrl } = {}) {
     [
       userId,
       name !== undefined ? name.trim() : null,
-      email !== undefined ? email.trim() : null,
+      email !== undefined ? normalizeEmail(email) : null,
       phone !== undefined && phone !== null ? phone.trim() : null,
       avatarUrl !== undefined && avatarUrl !== null ? avatarUrl.trim() : null,
     ],

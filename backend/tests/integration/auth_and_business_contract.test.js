@@ -53,6 +53,10 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
     if (testPool) {
       await testPool.end();
     }
+    const { pool } = require('../../src/config/db');
+    if (pool) {
+      await pool.end();
+    }
   });
 
   beforeEach(async () => {
@@ -128,7 +132,7 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
     ).rejects.toThrow();
   });
 
-  test('3. Unverified pending registration does NOT leak password match during login', async () => {
+  test('3. Unverified pending registration returns intentional 403 EMAIL_NOT_VERIFIED on correct credentials and 401 on incorrect credentials', async () => {
     // User registers but has not verified email yet
     await fetch(`${baseUrl}/auth/register`, {
       method: 'POST',
@@ -140,7 +144,7 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
       }),
     });
 
-    // Login attempt with correct password
+    // Login attempt with correct password returns intentional 403 EMAIL_NOT_VERIFIED
     const correctRes = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -149,8 +153,11 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
         password: 'CorrectSecretPassword123!',
       }),
     });
+    expect(correctRes.status).toBe(403);
+    const correctBody = await correctRes.json();
+    expect(correctBody.code).toBe('EMAIL_NOT_VERIFIED');
 
-    // Login attempt with wrong password
+    // Login attempt with wrong password returns 401 INVALID_CREDENTIALS
     const wrongRes = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -159,15 +166,12 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
         password: 'WrongPassword999!',
       }),
     });
-
-    // Security requirement: Status and error must be identical so attackers cannot guess passwords via pending accounts
-    expect(correctRes.status).toBe(wrongRes.status);
-    const correctBody = await correctRes.json();
+    expect(wrongRes.status).toBe(401);
     const wrongBody = await wrongRes.json();
-    expect(correctBody.code).toBe(wrongBody.code);
+    expect(wrongBody.code).toBe('INVALID_CREDENTIALS');
   });
 
-  test('4. verifyEmail does NOT create a dummy company with business_type="company" before business type selection', async () => {
+  test('4. verifyEmail creates company with business_type=NULL and onboardingCompleted=false (Option A)', async () => {
     // 1. Create a pending registration directly
     const expires = new Date(Date.now() + 60000);
     const { hashCode } = require('../../src/utils/otp');
@@ -194,18 +198,18 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
     expect(res.status).toBe(200);
     const body = await res.json();
 
-    // Architectural requirement: businessType MUST NOT be defaulted to 'company'
-    // It must clearly indicate onboarding is incomplete (e.g., null businessType)
+    // Option A architectural requirements:
     expect(body.user.businessType).toBeNull();
-    if (body.company) {
-      expect(body.company.businessType).toBeNull();
-    }
+    expect(body.user.onboardingCompleted).toBe(false);
+    expect(body.company).toBeDefined();
+    expect(body.company.businessType).toBeNull();
+    expect(body.company.onboardingCompleted).toBe(false);
   });
 
-  test('5. Business setup persists selected Grocery/Superette type and rejects invalid types like "construction"', async () => {
-    // Set up a verified owner with pending business type
+  test('5. Business setup persists selected Grocery/Superette type, completes onboarding, and rejects invalid types like "construction"', async () => {
+    // Set up a verified owner with pending business type (null)
     const compRes = await testPool.query(
-      `INSERT INTO companies (name, business_type, currency) VALUES ('Pending Setup', 'company', 'DZD') RETURNING id`,
+      `INSERT INTO companies (name, business_type, onboarding_completed, currency) VALUES ('Pending Setup', NULL, false, 'DZD') RETURNING id`,
     );
     const companyId = compRes.rows[0].id;
 
@@ -238,7 +242,7 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
     });
     expect(invalidRes.status).toBe(400);
 
-    // B. Successfully persists 'grocery'
+    // B. Successfully persists 'grocery' and marks onboardingCompleted=true
     const validRes = await fetch(`${baseUrl}/companies/me`, {
       method: 'PUT',
       headers: {
@@ -253,11 +257,108 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
 
     expect(validRes.status).toBe(200);
     const validBody = await validRes.json();
-    expect(validBody.data.business_type).toBe('grocery');
+    expect(validBody.data.businessType).toBe('grocery');
+    expect(validBody.data.onboardingCompleted).toBe(true);
 
     // C. Verify persisted in PostgreSQL
-    const checkDb = await testPool.query('SELECT business_type, name FROM companies WHERE id = $1', [companyId]);
+    const checkDb = await testPool.query('SELECT business_type, onboarding_completed, name FROM companies WHERE id = $1', [companyId]);
     expect(checkDb.rows[0].business_type).toBe('grocery');
+    expect(checkDb.rows[0].onboarding_completed).toBe(true);
     expect(checkDb.rows[0].name).toBe('El-Amel Superette');
+  });
+
+  test('6. Null business_type cleanly blocks specialized modules with 403 (never 500)', async () => {
+    // Create company with NULL business_type and uncompleted onboarding
+    const compRes = await testPool.query(
+      `INSERT INTO companies (name, business_type, onboarding_completed, currency) VALUES ('Incomplete Co', NULL, false, 'DZD') RETURNING id`,
+    );
+    const companyId = compRes.rows[0].id;
+
+    const userRes = await testPool.query(
+      `INSERT INTO users (company_id, name, email, password_hash, role, email_verified)
+       VALUES ($1, 'Onboarding User', 'incomplete@user.dz', 'dummy_hash', 'owner', true)
+       RETURNING id`,
+      [companyId],
+    );
+    const userId = userRes.rows[0].id;
+
+    const jwt = require('jsonwebtoken');
+    const env = require('../../src/config/env');
+    const token = jwt.sign(
+      { sub: userId, companyId, role: 'owner', emailVerified: true, type: 'access' },
+      env.jwt.accessSecret,
+      { expiresIn: '1h' },
+    );
+
+    const endpoints = [
+      '/superette/categories',
+      '/clinic/patients',
+      '/restaurant/menu-items',
+      '/pharmacy/medicines',
+      '/clothing/items',
+      '/enterprise/projects',
+    ];
+
+    for (const ep of endpoints) {
+      const res = await fetch(`${baseUrl}${ep}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.code).toBe('BUSINESS_TYPE_NOT_ALLOWED');
+    }
+  });
+
+  test('7. Login, refresh, and /companies/me all return onboardingCompleted and businessType in identical format', async () => {
+    // Verified user with completed onboarding
+    const bcrypt = require('bcrypt');
+    const hash = await bcrypt.hash('Secret12345!', 10);
+    const compRes = await testPool.query(
+      `INSERT INTO companies (name, business_type, onboarding_completed, currency) VALUES ('Verified Co', 'pharmacy', true, 'DZD') RETURNING id`,
+    );
+    const companyId = compRes.rows[0].id;
+
+    const userRes = await testPool.query(
+      `INSERT INTO users (company_id, name, email, password_hash, role, email_verified)
+       VALUES ($1, 'Pharma User', 'pharma@test.dz', $2, 'owner', true)
+       RETURNING id`,
+      [companyId, hash],
+    );
+    const userId = userRes.rows[0].id;
+
+    // A. Login
+    const loginRes = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'pharma@test.dz', password: 'Secret12345!' }),
+    });
+    expect(loginRes.status).toBe(200);
+    const loginBody = await loginRes.json();
+    expect(loginBody.user.businessType).toBe('pharmacy');
+    expect(loginBody.user.onboardingCompleted).toBe(true);
+    expect(loginBody.company.businessType).toBe('pharmacy');
+    expect(loginBody.company.onboardingCompleted).toBe(true);
+
+    // B. Refresh
+    const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: loginBody.refreshToken }),
+    });
+    expect(refreshRes.status).toBe(200);
+    const refreshBody = await refreshRes.json();
+    expect(refreshBody.user.businessType).toBe('pharmacy');
+    expect(refreshBody.user.onboardingCompleted).toBe(true);
+    expect(refreshBody.company.businessType).toBe('pharmacy');
+    expect(refreshBody.company.onboardingCompleted).toBe(true);
+
+    // C. Companies/me
+    const meRes = await fetch(`${baseUrl}/companies/me`, {
+      headers: { Authorization: `Bearer ${loginBody.accessToken}` },
+    });
+    expect(meRes.status).toBe(200);
+    const meBody = await meRes.json();
+    expect(meBody.data.businessType).toBe('pharmacy');
+    expect(meBody.data.onboardingCompleted).toBe(true);
   });
 });

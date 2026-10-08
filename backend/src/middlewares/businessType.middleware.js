@@ -33,7 +33,7 @@ function requireBusinessType(...allowedTypes) {
       if (!company) {
         return next(ApiError.notFound('Company not found'));
       }
-      if (!allowedTypes.includes(company.business_type)) {
+      if (!company.business_type || !allowedTypes.includes(company.business_type)) {
         return next(
           ApiError.forbidden(
             'This feature is not available for your business type',

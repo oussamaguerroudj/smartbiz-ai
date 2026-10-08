@@ -49,12 +49,29 @@ const COMPANY_SELECT = `
   id,
   name,
   business_type,
+  onboarding_completed,
   currency,
   phone,
   address,
   created_at,
   updated_at
 `;
+
+function formatCompanyResponse(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    businessType: row.business_type || null,
+    business_type: row.business_type || null,
+    onboardingCompleted: row.onboarding_completed === true,
+    onboarding_completed: row.onboarding_completed === true,
+    currency: row.currency,
+    phone: row.phone || null,
+    address: row.address || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 function validateOptionalString(value, fieldName, { minLength = 1, maxLength = 255 } = {}) {
   if (value === undefined) {
@@ -98,7 +115,7 @@ const getMe = asyncHandler(async (req, res) => {
   }
 
   return res.json({
-    data: result.rows[0],
+    data: formatCompanyResponse(result.rows[0]),
   });
 });
 
@@ -147,6 +164,7 @@ const updateMe = asyncHandler(async (req, res) => {
     );
   }
 
+  const willCompleteOnboarding = businessType !== undefined;
   const result = await query(
     `UPDATE companies
      SET
@@ -154,7 +172,9 @@ const updateMe = asyncHandler(async (req, res) => {
        business_type = COALESCE($3, business_type),
        currency = COALESCE($4, currency),
        phone = COALESCE($5, phone),
-       address = COALESCE($6, address)
+       address = COALESCE($6, address),
+       onboarding_completed = CASE WHEN $7::boolean THEN true ELSE onboarding_completed END,
+       updated_at = now()
      WHERE id = $1
      RETURNING ${COMPANY_SELECT}`,
     [
@@ -164,6 +184,7 @@ const updateMe = asyncHandler(async (req, res) => {
       currency === undefined ? null : currency.trim(),
       phone === undefined ? null : phone.trim(),
       address === undefined ? null : address.trim(),
+      willCompleteOnboarding,
     ],
   );
 
@@ -172,7 +193,7 @@ const updateMe = asyncHandler(async (req, res) => {
   }
 
   return res.json({
-    data: result.rows[0],
+    data: formatCompanyResponse(result.rows[0]),
   });
 });
 
