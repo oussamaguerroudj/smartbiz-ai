@@ -14,11 +14,12 @@ app.disable('x-powered-by');
 // Request logger at the very top so EVERY incoming request is logged immediately
 app.use((req, res, next) => {
   const start = Date.now();
+  const fullPath = req.originalUrl || req.url;
   // eslint-disable-next-line no-console
-  console.log(`--> [REQ IN] ${req.method} ${req.url}`);
+  console.log(`--> [REQ IN] ${req.method} ${fullPath}`);
   res.on('finish', () => {
     // eslint-disable-next-line no-console
-    console.log(`<-- [REQ OUT] ${req.method} ${req.url} ${res.statusCode} (${Date.now() - start}ms)`);
+    console.log(`<-- [REQ OUT] ${req.method} ${fullPath} ${res.statusCode} (${Date.now() - start}ms)`);
   });
   next();
 });

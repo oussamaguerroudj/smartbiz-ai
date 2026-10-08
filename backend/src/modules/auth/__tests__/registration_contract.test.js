@@ -109,6 +109,23 @@ describe('Auth Registration Contract & Validation Tests', () => {
         expect.arrayContaining(['New Founder', 'founder@example.com']),
       );
     });
+
+    test('registration emits safe logs without leaking passwords or secrets', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      query.mockResolvedValueOnce({ rows: [] });
+      query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
+
+      await authService.register({
+        name: 'Privacy User',
+        email: 'secretuser@example.com',
+        password: 'SuperSecretPassword123!',
+      });
+
+      const loggedMessages = consoleLogSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+      expect(loggedMessages).toContain('[AUTH-REGISTER] verification email dispatched successfully to recipient @example.com');
+      expect(loggedMessages).not.toContain('SuperSecretPassword123!');
+      consoleLogSpy.mockRestore();
+    });
   });
 
   describe('authService.login business_type and onboarding contract', () => {

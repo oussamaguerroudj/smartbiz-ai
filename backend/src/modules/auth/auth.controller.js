@@ -2,7 +2,13 @@ const asyncHandler = require('../../utils/asyncHandler');
 const authService = require('./auth.service');
 
 const register = asyncHandler(async (req, res) => {
+  const hasEmail = Boolean(req.body && typeof req.body.email === 'string' && req.body.email.trim());
+  const emailDomain = hasEmail ? `@${req.body.email.trim().split('@')[1] || 'unknown'}` : 'none';
+  // eslint-disable-next-line no-console
+  console.log(`[AUTH-REGISTER] req_received: method=POST path=/api/auth/register hasEmail=${hasEmail} toDomain=${emailDomain}`);
   const result = await authService.register(req.body);
+  // eslint-disable-next-line no-console
+  console.log(`[AUTH-REGISTER] req_completed: status=201 pendingVerification=true toDomain=${emailDomain}`);
   res.status(201).json(result);
 });
 

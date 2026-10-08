@@ -13,6 +13,11 @@ const env = require('../config/env');
  */
 function errorMiddleware(err, req, res, next) { // eslint-disable-line no-unused-vars
   if (err instanceof ApiError) {
+    const fullPath = req?.originalUrl || req?.url || 'unknown';
+    if (fullPath.includes('/auth') || err.statusCode >= 500) {
+      // eslint-disable-next-line no-console
+      console.warn(`[API-ERROR] path=${fullPath} status=${err.statusCode} code=${err.code} message=${err.message}`);
+    }
     return res.status(err.statusCode).json({
       error: true,
       message: err.message,

@@ -98,12 +98,14 @@ async function sendMail({ to, subject, html, text }) {
       // eslint-disable-next-line no-console
       console.error(`[EMAIL] verification_email failed after ${duration} ms (status ${response.status}):`, {
         status: response.status,
-        message: errBody?.message || 'Brevo API error',
+        code: errBody?.code || 'BREVO_ERROR',
+        message: errBody?.message || errBody?.error || 'Brevo API error',
       });
 
       const err = new Error(errBody?.message || `Brevo API returned status ${response.status}`);
       err.code = 'BREVO_API_ERROR';
       err.status = response.status;
+      err.brevoCode = errBody?.code;
       throw err;
     }
 
@@ -125,6 +127,10 @@ async function sendMail({ to, subject, html, text }) {
       const timeoutErr = new Error('Brevo API request timed out');
       timeoutErr.code = 'ETIMEDOUT';
       throw timeoutErr;
+    }
+    if (err.code !== 'BREVO_API_ERROR') {
+      // eslint-disable-next-line no-console
+      console.error(`[EMAIL] verification_email network failure after ${duration} ms:`, err.message);
     }
     throw err;
   } finally {

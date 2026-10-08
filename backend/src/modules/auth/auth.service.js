@@ -144,12 +144,14 @@ async function register({ name, email, password }) {
     [trimmedName, normalizedEmail, passwordHash, codeHash, expires],
   );
 
+  const domain = normalizedEmail.split('@')[1] || 'unknown';
   try {
     await sendVerificationCodeEmail({ name: trimmedName, email: normalizedEmail, code });
-  } catch (err) {
-    const domain = normalizedEmail.split('@')[1] || 'unknown';
     // eslint-disable-next-line no-console
-    console.error(`[EMAIL] Verification email failed for recipient @${domain}:`, err.message);
+    console.log(`[AUTH-REGISTER] verification email dispatched successfully to recipient @${domain}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[EMAIL] Verification email failed for recipient @${domain}: status=${err.status || 500} code=${err.brevoCode || err.code || 'UNKNOWN'} message=${err.message}`);
     throw ApiError.internal(
       'We could not send the verification email. Please try resending the code.',
       'VERIFICATION_EMAIL_FAILED',
@@ -344,12 +346,14 @@ async function resendVerification({ email }) {
     [normalizedEmail, codeHash, expires],
   );
 
+  const domain = normalizedEmail.split('@')[1] || 'unknown';
   try {
     await sendVerificationCodeEmail({ name: pending.name, email: normalizedEmail, code });
-  } catch (err) {
-    const domain = normalizedEmail.split('@')[1] || 'unknown';
     // eslint-disable-next-line no-console
-    console.error(`[EMAIL] Resend verification email failed for recipient @${domain}:`, err.message);
+    console.log(`[AUTH-RESEND] verification email dispatched successfully to recipient @${domain}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[EMAIL] Resend verification email failed for recipient @${domain}: status=${err.status || 500} code=${err.brevoCode || err.code || 'UNKNOWN'} message=${err.message}`);
     throw ApiError.internal(
       'We could not send the verification email. Please try resending the code.',
       'VERIFICATION_EMAIL_FAILED',
