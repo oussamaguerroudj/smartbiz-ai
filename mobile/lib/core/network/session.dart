@@ -2,15 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// FIX (reported bug): a logged-in user was asked to verify/log in
-/// again after simply closing and reopening the app. Root cause: the
-/// session used to live in a plain in-memory StateProvider only — there
-/// was nowhere for it to persist to, so every cold start began from
-/// scratch. This class now mirrors every session change to the
-/// device's secure storage (Keychain on iOS; Keystore-backed
-/// EncryptedSharedPreferences on Android), and [SessionNotifier.restore]
-/// reloads it at the next app boot — see main.dart's `main()`, which
-/// awaits that restore before the first frame is even built.
+/// Manages user authentication session persisted in secure storage.
 class Session {
   const Session({
     this.accessToken,
@@ -23,6 +15,7 @@ class Session {
     this.avatarUrl,
     this.role,
     this.businessType,
+    this.onboardingCompleted,
   });
 
   final String? accessToken;
@@ -35,6 +28,7 @@ class Session {
   final String? avatarUrl;
   final String? role;
   final String? businessType;
+  final bool? onboardingCompleted;
 
   bool get isLoggedIn => accessToken != null || refreshToken != null;
 
@@ -51,6 +45,7 @@ class Session {
     String? avatarUrl,
     String? role,
     String? businessType,
+    bool? onboardingCompleted,
   }) {
     return Session(
       accessToken: accessToken ?? this.accessToken,
@@ -63,6 +58,7 @@ class Session {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       role: role ?? this.role,
       businessType: businessType ?? this.businessType,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 
@@ -77,6 +73,7 @@ class Session {
         'avatarUrl': avatarUrl,
         'role': role,
         'businessType': businessType,
+        'onboardingCompleted': onboardingCompleted,
       };
 
   factory Session.fromStorageJson(Map<String, dynamic> json) => Session(
@@ -90,6 +87,7 @@ class Session {
         avatarUrl: json['avatarUrl'] as String?,
         role: json['role'] as String?,
         businessType: json['businessType'] as String?,
+        onboardingCompleted: json['onboardingCompleted'] as bool?,
       );
 
   factory Session.fromAuthResponse(Map<String, dynamic> raw) {
@@ -99,114 +97,43 @@ class Session {
             ? Map<String, dynamic>.from(raw['data'] as Map)
             : raw);
 
-    final token = (data['accessToken'] ??
-            data['token'] ??
-            data['bearer'] ??
-            raw['accessToken'] ??
-            raw['token'] ??
-            raw['bearer'])
-        ?.toString();
-
+    final token = (data['accessToken'] ?? raw['accessToken'])?.toString();
     final refreshToken =
         (data['refreshToken'] ?? raw['refreshToken'])?.toString();
 
-    Map<String, dynamic> userMap;
-    if (data['user'] is Map<String, dynamic>) {
-      userMap = data['user'] as Map<String, dynamic>;
-    } else if (data['user'] is Map) {
-      userMap = Map<String, dynamic>.from(data['user'] as Map);
-    } else if (raw['user'] is Map<String, dynamic>) {
-      userMap = raw['user'] as Map<String, dynamic>;
-    } else if (raw['user'] is Map) {
-      userMap = Map<String, dynamic>.from(raw['user'] as Map);
-    } else {
-      userMap = data;
-    }
+    final userMap = (data['user'] is Map)
+        ? Map<String, dynamic>.from(data['user'] as Map)
+        : ((raw['user'] is Map)
+            ? Map<String, dynamic>.from(raw['user'] as Map)
+            : data);
 
-    String? extractId(dynamic val) {
-      if (val == null) return null;
-      if (val is String) {
-        final s = val.trim();
-        if (s.isEmpty || s == 'null' || s == 'undefined') return null;
-        if (s.startsWith('{') && s.contains('_id:')) {
-          final match = RegExp(r'_id:\s*([a-zA-Z0-9_-]+)').firstMatch(s);
-          if (match != null) return match.group(1);
-        }
-        return s;
-      }
-      if (val is num) return val.toString();
-      if (val is Map) {
-        return extractId(val['id'] ?? val['_id'] ?? val['companyId'] ?? val['businessId']);
-      }
-      return null;
-    }
+    final companyMap = (data['company'] is Map)
+        ? Map<String, dynamic>.from(data['company'] as Map)
+        : ((raw['company'] is Map)
+            ? Map<String, dynamic>.from(raw['company'] as Map)
+            : <String, dynamic>{});
 
-    final userId = extractId(userMap['id'] ?? userMap['_id'] ?? userMap['userId'] ?? data['userId'] ?? raw['userId']);
+    final userId = userMap['id']?.toString();
+    final companyId =
+        companyMap['id']?.toString() ?? userMap['companyId']?.toString();
 
-    final extractedCompanyId = extractId(
-      userMap['companyId'] ??
-      userMap['company_id'] ??
-      userMap['company'] ??
-      userMap['businessId'] ??
-      userMap['business'] ??
-      data['companyId'] ??
-      data['company_id'] ??
-      data['company'] ??
-      data['businessId'] ??
-      data['business'] ??
-      raw['companyId'] ??
-      raw['businessId'],
-    );
-    // Tenant safety: if no explicit company/business ID is present, use userId so
-    // offline queries and dashboard providers never hang on a null companyId.
-    final companyId = extractedCompanyId ?? userId;
+    final businessType = (companyMap['businessType'] ??
+            companyMap['business_type'] ??
+            userMap['businessType'] ??
+            userMap['business_type'])
+        ?.toString();
 
-    String? extractBusinessType(dynamic val) {
-      if (val == null) return null;
-      if (val is String) {
-        final s = val.trim();
-        return s.isEmpty ? null : s.toLowerCase();
-      }
-      if (val is Map) {
-        return extractBusinessType(
-          val['businessType'] ??
-          val['business_type'] ??
-          val['type'] ??
-          val['industry'],
-        );
-      }
-      return null;
-    }
+    final onboardingCompleted = (companyMap['onboardingCompleted'] == true ||
+        companyMap['onboarding_completed'] == true ||
+        userMap['onboardingCompleted'] == true ||
+        userMap['onboarding_completed'] == true);
 
-    final businessType = extractBusinessType(
-      userMap['businessType'] ??
-      userMap['business_type'] ??
-      userMap['type'] ??
-      userMap['industry'] ??
-      userMap['business'] ??
-      data['businessType'] ??
-      data['business_type'] ??
-      data['type'] ??
-      data['industry'] ??
-      data['business'] ??
-      raw['businessType'],
-    );
-
-    final userName = (
-      userMap['name'] ??
-      userMap['userName'] ??
-      userMap['username'] ??
-      (userMap['business'] is Map ? (userMap['business'] as Map)['name'] : null) ??
-      (data['business'] is Map ? (data['business'] as Map)['name'] : null) ??
-      data['name']
-    )?.toString();
-
+    final userName =
+        (userMap['name'] ?? companyMap['name'] ?? data['name'])?.toString();
     final email = userMap['email']?.toString() ?? data['email']?.toString();
     final phone = userMap['phone']?.toString() ?? data['phone']?.toString();
-    final avatarUrl = (userMap['avatarUrl'] ??
-            userMap['avatar_url'] ??
-            userMap['avatar'])
-        ?.toString();
+    final avatarUrl =
+        (userMap['avatarUrl'] ?? userMap['avatar_url'])?.toString();
     final role = userMap['role']?.toString();
 
     return Session(
@@ -220,6 +147,7 @@ class Session {
       avatarUrl: avatarUrl,
       role: role,
       businessType: businessType,
+      onboardingCompleted: onboardingCompleted,
     );
   }
 }
@@ -269,6 +197,7 @@ class SessionNotifier extends StateNotifier<Session> {
   Future<void> updateBusinessType(String businessType) async {
     state = state.copyWith(
       businessType: businessType,
+      onboardingCompleted: true,
     );
     await _storage.write(
       key: _storageKey,
@@ -276,12 +205,6 @@ class SessionNotifier extends StateNotifier<Session> {
     );
   }
 
-  /// The ONLY way a session should end during normal use: an explicit
-  /// Logout tap, or a refresh token that's genuinely dead (expired past
-  /// its lifetime, or rejected by the server). This is never called
-  /// just because the app was closed/reopened, or because a single
-  /// short-lived access token expired — api_client.dart handles that
-  /// silently via the refresh token instead (see its 401-retry logic).
   Future<void> clear() async {
     state = Session.empty;
     await _storage.delete(key: _storageKey);

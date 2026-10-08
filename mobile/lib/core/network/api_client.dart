@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,11 +21,19 @@ class ApiClient {
 
   final Ref _ref;
 
-  static const String defaultBaseUrl = String.fromEnvironment(
-    'API_URL',
-    defaultValue: 'https://smartbiz-ai-backend.onrender.com/api',
-  );
-  static const String lanFallbackBaseUrl = 'http://10.33.166.30:4000/api';
+  static const String definedApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
+
+  static String get defaultBaseUrl {
+    if (definedApiUrl.isNotEmpty) {
+      return definedApiUrl;
+    }
+    // In debug mode only, provide local emulator URL if none defined
+    if (!kReleaseMode) {
+      return 'http://10.0.2.2:4000/api';
+    }
+    return '';
+  }
+
   static String baseUrl = defaultBaseUrl;
 
   static Future<void> initBaseUrl() async {
@@ -33,31 +41,18 @@ class ApiClient {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('server_base_url');
       if (saved != null && saved.trim().isNotEmpty) {
-        final trimmed = saved.trim();
-        final isProd = defaultBaseUrl.startsWith('https://');
-        final isSavedLocal = trimmed.contains('127.0.0.1') ||
-            trimmed.contains('localhost') ||
-            trimmed.contains('10.33.166.30') ||
-            trimmed.contains('10.0.2.2');
-        if (isProd && isSavedLocal) {
-          baseUrl = defaultBaseUrl;
-          await prefs.setString('server_base_url', defaultBaseUrl);
-        } else {
-          baseUrl = trimmed;
-        }
+        baseUrl = saved.trim();
       } else {
         baseUrl = defaultBaseUrl;
-        unawaited(detectBestBaseUrl());
       }
     } catch (_) {
       baseUrl = defaultBaseUrl;
     }
   }
 
-  /// Automatically tests if 127.0.0.1:4000 is reachable (e.g. adb reverse over USB).
-  /// If unreachable (e.g. phone running over Wi-Fi without USB), transparently
-  /// switches to the local network LAN IP so real device scanning works out-of-the-box.
+  /// In debug mode only, test if adb reverse 127.0.0.1:4000 is reachable.
   static Future<void> detectBestBaseUrl() async {
+    if (kReleaseMode) return;
     if (baseUrl.contains('127.0.0.1') || baseUrl.contains('localhost')) {
       final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
       try {
@@ -65,17 +60,10 @@ class ApiClient {
         final res = await req.close();
         if (res.statusCode == 200) {
           client.close();
-          return; // 127.0.0.1 works (adb reverse active)
+          return;
         }
       } catch (_) {
-        // 127.0.0.1 unreachable (no adb reverse), probe LAN IP
-        try {
-          final lanReq = await client.getUrl(Uri.parse('http://10.33.166.30:4000/health'));
-          final lanRes = await lanReq.close();
-          if (lanRes.statusCode == 200) {
-            baseUrl = lanFallbackBaseUrl;
-          }
-        } catch (_) {}
+        baseUrl = 'http://10.0.2.2:4000/api';
       } finally {
         client.close();
       }

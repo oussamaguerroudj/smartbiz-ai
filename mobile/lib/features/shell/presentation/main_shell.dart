@@ -42,6 +42,8 @@ import '../../enterprise/presentation/screens/enterprise_main_dashboard_screen.d
 import '../../enterprise/presentation/screens/enterprise_projects_screen.dart';
 import '../../dashboard/presentation/screens/all_pages_screen.dart';
 import '../../auth/data/companies_repository.dart';
+import '../../auth/presentation/screens/business_type_screen.dart';
+import '../../auth/presentation/screens/business_setup_screen.dart';
 import '../../../core/network/session.dart';
 
 /// Main App Shell — Spec Ch. 7 (Navigation)
@@ -132,8 +134,36 @@ class _MainShellState extends ConsumerState<MainShell> {
     }
 
     final l10n = AppLocalizations.of(context)!;
-    final businessType = ref.watch(companyInfoProvider).valueOrNull?.businessType ??
-        session.businessType;
+    final companyInfoAsync = ref.watch(companyInfoProvider);
+    final companyInfo = companyInfoAsync.valueOrNull;
+
+    // A user with null businessType in session or explicit incomplete onboarding MUST be sent to BusinessTypeScreen.
+    // The legacy placeholder 'company' in companyInfo must NOT silently bypass onboarding if session has no type or onboarding is incomplete.
+    final sessionHasNoType = session.businessType == null || session.businessType!.isEmpty;
+    final isOnboardingIncomplete = session.onboardingCompleted == false ||
+        (companyInfo != null && !companyInfo.onboardingCompleted) ||
+        sessionHasNoType;
+
+    final businessType = session.businessType ??
+        (companyInfo?.businessType != 'company' ? companyInfo?.businessType : null);
+
+    if (isOnboardingIncomplete || businessType == null) {
+      return BusinessTypeScreen(
+        onContinue: (type) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => BusinessSetupScreen(
+                businessType: type,
+                onFinish: () {
+                  ref.invalidate(companyInfoProvider);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ),
+          );
+        },
+      );
+    }
 
     final tabs = [
       _dashboardTabFor(businessType),

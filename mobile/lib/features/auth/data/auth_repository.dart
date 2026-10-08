@@ -20,8 +20,6 @@ class AuthRepository {
     required String name,
     required String email,
     required String password,
-    String? industry,
-    String? type,
   }) async {
     final client = _ref.read(apiClientProvider);
     final body = <String, dynamic>{
@@ -29,8 +27,6 @@ class AuthRepository {
       'email': email,
       'password': password,
     };
-    if (industry != null && industry.isNotEmpty) body['industry'] = industry;
-    if (type != null && type.isNotEmpty) body['type'] = type;
     await client.post('/auth/register', body: body);
   }
 

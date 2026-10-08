@@ -38,7 +38,8 @@ class CompaniesRepository {
 
     final fallback = CompanyInfo(
       name: (session.userName?.isNotEmpty == true) ? session.userName! : 'My Business',
-      businessType: session.businessType ?? cached?.businessType ?? 'company',
+      businessType: session.businessType ?? cached?.businessType,
+      onboardingCompleted: session.onboardingCompleted ?? cached?.onboardingCompleted ?? false,
       currency: 'DZD',
       phone: session.phone,
     );
@@ -49,28 +50,10 @@ class CompaniesRepository {
       return cached ?? fallback;
     }
 
-    // 3. Fetch fresh from backend: try /companies/me, fallback to /business/me, /business
+    // 3. Fetch fresh from canonical backend endpoint: /companies/me
     try {
       final client = _ref.read(apiClientProvider);
-      dynamic response;
-      try {
-        response = await client.get('/companies/me');
-      } on ApiException catch (e) {
-        if (e.statusCode == 404) {
-          try {
-            response = await client.get('/business/me');
-          } on ApiException catch (e2) {
-            if (e2.statusCode == 404) {
-              response = await client.get('/business');
-            } else {
-              rethrow;
-            }
-          }
-        } else {
-          rethrow;
-        }
-      }
-
+      final response = await client.get('/companies/me');
       final rawData = response['data'] ?? response;
       final data = rawData is Map<String, dynamic>
           ? rawData
@@ -138,13 +121,16 @@ class CompaniesRepository {
 class CompanyInfo {
   CompanyInfo({
     required this.name,
-    required this.businessType,
+    this.businessType,
+    bool? onboardingCompleted,
     this.currency = 'DZD',
     this.phone,
     this.address,
-  });
+  }) : onboardingCompleted = onboardingCompleted ?? (businessType != null && businessType.isNotEmpty);
+
   final String name;
-  final String businessType;
+  final String? businessType;
+  final bool onboardingCompleted;
   final String currency;
   final String? phone;
   final String? address;
@@ -155,10 +141,9 @@ class CompanyInfo {
             (json['business_name'] as String?) ??
             '',
         businessType: (json['businessType'] as String?) ??
-            (json['business_type'] as String?) ??
-            (json['type'] as String?) ??
-            (json['industry'] as String?) ??
-            'company',
+            (json['business_type'] as String?),
+        onboardingCompleted: (json['onboardingCompleted'] == true ||
+            json['onboarding_completed'] == true),
         currency: (json['currency'] as String?) ?? 'DZD',
         phone: json['phone'] as String?,
         address: json['address'] as String?,
@@ -176,7 +161,8 @@ final companyInfoProvider = FutureProvider.autoDispose<CompanyInfo?>((ref) async
   } catch (_) {
     return CompanyInfo(
       name: (session.userName?.isNotEmpty == true) ? session.userName! : 'My Business',
-      businessType: session.businessType ?? 'company',
+      businessType: session.businessType,
+      onboardingCompleted: session.onboardingCompleted ?? false,
       currency: 'DZD',
       phone: session.phone,
     );

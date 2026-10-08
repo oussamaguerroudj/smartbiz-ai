@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,11 +27,8 @@ Future<void> main() async {
 
   final container = ProviderContainer();
 
-  // FIX (reported bug): both awaited here, before the first frame, so
-  // the very first thing drawn already reflects the real answer to
-  // "is this user logged in?" and "has this device picked a language
-  // before?" — rather than the UI briefly showing (and this async work
-  // then invisibly racing to correct) the wrong initial screen.
+  // Both awaited here, before the first frame, so the very first thing
+  // drawn already reflects the real session and language settings.
   await container.read(sessionProvider.notifier).restore();
   await container.read(localeProvider.notifier).ready;
 
@@ -58,27 +56,6 @@ class ModiriApp extends ConsumerWidget {
       themeMode: themeMode,
       locale: locale,
       supportedLocales: supportedLocales,
-      // FIX (reported bug): switching to Arabic previously only flipped
-      // TextDirection to RTL via the Locale — no AppLocalizations
-      // delegate was ever registered, and no screen ever read translated
-      // strings, so the visible text silently stayed English. The .arb
-      // files under core/localization/ already had full English/Arabic/
-      // French translations sitting unused. Fix: register the generated
-      // AppLocalizations.delegate below (produced by `flutter gen-l10n`
-      // from those same .arb files — see l10n.yaml) and read strings via
-      // AppLocalizations.of(context) instead of hardcoding them.
-      //
-      // IMPORTANT — one-time setup step: `lib/l10n/app_localizations.dart`
-      // is generated code, not checked in. Run `flutter pub get` once
-      // after pulling these changes (generate:true in pubspec.yaml runs
-      // gen-l10n automatically) before this will compile.
-      //
-      // Coverage in this pass: Onboarding, Login, Register, Business
-      // Type, Business Setup, bottom nav labels, and the More menu are
-      // fully wired to real translated strings. Dashboard/Reports/
-      // Employees/etc. still have hardcoded English strings — the .arb
-      // files don't have keys for them yet, and this pass didn't invent
-      // rushed translations for the rest. See REDESIGN_CHANGELOG.md.
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -90,18 +67,6 @@ class ModiriApp extends ConsumerWidget {
   }
 }
 
-/// FIX (reported bug): the previous version pushed each screen via
-/// Navigator.push using a BuildContext captured once in initState and
-/// re-used across every nested callback. That pattern is fragile — the
-/// "Get Started" transition (and, latently, several after it) could fail
-/// to navigate because the captured context stopped resolving to the
-/// active Navigator reliably.
-///
-/// Replaced with a single explicit state enum + switch in build(). Each
-/// screen's callback just calls setState to move to the next phase — no
-/// BuildContext reuse, no ambiguity about which Navigator is being used.
-/// This will be replaced by go_router with real route guards once the
-/// data/auth layer exists (Phase 4/5), as already noted in core/routing/.
 enum _AppPhase {
   splash,
   languageSelect,
@@ -125,37 +90,53 @@ class _AppFlow extends ConsumerStatefulWidget {
 class _AppFlowState extends ConsumerState<_AppFlow> {
   _AppPhase _phase = _AppPhase.splash;
   BusinessType? _selectedBusinessType;
-  // The email a verification/reset code was just sent to — carried across
-  // the verifyAccount / forgotPassword phases so those screens know which
-  // address to show and confirm against.
   String _pendingEmail = '';
 
-  @override
-  void initState() {
-    super.initState();
-    // Splash's own transition to Onboarding is now driven by
-    // VideoSplashScreen calling onFinished (video end / error fallback /
-    // safety timeout) — see below — instead of a fixed delay here.
+  void _navigateAuthenticated() {
+    final session = ref.read(sessionProvider);
+    if (!session.isLoggedIn) {
+      setState(() => _phase = _AppPhase.login);
+      return;
+    }
+    if (session.role == 'super_admin' || session.role == 'support') {
+      setState(() => _phase = _AppPhase.main);
+      return;
+    }
+    if (session.onboardingCompleted == false || session.businessType == null) {
+      setState(() => _phase = _AppPhase.businessType);
+      return;
+    }
+    setState(() => _phase = _AppPhase.main);
   }
 
   @override
   Widget build(BuildContext context) {
-    // FIX (reported bug — Finish Setup not navigating to Dashboard):
-    // this used to read `ref.watch(sessionProvider)` and, if the phase
-    // was `main` but the session looked logged-out, mutate `_phase`
-    // directly INSIDE build() — a real anti-pattern. Mutating instance
-    // state during build (instead of via setState, or better, only in
-    // response to an actual event) means a phase transition set moments
-    // earlier by a callback (like BusinessSetupScreen's onFinish) could
-    // be silently overridden again on the very next rebuild if
-    // `sessionProvider` re-emitted for any unrelated reason while its
-    // value was momentarily read as logged-out — exactly the "button
-    // works, request succeeds, but the screen never actually moves on"
-    // symptom that was reported.
-    //
-    // Fixed by only reacting to a genuine logout EVENT via ref.listen
-    // (previous session had a token, new one doesn't) instead of
-    // re-deriving `_phase` from session state on every single build.
+    if (kReleaseMode && ApiClient.baseUrl.isEmpty) {
+      return const Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red),
+                SizedBox(height: 16),
+                Text(
+                  'Configuration Error',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'API_URL is not configured for this release build.\nPlease rebuild the application with:\n--dart-define=API_URL=https://<your-backend-url>/api',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     ref.listen(sessionProvider, (previous, next) {
       final wasLoggedIn = previous?.isLoggedIn ?? false;
       if (wasLoggedIn && !next.isLoggedIn && _phase == _AppPhase.main) {
@@ -164,8 +145,6 @@ class _AppFlowState extends ConsumerState<_AppFlow> {
     });
 
     return AnimatedSwitcher(
-      // Smooth cross-fade between every phase (splash → onboarding →
-      // login → ... → main), instead of an abrupt widget swap.
       duration: const Duration(milliseconds: 420),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
@@ -180,31 +159,24 @@ class _AppFlowState extends ConsumerState<_AppFlow> {
     switch (_phase) {
       case _AppPhase.splash:
         return VideoSplashScreen(
-          // FIX (reported bug — asked to verify again after closing the
-          // app): this used to unconditionally go to onboarding next,
-          // regardless of session state — main() now awaits
-          // sessionProvider's restore() before this widget is ever
-          // built, so by the time the user sees this, `ref.read
-          // (sessionProvider).isLoggedIn` already reflects a real,
-          // possibly-persisted-from-days-ago session.
-          onFinished: () => setState(() {
+          onFinished: () {
             if (ref.read(sessionProvider).isLoggedIn) {
-              _phase = _AppPhase.main;
+              _navigateAuthenticated();
             } else {
-              _phase = _AppPhase.languageSelect;
+              setState(() => _phase = _AppPhase.languageSelect);
             }
-          }),
+          },
         );
 
       case _AppPhase.languageSelect:
         return LanguageSelectScreen(
-          onSelected: () => setState(() {
+          onSelected: () {
             if (ref.read(sessionProvider).isLoggedIn) {
-              _phase = _AppPhase.main;
+              _navigateAuthenticated();
             } else {
-              _phase = _AppPhase.onboarding;
+              setState(() => _phase = _AppPhase.onboarding);
             }
-          }),
+          },
         );
 
       case _AppPhase.onboarding:
@@ -214,15 +186,10 @@ class _AppFlowState extends ConsumerState<_AppFlow> {
 
       case _AppPhase.login:
         return LoginScreen(
-          onLoginSuccess: () => setState(() => _phase = _AppPhase.main),
+          onLoginSuccess: _navigateAuthenticated,
           onGoToRegister: () => setState(() => _phase = _AppPhase.register),
           onGoToForgotPassword: () =>
               setState(() => _phase = _AppPhase.forgotPassword),
-          // FIX (reported bug): logging in with an unverified account
-          // said "verify your account" but left the user with no way to
-          // actually do that — going back to Register just said the
-          // email was already taken. Now it takes them straight to the
-          // code screen for that email.
           onGoToVerify: (email) => setState(() {
             _pendingEmail = email;
             _phase = _AppPhase.verifyAccount;

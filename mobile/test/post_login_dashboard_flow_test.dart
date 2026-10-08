@@ -39,23 +39,24 @@ void main() {
   });
 
   group('Post-Login Flow & Dashboard Resilience Verification', () {
-    test('1. Session.fromAuthResponse extracts nested business object and guarantees companyId', () {
+    test('1. Session.fromAuthResponse extracts user and company objects and guarantees companyId', () {
       final backendResponse = {
-        'status': 'success',
-        'token': 'jwt_prod_token_test_123',
-        'data': {
-          'user': {
-            '_id': 'usr_production_678',
-            'name': 'Production Test User',
-            'email': 'test@modiri.ai',
-            'role': 'owner',
-            'business': {
-              '_id': 'bus_prod_999',
-              'name': 'Superette Modiri',
-              'type': 'supermarket',
-              'industry': 'retail',
-            },
-          },
+        'accessToken': 'jwt_prod_token_test_123',
+        'refreshToken': 'jwt_refresh_token_test_456',
+        'user': {
+          'id': 'usr_production_678',
+          'companyId': 'bus_prod_999',
+          'name': 'Production Test User',
+          'email': 'test@modiri.ai',
+          'role': 'owner',
+          'businessType': 'supermarket',
+          'onboardingCompleted': true,
+        },
+        'company': {
+          'id': 'bus_prod_999',
+          'name': 'Superette Modiri',
+          'businessType': 'supermarket',
+          'onboardingCompleted': true,
         },
       };
 
@@ -66,23 +67,28 @@ void main() {
       expect(session.companyId, equals('bus_prod_999'));
       expect(session.businessType, equals('supermarket'));
       expect(session.userName, equals('Production Test User'));
+      expect(session.onboardingCompleted, isTrue);
     });
 
-    test('2. Session.fromAuthResponse falls back to userId when companyId is missing completely', () {
+    test('2. Session.fromAuthResponse handles user when company is null during onboarding', () {
       final backendResponse = {
-        'token': 'jwt_token_fallback',
+        'accessToken': 'jwt_token_fallback',
         'user': {
           'id': 'usr_fallback_123',
           'name': 'Fallback User',
           'email': 'fallback@test.com',
+          'businessType': null,
+          'onboardingCompleted': false,
         },
       };
 
       final session = Session.fromAuthResponse(backendResponse);
       expect(session.isLoggedIn, isTrue);
-      expect(session.companyId, equals('usr_fallback_123'),
-          reason: 'companyId should fall back to userId so it is never null');
+      expect(session.userId, equals('usr_fallback_123'));
+      expect(session.businessType, isNull);
+      expect(session.onboardingCompleted, isFalse);
     });
+
 
     test('3. CompaniesRepository provides valid CompanyInfo fallback if API returns 404', () {
       const session = Session(
