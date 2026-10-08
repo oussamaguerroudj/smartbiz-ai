@@ -464,6 +464,20 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.grossProfit).toBe(500);
       expect(result.costOfGoodsSold).toBe(0);
     });
+
+    it('throws 403 ONBOARDING_INCOMPLETE when company business_type is NULL', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: null }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      await expect(calculateFinancials(mockCompanyId, { period: 'daily' })).rejects.toMatchObject({
+        statusCode: 403,
+        code: 'ONBOARDING_INCOMPLETE',
+      });
+    });
   });
 });
 

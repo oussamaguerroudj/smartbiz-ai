@@ -132,7 +132,17 @@ async function calculateFinancials(companyId, params = {}) {
     `SELECT business_type FROM companies WHERE id = $1`,
     [companyId],
   );
-  const businessType = companyRes.rows[0]?.business_type || 'retail_store';
+  const company = companyRes.rows[0];
+  if (!company) {
+    throw ApiError.notFound('Company not found');
+  }
+  if (!company.business_type) {
+    throw ApiError.forbidden(
+      'Business onboarding is incomplete. Please complete business setup first.',
+      'ONBOARDING_INCOMPLETE',
+    );
+  }
+  const businessType = company.business_type;
 
   // 1. Global Totals (ALL ACTUAL TRANSACTIONS in system, unfiltered by period)
   const [
