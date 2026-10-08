@@ -113,7 +113,7 @@ describe('Auth Registration Contract & Validation Tests', () => {
 
   describe('authService.login business_type and onboarding contract', () => {
     test('login returns authoritative businessType and onboardingCompleted on both user and company', async () => {
-      const bcrypt = require('bcrypt');
+      const bcrypt = require('bcryptjs');
       const hash = await bcrypt.hash('Password123!', 10);
 
       query.mockResolvedValueOnce({

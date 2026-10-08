@@ -182,7 +182,7 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
     // 1. Create a pending registration directly
     const expires = new Date(Date.now() + 60000);
     const { hashCode } = require('../../src/utils/otp');
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const passwordHash = await bcrypt.hash('Password123!', 10);
     const codeHash = hashCode('123456');
 
@@ -318,7 +318,7 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
 
   test('7. Login, refresh, and /companies/me all return onboardingCompleted and businessType in identical format', async () => {
     // Verified user with completed onboarding
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const hash = await bcrypt.hash('Secret12345!', 10);
     const compRes = await testPool.query(
       `INSERT INTO companies (name, business_type, onboarding_completed, currency) VALUES ('Verified Co', 'pharmacy', true, 'DZD') RETURNING id`,

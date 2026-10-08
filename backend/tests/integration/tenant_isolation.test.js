@@ -60,7 +60,7 @@ describe('Multi-Tenant Isolation Security Suite (Real PostgreSQL)', () => {
     await testPool.query('DELETE FROM companies');
 
     const { hashCode } = require('../../src/utils/otp');
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const passwordHash = await bcrypt.hash('Password123!', 10);
     const expires = new Date(Date.now() + 600000);
     const codeHash = hashCode('123456');
