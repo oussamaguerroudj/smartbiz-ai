@@ -9,7 +9,7 @@ const { generateCode, hashCode, verifyCodeHash } = require('../../utils/otp');
 const BCRYPT_ROUNDS = 10;
 // Verification codes are intentionally very short-lived: 1 minute. After
 // that the code is dead (the expiry check below rejects it even if it's
-// the "right" code) and the user has to hit resend for a new one — which
+// the "right" code) and the user has to hit resend for a new one  -  which
 // immediately overwrites/invalidates whatever code came before it.
 const VERIFICATION_CODE_TTL_SECONDS = 60;
 const RESET_CODE_TTL_MINUTES = 15;
@@ -75,7 +75,7 @@ function toPublicUser(row) {
   };
 }
 
-/** Sends the actual email — no DB write. Callers persist the code first. */
+/** Sends the actual email  -  no DB write. Callers persist the code first. */
 async function sendVerificationCodeEmail({ name, email, code }) {
   const safeName = escapeHtml(name);
 
@@ -94,13 +94,13 @@ async function sendVerificationCodeEmail({ name, email, code }) {
  *
  * The account (and its `users` row) is NOT created here anymore. Until the
  * emailed code is confirmed, nothing exists in `users`/`companies` for
- * this signup — only a row in `pending_registrations`, keyed by email.
+ * this signup  -  only a row in `pending_registrations`, keyed by email.
  * This is what makes "email already exists" go away for someone who
  * registered but never entered their code: there's genuinely no account
  * yet, so registering again with the same email just overwrites the
  * pending row and sends a fresh code.
  *
- * The account is only ever created — inside verifyEmail() — once the
+ * The account is only ever created  -  inside verifyEmail()  -  once the
  * correct code is confirmed.
  */
 async function register({ name, email, password }) {
@@ -126,7 +126,7 @@ async function register({ name, email, password }) {
     Date.now() + VERIFICATION_CODE_TTL_SECONDS * 1000,
   );
 
-  // One pending row per email — re-registering the same (still
+  // One pending row per email  -  re-registering the same (still
   // unverified) address just replaces the name/password/code instead of
   // being blocked as a duplicate.
   await query(
@@ -134,7 +134,7 @@ async function register({ name, email, password }) {
        name, email, password_hash, code_hash, code_expires, attempts
      )
      VALUES ($1, $2, $3, $4, $5, 0)
-     ON CONFLICT (email) DO UPDATE
+     ON CONFLICT (lower(trim(email))) DO UPDATE
        SET name = EXCLUDED.name,
            password_hash = EXCLUDED.password_hash,
            code_hash = EXCLUDED.code_hash,
@@ -153,7 +153,7 @@ async function register({ name, email, password }) {
     );
   }
 
-  // No tokens, no user object — there's no account yet. The client just
+  // No tokens, no user object  -  there's no account yet. The client just
   // moves on to the "enter your code" screen with this email.
   return {
     email: normalizedEmail,
@@ -174,7 +174,7 @@ async function login({ email, password }) {
   const user = result.rows[0];
 
   if (!user) {
-    // No verified account — but if there's a matching pending signup,
+    // No verified account  -  but if there's a matching pending signup,
     // tell the user to verify instead of a flat "invalid credentials"
     // (without leaking whether the email exists to someone guessing a
     // wrong password).
@@ -215,7 +215,7 @@ async function login({ email, password }) {
   }
 
   // Accounts only ever get created (see verifyEmail()) once verified, so
-  // this should always be true — kept as a defensive check.
+  // this should always be true  -  kept as a defensive check.
   if (!user.email_verified) {
     throw ApiError.forbidden(
       'Please verify your email before logging in.',
@@ -289,8 +289,8 @@ async function refresh({ refreshToken }) {
 
 /**
  * Resends a fresh code for a pending (not-yet-created) registration.
- * Unauthenticated by design — identified by email only, same as
- * register() — because at this point there's no account and therefore
+ * Unauthenticated by design  -  identified by email only, same as
+ * register()  -  because at this point there's no account and therefore
  * no access token to authenticate with.
  *
  * Generating a new code immediately overwrites/invalidates the old one
@@ -351,7 +351,7 @@ async function resendVerification({ email }) {
  *
  * SECURITY FIX (SEC-AUTH-001 & SEC-AUTH-002):
  * 1. Never issue tokens for an existing user when no pending_registrations
- *    row exists — doing so allowed zero-click account takeover of any
+ *    row exists  -  doing so allowed zero-click account takeover of any
  *    verified account by submitting their email with any 6-digit code.
  * 2. Commit the `attempts = attempts + 1` increment before throwing
  *    INVALID_CODE so failed brute-force attempts are not rolled back.

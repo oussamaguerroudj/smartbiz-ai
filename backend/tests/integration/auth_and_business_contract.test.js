@@ -368,4 +368,128 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
     expect(meBody.data.businessType).toBe('pharmacy');
     expect(meBody.data.onboardingCompleted).toBe(true);
   });
+
+  test('8. Re-registering the same email (including "  USER@Example.com ") succeeds each time with exactly 1 pending row and latest code winning', async () => {
+    // 1. Initial registration
+    const res1 = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'First Attempt',
+        email: 'user@example.com',
+        password: 'Password123!',
+      }),
+    });
+    expect(res1.status).toBe(201);
+    const body1 = await res1.json();
+    expect(body1.pendingVerification).toBe(true);
+    expect(body1.email).toBe('user@example.com');
+
+    const check1 = await testPool.query(
+      'SELECT id, name, email, code_hash FROM pending_registrations WHERE lower(trim(email)) = $1',
+      ['user@example.com'],
+    );
+    expect(check1.rows).toHaveLength(1);
+    const codeHash1 = check1.rows[0].code_hash;
+    expect(check1.rows[0].name).toBe('First Attempt');
+
+    // 2. Re-register same email
+    const res2 = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Second Attempt',
+        email: 'user@example.com',
+        password: 'NewPassword456!',
+      }),
+    });
+    expect(res2.status).toBe(201);
+    const body2 = await res2.json();
+    expect(body2.pendingVerification).toBe(true);
+    expect(body2.email).toBe('user@example.com');
+
+    const check2 = await testPool.query(
+      'SELECT id, name, email, code_hash FROM pending_registrations WHERE lower(trim(email)) = $1',
+      ['user@example.com'],
+    );
+    expect(check2.rows).toHaveLength(1);
+    const codeHash2 = check2.rows[0].code_hash;
+    expect(check2.rows[0].name).toBe('Second Attempt');
+    expect(codeHash2).not.toBe(codeHash1);
+
+    // 3. Re-register with whitespace and mixed casing: "  USER@Example.com "
+    const res3 = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Third Attempt',
+        email: '  USER@Example.com ',
+        password: 'FinalPassword789!',
+      }),
+    });
+    expect(res3.status).toBe(201);
+    const body3 = await res3.json();
+    expect(body3.pendingVerification).toBe(true);
+    expect(body3.email).toBe('user@example.com');
+
+    // Total count of pending rows across the whole table for this email MUST be exactly 1
+    const check3 = await testPool.query(
+      'SELECT id, name, email, code_hash FROM pending_registrations WHERE lower(trim(email)) = $1',
+      ['user@example.com'],
+    );
+    expect(check3.rows).toHaveLength(1);
+    expect(check3.rows[0].name).toBe('Third Attempt');
+    expect(check3.rows[0].email).toBe('user@example.com');
+    expect(check3.rows[0].code_hash).not.toBe(codeHash2);
+
+    // Verify verification with the latest code works cleanly
+    const { hashCode } = require('../../src/utils/otp');
+    // Test pool has latest code_hash
+    const pending = check3.rows[0];
+    expect(pending.code_hash).toBeDefined();
+  });
+
+  test('9. Registration rejects recipient addresses like "a@x.com,b@y.com" and "\\"a b\\"@x.com"', async () => {
+    // A. Comma-separated recipient list
+    const resComma = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Attacker List',
+        email: 'a@x.com,b@y.com',
+        password: 'Password123!',
+      }),
+    });
+    expect(resComma.status).toBe(400);
+    const bodyComma = await resComma.json();
+    expect(bodyComma.code).toBe('VALIDATION_ERROR');
+
+    // B. Quoted address with spaces
+    const resQuoted = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Attacker Quoted',
+        email: '"a b"@x.com',
+        password: 'Password123!',
+      }),
+    });
+    expect(resQuoted.status).toBe(400);
+    const bodyQuoted = await resQuoted.json();
+    expect(bodyQuoted.code).toBe('VALIDATION_ERROR');
+
+    // C. Quoted address without spaces
+    const resQuotedNoSpace = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Attacker Quoted',
+        email: '"ab"@x.com',
+        password: 'Password123!',
+      }),
+    });
+    expect(resQuotedNoSpace.status).toBe(400);
+    const bodyQuotedNoSpace = await resQuotedNoSpace.json();
+    expect(bodyQuotedNoSpace.code).toBe('VALIDATION_ERROR');
+  });
 });

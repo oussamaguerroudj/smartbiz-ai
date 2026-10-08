@@ -35,5 +35,7 @@ END $$;
 DROP INDEX IF EXISTS ux_users_email;
 CREATE UNIQUE INDEX ux_users_email ON users (lower(trim(email))) WHERE deleted_at IS NULL;
 
+ALTER TABLE pending_registrations DROP CONSTRAINT IF EXISTS pending_registrations_email_key;
 DROP INDEX IF EXISTS idx_pending_registrations_email;
 CREATE UNIQUE INDEX idx_pending_registrations_email ON pending_registrations (lower(trim(email)));
+

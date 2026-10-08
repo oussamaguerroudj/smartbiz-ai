@@ -3,7 +3,19 @@ const ApiError = require('../../utils/ApiError');
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function isValidEmail(email) {
-  return typeof email === 'string' && EMAIL_REGEX.test(email.trim());
+  if (typeof email !== 'string') return false;
+  const trimmed = email.trim();
+  if (
+    trimmed.includes(',') ||
+    trimmed.includes('"') ||
+    trimmed.includes(';') ||
+    trimmed.includes('\\') ||
+    trimmed.includes('\n') ||
+    trimmed.includes('\r')
+  ) {
+    return false;
+  }
+  return EMAIL_REGEX.test(trimmed);
 }
 
 function isValidPassword(password) {
