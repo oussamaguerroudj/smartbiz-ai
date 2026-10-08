@@ -87,6 +87,9 @@ HAVING count(*) > 1;
 Legacy versions of the backend created companies with placeholder `name = 'New Business'` and `business_type = 'company'`.
 To guarantee safety on existing production databases, this update is NOT in the automatic startup sequence. It is located in [`backend/manual_migrations/034_flag_placeholder_companies.sql`](file:///c:/Users/Haoui/Downloads/modiri-business-type-simplified%20%281%29/backend/manual_migrations/034_flag_placeholder_companies.sql).
 
+**What it does to "company" accounts**:
+When applied, any legacy placeholder company (`name = 'New Business'` AND `business_type = 'company'`) has its `business_type` set to `NULL` and `onboarding_completed` set to `false`. When users belonging to these accounts subsequently log in or refresh tokens, the API reports `onboardingCompleted: false` and `businessType: null`, prompting the mobile application to route them directly to the Business Type Setup screen so they can choose their real industry and business model rather than remaining stuck with a dummy company profile.
+
 1. Execute the read-only query to inspect matching rows:
 ```sql
 SELECT id, name, business_type, onboarding_completed, created_at
@@ -108,11 +111,27 @@ psql $DATABASE_URL -f backend/manual_migrations/034_flag_placeholder_companies.s
 
 ---
 
-## 4. Building & Running the Flutter Client
+## 4. Security Posture & Accepted Operational Decisions
+
+### 4.1 CORS_ORIGIN = "*" (Temporary Accepted Decision)
+`CORS_ORIGIN` is configured to `"*"` in [`render.yaml`](file:///c:/Users/Haoui/Downloads/modiri-business-type-simplified%20%281%29/render.yaml). This is a **temporary accepted decision** for the initial rollout:
+- The current client ecosystem consists solely of native mobile applications (Android/iOS Flutter client). Native HTTP clients do not send browser `Origin` headers and do not enforce the browser Same-Origin Policy.
+- Once a web dashboard or administrative web application is deployed, `CORS_ORIGIN` must be restricted in the Render environment settings to the specific production web origins (e.g. `https://admin.yourdomain.com`).
+
+### 4.2 Nodemailer High Severity Advisory (Accepted Risk)
+`npm audit --omit=dev` reports 0 critical vulnerabilities. All critical vulnerabilities in transitive dependencies (`proxy-addr`, `tar`, `qs`) were remediated.
+One high-severity advisory remains on `nodemailer <= 10.0.5` ([GHSA-mm7p-fcc7-pg87](https://github.com/advisories/GHSA-mm7p-fcc7-pg87)):
+- Remediating this advisory requires upgrading across a major breaking change boundary to `nodemailer@10.x`.
+- In Modiri AI, `nodemailer` is strictly used server-side with verified SMTP credentials to send short 6-digit OTP verification codes to user-provided email addresses (`sendVerificationEmail` / `sendPasswordResetEmail`). It does not accept arbitrary untrusted MIME structures or client-provided transport configurations.
+- Therefore, this advisory is documented and classified as an **accepted risk** until a planned major version refactor of the email transport layer.
+
+---
+
+## 5. Building & Running the Flutter Client
 
 The Flutter application requires the API URL to be supplied at compile time via `--dart-define=API_URL`. Hardcoded third-party backend URLs have been eliminated.
 
-### Step 4.1: Development Run
+### Step 5.1: Development Run
 To test against your Render backend:
 ```bash
 cd mobile
@@ -127,7 +146,7 @@ flutter run --dart-define=API_URL=http://10.0.2.2:4000/api   # Android Emulator
 flutter run --dart-define=API_URL=http://localhost:4000/api  # iOS Simulator / Desktop / Web
 ```
 
-### Step 4.2: Production Release APK Build
+### Step 5.2: Production Release APK Build
 Build the release APK with the production API URL:
 ```bash
 cd mobile
@@ -141,7 +160,7 @@ The resulting APK is generated at:
 
 ---
 
-## 5. Physical Device Smoke Test Script (QA Checklist)
+## 6. Physical Device Smoke Test Script (QA Checklist)
 
 Follow this step-by-step checklist on a real physical device (Android or iOS) running the newly built release APK:
 
