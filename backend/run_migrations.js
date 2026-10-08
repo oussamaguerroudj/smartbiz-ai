@@ -95,6 +95,7 @@ async function runMigrations() {
     } else {
       console.log(`Successfully executed ${ranCount} pending migration(s).`);
     }
+    process.exit(0);
   } catch (err) {
     console.error('Migration runner failed:', err.message);
     try {
