@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -113,7 +115,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             SnackBar(content: Text('${l10n.firstTimeRegisterInternetRequired}\n(${e.message})')),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+          if (!kReleaseMode && e.statusCode == 404) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('API Route Error (404)'),
+                content: SingleChildScrollView(
+                  child: SelectableText(e.message),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Dismiss'),
+                  ),
+                ],
+              ),
+            );
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.message),
+              duration: const Duration(seconds: 15),
+            ),
+          );
         }
       }
     } catch (e) {
@@ -188,6 +212,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     child: Text(l10n.haveAccount),
                   ),
                 ),
+                if (!kReleaseMode) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Center(
+                    child: Text(
+                      'Server: ${ApiClient.baseUrl}',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -123,7 +124,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             SnackBar(content: Text(errorMsg)),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+          if (!kReleaseMode && e.statusCode == 404) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('API Route Error (404)'),
+                content: SingleChildScrollView(
+                  child: SelectableText(e.message),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Dismiss'),
+                  ),
+                ],
+              ),
+            );
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.message),
+              duration: const Duration(seconds: 15),
+            ),
+          );
         }
       }
     } catch (e) {
@@ -238,6 +261,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Text(l10n.noAccount),
                   ),
                 ),
+                if (!kReleaseMode) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Center(
+                    child: Text(
+                      'Server: ${ApiClient.baseUrl}',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

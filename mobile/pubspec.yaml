@@ -1,7 +1,7 @@
 name: modiri_ai
 description: Modiri AI — AI-powered small business management app.
 publish_to: 'none'
-version: 0.1.0
+version: 0.1.1+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

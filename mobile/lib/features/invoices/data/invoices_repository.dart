@@ -76,6 +76,12 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
     final db = await AppDatabase.instance.database;
     final batch = db.batch();
     for (final inv in invoices) {
+      // Reconcile: delete any existing local placeholder that had the same invoice_number
+      batch.delete(
+        'invoices',
+        where: 'company_id = ? AND invoice_number = ? AND id != ?',
+        whereArgs: [companyId, inv.invoiceNumber, inv.id],
+      );
       batch.insert(
         'invoices',
         {

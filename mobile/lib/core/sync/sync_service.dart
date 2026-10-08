@@ -215,10 +215,19 @@ class SyncService extends StateNotifier<SyncState> {
             await db.update('sales', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
             if (res is Map && res['data'] is Map && res['data']['invoice'] is Map) {
               final inv = res['data']['invoice'] as Map<String, dynamic>;
-              if (inv['invoice_number'] != null) {
+              final serverInvoiceId = inv['id']?.toString();
+              final serverInvoiceNumber = inv['invoice_number']?.toString();
+              if (serverInvoiceId != null) {
+                await db.delete(
+                  'invoices',
+                  where: 'sale_id = ? AND id != ?',
+                  whereArgs: [op['entity_id'], serverInvoiceId],
+                );
+              }
+              if (serverInvoiceNumber != null) {
                 await db.update(
                   'invoices',
-                  {'invoice_number': inv['invoice_number'].toString()},
+                  {'invoice_number': serverInvoiceNumber},
                   where: 'sale_id = ?',
                   whereArgs: [op['entity_id']],
                 );
@@ -276,10 +285,17 @@ class SyncService extends StateNotifier<SyncState> {
             });
             await db.update('appointments', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
           } else if (entityType == 'product' && opType == 'CREATE') {
-            await client.post('/products', body: {
+            final res = await client.post('/products', body: {
               ...payload,
+              'id': op['entity_id'],
               'clientId': clientTxId,
             });
+            if (res is Map && res['data'] is Map && res['data']['id'] != null) {
+              final serverId = res['data']['id'].toString();
+              if (serverId != op['entity_id']) {
+                await db.delete('products', where: 'id = ?', whereArgs: [op['entity_id']]);
+              }
+            }
             await db.update('products', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
           } else if (entityType == 'supplier' && opType == 'CREATE') {
             await client.post('/suppliers', body: {

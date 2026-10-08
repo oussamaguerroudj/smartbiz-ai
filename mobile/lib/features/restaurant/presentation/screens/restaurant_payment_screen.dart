@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/restaurant_repository.dart';
 import '../../domain/restaurant_models.dart';
+import '../../../invoices/data/invoices_repository.dart';
 import 'restaurant_orders_screen.dart';
 
 /// Restaurant Payment Screen (Part 5 & Part 7).
@@ -143,6 +144,7 @@ class _RestaurantPaymentScreenState extends ConsumerState<RestaurantPaymentScree
       ref.invalidate(restaurantActiveOrdersProvider);
       ref.invalidate(restaurantDashboardProvider);
       ref.invalidate(restaurantTablesProvider);
+      ref.invalidate(invoicesRepositoryProvider);
       if (mounted) {
         Navigator.of(context).pop(true);
       }
@@ -372,7 +374,7 @@ class _RestaurantPaymentScreenState extends ConsumerState<RestaurantPaymentScree
                   ),
                   const SizedBox(height: AppSpacing.sm),
 
-                  // Method Selection
+                  // Method Selection (Direct Payment only for Restaurant)
                   Row(
                     children: [
                       Expanded(
@@ -380,14 +382,6 @@ class _RestaurantPaymentScreenState extends ConsumerState<RestaurantPaymentScree
                           label: Center(child: Text(l10n.cashPaymentMethod)),
                           selected: _selectedMethod == 'cash',
                           onSelected: (s) => setState(() => _selectedMethod = 'cash'),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: Center(child: Text(l10n.cardPaymentMethod)),
-                          selected: _selectedMethod == 'card',
-                          onSelected: (s) => setState(() => _selectedMethod = 'card'),
                         ),
                       ),
                     ],

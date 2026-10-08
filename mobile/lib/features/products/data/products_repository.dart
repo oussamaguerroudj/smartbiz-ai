@@ -159,7 +159,8 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     // Try posting to API in background / queue
     try {
       final client = _ref.read(apiClientProvider);
-      await client.post('/products', body: {
+      final res = await client.post('/products', body: {
+        'id': newId,
         'name': name,
         'category': category,
         'purchasePrice': purchasePrice,
@@ -172,6 +173,12 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
         if (color != null && color.isNotEmpty) 'color': color,
         if (brand != null && brand.isNotEmpty) 'brand': brand,
       });
+      if (res is Map && res['data'] is Map && res['data']['id'] != null) {
+        final serverId = res['data']['id'].toString();
+        if (serverId != newId) {
+          await db.delete('products', where: 'id = ?', whereArgs: [newId]);
+        }
+      }
       await load();
     } catch (_) {
       // Offline: Enqueue for sync
@@ -182,6 +189,7 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
         entityId: newId,
         operationType: 'CREATE',
         payload: {
+          'id': newId,
           'name': name,
           'category': category,
           'purchasePrice': purchasePrice,

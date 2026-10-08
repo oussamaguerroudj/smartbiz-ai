@@ -23,9 +23,21 @@ class ApiClient {
 
   static const String definedApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
 
+  static String normalizeUrl(String raw) {
+    var clean = raw.trim().replaceAll(RegExp(r'/+$'), '');
+    if (clean.isEmpty) return '';
+    if (clean.endsWith('/apicd')) {
+      clean = clean.substring(0, clean.length - 2);
+    }
+    if (!clean.endsWith('/api')) {
+      clean = '$clean/api';
+    }
+    return clean;
+  }
+
   static String get defaultBaseUrl {
     if (definedApiUrl.isNotEmpty) {
-      return definedApiUrl;
+      return normalizeUrl(definedApiUrl);
     }
     // In debug mode only, provide local emulator URL if none defined
     if (!kReleaseMode) {
@@ -40,8 +52,14 @@ class ApiClient {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('server_base_url');
-      if (saved != null && saved.trim().isNotEmpty) {
-        baseUrl = saved.trim();
+      if (kReleaseMode && definedApiUrl.isNotEmpty) {
+        // In release builds, compile-time API_URL is authoritative.
+        baseUrl = defaultBaseUrl;
+        if (saved != baseUrl) {
+          await prefs.setString('server_base_url', baseUrl);
+        }
+      } else if (saved != null && saved.trim().isNotEmpty) {
+        baseUrl = normalizeUrl(saved);
       } else {
         baseUrl = defaultBaseUrl;
       }
@@ -71,11 +89,7 @@ class ApiClient {
   }
 
   static Future<void> setBaseUrl(String url) async {
-    var clean = url.trim().replaceAll(RegExp(r'/+$'), '');
-    if (!clean.endsWith('/api')) {
-      clean = '$clean/api';
-    }
-    baseUrl = clean;
+    baseUrl = normalizeUrl(url);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('server_base_url', baseUrl);
@@ -98,7 +112,27 @@ class ApiClient {
     );
   }
 
-  dynamic _decode(http.Response response) {
+  void _logDebugRequest(String method, String path, Uri uri) {
+    debugPrint('=== [API REQUEST] ===');
+    debugPrint('API base URL: $baseUrl');
+    debugPrint('HTTP method: $method');
+    debugPrint('request path: $path');
+    debugPrint('final URL: $uri');
+  }
+
+  void _logDebugResponse(int statusCode, String body) {
+    debugPrint('=== [API RESPONSE] ===');
+    debugPrint('HTTP status: $statusCode');
+    debugPrint('response body: $body');
+    debugPrint('======================');
+  }
+
+  dynamic _decode(
+    http.Response response, {
+    String? method,
+    String? path,
+    Uri? uri,
+  }) {
     dynamic body;
 
     try {
@@ -107,16 +141,28 @@ class ApiClient {
       body = {};
     }
 
+    _logDebugResponse(response.statusCode, response.body);
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
 
+    final rawMessage = (body is Map && body['message'] != null)
+        ? body['message'].toString()
+        : 'Request failed (${response.statusCode})';
+
+    final displayMessage = kReleaseMode
+        ? rawMessage
+        : '$rawMessage\n\nMETHOD: ${method ?? 'UNKNOWN'}\nFULL URL: ${uri ?? '$baseUrl$path'}\nPATH: ${path ?? 'UNKNOWN'}\nSTATUS: ${response.statusCode}\nRESPONSE: ${response.body}';
+
     throw ApiException(
       statusCode: response.statusCode,
-      message: (body is Map && body['message'] != null)
-          ? body['message'].toString()
-          : 'Request failed (${response.statusCode})',
+      message: displayMessage,
       code: body is Map ? body['code']?.toString() : null,
+      method: method,
+      url: uri?.toString() ?? '$baseUrl$path',
+      path: path,
+      responseBody: response.body,
     );
   }
 
@@ -242,14 +288,16 @@ class ApiClient {
     String path, {
     Map<String, String>? query,
   }) async {
+    final uri = _uri(path, query);
+    _logDebugRequest('GET', path, uri);
     final response = await _request(
       () => http.get(
-        _uri(path, query),
+        uri,
         headers: _headers,
       ),
     );
 
-    return _decode(response);
+    return _decode(response, method: 'GET', path: path, uri: uri);
   }
 
   /// Ch. 7/9 printing (Clinic remaining-issues pass)  -  for endpoints
@@ -258,9 +306,11 @@ class ApiClient {
   /// handling as [get] (goes through the same [_request]); only the
   /// response parsing differs.
   Future<Uint8List> getBytes(String path, {Map<String, String>? query}) async {
+    final uri = _uri(path, query);
+    _logDebugRequest('GET', path, uri);
     final response = await _request(
       () => http.get(
-        _uri(path, query),
+        uri,
         headers: _headers,
       ),
     );
@@ -275,12 +325,20 @@ class ApiClient {
     } catch (_) {
       body = {};
     }
+    final rawMsg = (body is Map && body['message'] != null)
+        ? body['message'].toString()
+        : 'Request failed (${response.statusCode})';
+    final displayMessage = kReleaseMode
+        ? rawMsg
+        : '$rawMsg\n\nMETHOD: GET\nFULL URL: $uri\nPATH: $path\nSTATUS: ${response.statusCode}\nRESPONSE: ${response.body}';
     throw ApiException(
       statusCode: response.statusCode,
-      message: (body is Map && body['message'] != null)
-          ? body['message'].toString()
-          : 'Request failed (${response.statusCode})',
+      message: displayMessage,
       code: body is Map ? body['code']?.toString() : null,
+      method: 'GET',
+      url: uri.toString(),
+      path: path,
+      responseBody: response.body,
     );
   }
 
@@ -290,37 +348,41 @@ class ApiClient {
     Duration? timeout,
     http.Client? client,
   }) async {
+    final uri = _uri(path);
+    _logDebugRequest('POST', path, uri);
     final response = await _request(
       () => client != null
           ? client.post(
-              _uri(path),
+              uri,
               headers: _headers,
               body: body != null ? jsonEncode(body) : null,
             )
           : http.post(
-              _uri(path),
+              uri,
               headers: _headers,
               body: body != null ? jsonEncode(body) : null,
             ),
       timeout: timeout,
     );
 
-    return _decode(response);
+    return _decode(response, method: 'POST', path: path, uri: uri);
   }
 
   Future<dynamic> put(
     String path, {
     Object? body,
   }) async {
+    final uri = _uri(path);
+    _logDebugRequest('PUT', path, uri);
     final response = await _request(
       () => http.put(
-        _uri(path),
+        uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
       ),
     );
 
-    return _decode(response);
+    return _decode(response, method: 'PUT', path: path, uri: uri);
   }
 
   /// Added alongside the Restaurant module: every PATCH-declared route
@@ -332,30 +394,34 @@ class ApiClient {
     String path, {
     Object? body,
   }) async {
+    final uri = _uri(path);
+    _logDebugRequest('PATCH', path, uri);
     final response = await _request(
       () => http.patch(
-        _uri(path),
+        uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
       ),
     );
 
-    return _decode(response);
+    return _decode(response, method: 'PATCH', path: path, uri: uri);
   }
 
   Future<dynamic> delete(
     String path, {
     Object? body,
   }) async {
+    final uri = _uri(path);
+    _logDebugRequest('DELETE', path, uri);
     final response = await _request(
       () => http.delete(
-        _uri(path),
+        uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
       ),
     );
 
-    return _decode(response);
+    return _decode(response, method: 'DELETE', path: path, uri: uri);
   }
 }
 
