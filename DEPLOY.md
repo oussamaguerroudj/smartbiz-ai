@@ -83,6 +83,29 @@ HAVING count(*) > 1;
 > [!NOTE]
 > Migration `032_normalize_emails_and_unique_indexes.sql` creates a unique expression index `idx_users_email_unique_lower` on `lower(trim(email))`. If duplicates exist, the migration will abort cleanly without deleting or merging data.
 
+### Reviewing and Flagging Legacy Placeholder Companies (Manual Step)
+Legacy versions of the backend created companies with placeholder `name = 'New Business'` and `business_type = 'company'`.
+To guarantee safety on existing production databases, this update is NOT in the automatic startup sequence. It is located in [`backend/manual_migrations/034_flag_placeholder_companies.sql`](file:///c:/Users/Haoui/Downloads/modiri-business-type-simplified%20%281%29/backend/manual_migrations/034_flag_placeholder_companies.sql).
+
+1. Execute the read-only query to inspect matching rows:
+```sql
+SELECT id, name, business_type, onboarding_completed, created_at
+FROM companies
+WHERE name = 'New Business' AND business_type = 'company';
+```
+2. If confirmed, execute the manual update script:
+```sql
+UPDATE companies
+SET onboarding_completed = false,
+    business_type = NULL
+WHERE name = 'New Business'
+  AND business_type = 'company';
+```
+Or apply the file directly via psql:
+```bash
+psql $DATABASE_URL -f backend/manual_migrations/034_flag_placeholder_companies.sql
+```
+
 ---
 
 ## 4. Building & Running the Flutter Client
