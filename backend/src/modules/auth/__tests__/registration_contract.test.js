@@ -1,4 +1,4 @@
-const { validateRegister, VALID_INDUSTRIES, VALID_TYPES } = require('../auth.validators');
+const { validateRegister } = require('../auth.validators');
 const authService = require('../auth.service');
 const { query } = require('../../../config/db');
 
@@ -23,16 +23,13 @@ describe('Auth Registration Contract & Validation Tests', () => {
     next = jest.fn();
   });
 
-  describe('validateRegister middleware', () => {
-    // 1. successful registration
-    test('1. successful registration: accepts valid registration payload', () => {
+  describe('validateRegister middleware (Intended Contract)', () => {
+    test('1. accepts valid registration payload (name, email, password)', () => {
       req = {
         body: {
           name: 'Ahmed Store',
           email: 'ahmed@store.com',
           password: 'Password123!',
-          industry: 'retail',
-          type: 'retail_store',
         },
       };
 
@@ -41,129 +38,81 @@ describe('Auth Registration Contract & Validation Tests', () => {
       expect(next).toHaveBeenCalledWith(); // No error passed
     });
 
-    // 2. step 1 initial signup without industry and type
-    test('2. initial signup: accepts payload with only name, email, password (no industry or type)', () => {
+    test('2. rejects name shorter than 2 characters', () => {
       req = {
         body: {
-          name: 'Ahmed Modiri',
-          email: 'ahmed@modiri.ai',
+          name: 'A',
+          email: 'ahmed@store.com',
           password: 'Password123!',
         },
       };
+
       validateRegister(req, res, next);
       expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith(); // Clean pass
+      const err = next.mock.calls[0][0];
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toContain('name must be at least 2 characters');
     });
 
-    // 3. allows null or empty industry/type
-    test('3. allows null or empty industry and type during step 1', () => {
+    test('3. rejects invalid email format', () => {
       req = {
         body: {
-          name: 'Ahmed Modiri',
-          email: 'ahmed@modiri.ai',
+          name: 'Ahmed Store',
+          email: 'not-an-email',
           password: 'Password123!',
-          industry: null,
-          type: '',
         },
       };
+
       validateRegister(req, res, next);
       expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith(); // Clean pass
+      const err = next.mock.calls[0][0];
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toContain('A valid email is required');
     });
 
-    // 4. invalid industry/type
-    test('4. invalid industry/type: rejects unknown industry or unknown type', () => {
-      // Invalid industry
+    test('4. rejects password shorter than 6 characters', () => {
       req = {
         body: {
           name: 'Ahmed Store',
           email: 'ahmed@store.com',
-          password: 'Password123!',
-          industry: 'aerospace_unknown',
-          type: 'retail_store',
+          password: '12345',
         },
       };
+
       validateRegister(req, res, next);
       expect(next).toHaveBeenCalledTimes(1);
-      const err1 = next.mock.calls[0][0];
-      expect(err1.statusCode).toBe(400);
-      expect(err1.message).toContain('industry must be one of');
-
-      // Invalid type
-      next.mockClear();
-      req.body.industry = 'retail';
-      req.body.type = 'spaceship_station';
-      validateRegister(req, res, next);
-      expect(next).toHaveBeenCalledTimes(1);
-      const err2 = next.mock.calls[0][0];
-      expect(err2.statusCode).toBe(400);
-      expect(err2.message).toContain('type must be one of');
-    });
-
-    // 5. Flutter request payload matching backend schema
-    test('5. Flutter request payload matching backend schema: accepts exact Flutter JSON body', () => {
-      const flutterPayload = {
-        name: 'Fatima Zahra',
-        email: 'fatima@pharmacy.dz',
-        password: 'SecurePassword2026!',
-      };
-
-      req = { body: flutterPayload };
-      validateRegister(req, res, next);
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith(); // Clean pass
+      const err = next.mock.calls[0][0];
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toContain('password must be at least 6 characters');
     });
   });
 
-  describe('authService.register with industry & type', () => {
-    test('stores industry and type in pending_registrations and sends email', async () => {
+  describe('authService.register contract', () => {
+    test('creates pending_registrations row without industry/type and returns pendingVerification', async () => {
       query.mockResolvedValueOnce({ rows: [] }); // No existing user
       query.mockResolvedValueOnce({ rows: [] }); // insert pending_registrations
 
       const result = await authService.register({
-        name: 'Karim Superette',
-        email: 'karim@superette.dz',
-        password: 'Password123!',
-        industry: 'retail',
-        type: 'supermarket',
-      });
-
-      expect(result).toEqual({
-        email: 'karim@superette.dz',
-        pendingVerification: true,
-      });
-
-      // Verify DB query inserted industry and type
-      expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('industry, type'),
-        expect.arrayContaining(['retail', 'supermarket']),
-      );
-    });
-
-    test('stores null industry and type for step 1 signup when omitted', async () => {
-      query.mockResolvedValueOnce({ rows: [] }); // No existing user
-      query.mockResolvedValueOnce({ rows: [] }); // insert pending_registrations
-
-      const result = await authService.register({
-        name: 'New Business Owner',
-        email: 'owner@example.com',
+        name: 'New Founder',
+        email: 'founder@example.com',
         password: 'Password123!',
       });
 
       expect(result).toEqual({
-        email: 'owner@example.com',
+        email: 'founder@example.com',
         pendingVerification: true,
       });
 
+      // Verify DB query inserted only canonical pending_registrations fields
       expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('industry, type'),
-        expect.arrayContaining([null, null]),
+        expect.stringContaining('INSERT INTO pending_registrations'),
+        expect.arrayContaining(['New Founder', 'founder@example.com']),
       );
     });
   });
 
-  describe('authService.login business_type contract', () => {
-    test('login returns authoritative businessType on both user and company objects', async () => {
+  describe('authService.login business_type and onboarding contract', () => {
+    test('login returns authoritative businessType and onboardingCompleted on both user and company', async () => {
       const bcrypt = require('bcrypt');
       const hash = await bcrypt.hash('Password123!', 10);
 
@@ -179,6 +128,7 @@ describe('Auth Registration Contract & Validation Tests', () => {
             email_verified: true,
             business_type: 'clinic',
             company_name: 'Dr Amine Clinic',
+            onboarding_completed: true,
           },
         ],
       });
@@ -189,7 +139,9 @@ describe('Auth Registration Contract & Validation Tests', () => {
       });
 
       expect(res.user.businessType).toBe('clinic');
+      expect(res.user.onboardingCompleted).toBe(true);
       expect(res.company.businessType).toBe('clinic');
+      expect(res.company.onboardingCompleted).toBe(true);
       expect(res.company.name).toBe('Dr Amine Clinic');
       expect(res.accessToken).toBeDefined();
     });
