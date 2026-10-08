@@ -147,6 +147,9 @@ async function register({ name, email, password }) {
   try {
     await sendVerificationCodeEmail({ name: trimmedName, email: normalizedEmail, code });
   } catch (err) {
+    const domain = normalizedEmail.split('@')[1] || 'unknown';
+    // eslint-disable-next-line no-console
+    console.error(`[EMAIL] Verification email failed for recipient @${domain}:`, err.message);
     throw ApiError.internal(
       'We could not send the verification email. Please try resending the code.',
       'VERIFICATION_EMAIL_FAILED',
@@ -341,7 +344,17 @@ async function resendVerification({ email }) {
     [normalizedEmail, codeHash, expires],
   );
 
-  await sendVerificationCodeEmail({ name: pending.name, email: normalizedEmail, code });
+  try {
+    await sendVerificationCodeEmail({ name: pending.name, email: normalizedEmail, code });
+  } catch (err) {
+    const domain = normalizedEmail.split('@')[1] || 'unknown';
+    // eslint-disable-next-line no-console
+    console.error(`[EMAIL] Resend verification email failed for recipient @${domain}:`, err.message);
+    throw ApiError.internal(
+      'We could not send the verification email. Please try resending the code.',
+      'VERIFICATION_EMAIL_FAILED',
+    );
+  }
 }
 
 /**

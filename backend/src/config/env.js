@@ -31,20 +31,8 @@ if (nodeEnv === 'production') {
   if (!corsOrigin) {
     throw new Error('CORS_ORIGIN is required in production');
   }
-  if (!process.env.SMTP_HOST || String(process.env.SMTP_HOST).trim() === '') {
-    throw new Error('SMTP_HOST is required in production');
-  }
-  if (!process.env.SMTP_PORT || String(process.env.SMTP_PORT).trim() === '') {
-    throw new Error('SMTP_PORT is required in production');
-  }
-  if (!process.env.SMTP_USER || String(process.env.SMTP_USER).trim() === '') {
-    throw new Error('SMTP_USER is required in production');
-  }
-  if (!process.env.SMTP_PASS || String(process.env.SMTP_PASS).trim() === '') {
-    throw new Error('SMTP_PASS is required in production');
-  }
-  if (!process.env.SMTP_FROM || String(process.env.SMTP_FROM).trim() === '') {
-    throw new Error('SMTP_FROM is required in production');
+  if (!process.env.BREVO_API_KEY || String(process.env.BREVO_API_KEY).trim() === '') {
+    throw new Error('BREVO_API_KEY is required in production');
   }
 }
 
@@ -118,13 +106,19 @@ module.exports = {
     ocrServiceUrl: process.env.OCR_SERVICE_URL || null,
   },
 
+  brevo: {
+    apiKey: process.env.BREVO_API_KEY || null,
+    fromEmail: process.env.BREVO_FROM_EMAIL || 'oussama.guerroudj@ensia.edu.dz',
+    fromName: process.env.BREVO_FROM_NAME || 'Modiri AI',
+  },
+
   smtp: {
     host: process.env.SMTP_HOST || null,
-    port: positiveInt('SMTP_PORT', '587'),
+    port: process.env.SMTP_PORT ? positiveInt('SMTP_PORT', '587') : 587,
     user: process.env.SMTP_USER || null,
     pass: process.env.SMTP_PASS || null,
     from:
       process.env.SMTP_FROM ||
-      'Modiri AI <no-reply@modiri.ai>',
+      'Modiri AI <oussama.guerroudj@ensia.edu.dz>',
   },
 };

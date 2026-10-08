@@ -24,16 +24,12 @@ services:
         value: 30d
       - key: CORS_ORIGIN
         value: "*"
-      - key: SMTP_HOST
+      - key: BREVO_API_KEY
         sync: false
-      - key: SMTP_PORT
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: SMTP_FROM
-        sync: false
+      - key: BREVO_FROM_EMAIL
+        value: oussama.guerroudj@ensia.edu.dz
+      - key: BREVO_FROM_NAME
+        value: Modiri AI
       - key: AI_BASE_URL
         value: http://localhost:11434/v1
       - key: AI_API_KEY

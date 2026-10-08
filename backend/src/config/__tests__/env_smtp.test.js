@@ -1,4 +1,4 @@
-describe('Production SMTP Boot Validation', () => {
+describe('Production Email Boot Validation', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -10,39 +10,28 @@ describe('Production SMTP Boot Validation', () => {
     process.env = originalEnv;
   });
 
-  test('throws in production when SMTP_HOST is missing', () => {
+  test('throws in production when BREVO_API_KEY is missing', () => {
     process.env.NODE_ENV = 'production';
     process.env.CORS_ORIGIN = '*';
     process.env.DATABASE_URL = 'postgresql://localhost:5432/db';
     process.env.JWT_ACCESS_SECRET = 'a'.repeat(32);
     process.env.JWT_REFRESH_SECRET = 'b'.repeat(32);
-    delete process.env.SMTP_HOST;
+    delete process.env.BREVO_API_KEY;
 
-    expect(() => require('../env')).toThrow('SMTP_HOST is required in production');
+    expect(() => require('../env')).toThrow('BREVO_API_KEY is required in production');
   });
 
-  test('throws in production when SMTP_USER is missing', () => {
+  test('succeeds in production when BREVO_API_KEY is provided', () => {
     process.env.NODE_ENV = 'production';
     process.env.CORS_ORIGIN = '*';
     process.env.DATABASE_URL = 'postgresql://localhost:5432/db';
     process.env.JWT_ACCESS_SECRET = 'a'.repeat(32);
     process.env.JWT_REFRESH_SECRET = 'b'.repeat(32);
-    process.env.SMTP_HOST = 'smtp.example.com';
-    delete process.env.SMTP_USER;
+    process.env.BREVO_API_KEY = 'xkeysib-test-dummy-key';
 
-    expect(() => require('../env')).toThrow('SMTP_USER is required in production');
-  });
-
-  test('throws in production when SMTP_PASS is missing', () => {
-    process.env.NODE_ENV = 'production';
-    process.env.CORS_ORIGIN = '*';
-    process.env.DATABASE_URL = 'postgresql://localhost:5432/db';
-    process.env.JWT_ACCESS_SECRET = 'a'.repeat(32);
-    process.env.JWT_REFRESH_SECRET = 'b'.repeat(32);
-    process.env.SMTP_HOST = 'smtp.example.com';
-    process.env.SMTP_USER = 'user';
-    delete process.env.SMTP_PASS;
-
-    expect(() => require('../env')).toThrow('SMTP_PASS is required in production');
+    const env = require('../env');
+    expect(env.brevo.apiKey).toBe('xkeysib-test-dummy-key');
+    expect(env.brevo.fromEmail).toBe('oussama.guerroudj@ensia.edu.dz');
+    expect(env.brevo.fromName).toBe('Modiri AI');
   });
 });

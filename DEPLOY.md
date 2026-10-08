@@ -37,6 +37,13 @@ In the Render Blueprint configuration interface, you must provide values for the
 > [!IMPORTANT]
 > The backend server enforces **fail-fast boot validation** in production (`NODE_ENV=production`). If any of the five SMTP variables are missing, the server process will exit with code 1 at boot to prevent users registering without receiving verification emails.
 
+> [!WARNING]
+> **Render Free Tier Outbound SMTP Restriction**:
+> Render blocks outbound traffic on SMTP ports 25, 465, and 587 for all web services on the Free tier. When running on Render Free tier, direct SMTP connections to `smtp-relay.brevo.com:587` will hang until client timeout. Upgrading the Render web service to any paid instance type (e.g. Starter) unblocks outbound ports 587 and 465. Alternatively, port 2525 can be evaluated if permitted by the network tier.
+>
+> **Brevo Sender Verification**:
+> `SMTP_FROM` must match an authorized/verified sender address in Brevo (e.g. `oussama.guerroudj@ensia.edu.dz`). Unverified sender addresses will cause Brevo to reject or block transactional email dispatch.
+
 ### Step 2.3: Automated Migrations & Tracking Table
 Render executes the following startup command automatically:
 ```bash

@@ -1,97 +1,166 @@
-const nodemailer = require('nodemailer');
 const env = require('../config/env');
 
-/**
- * Shared SMTP transporter.
- *
- * TLS certificate verification is enabled by default.
- * For local development only, it can be explicitly disabled with:
- *
- * SMTP_REJECT_UNAUTHORIZED=false
- *
- * Never use this setting in production.
- */
-
-const rejectUnauthorized =
-  process.env.SMTP_REJECT_UNAUTHORIZED !== 'false';
-
-if (
-  env.smtp.user &&
-  !env.smtp.pass
-) {
-  throw new Error(
-    'SMTP_PASS is required when SMTP_USER is configured',
-  );
+function getRecipientDomain(email) {
+  const parts = String(email || '').split('@');
+  return parts.length > 1 ? `@${parts[1]}` : 'unknown';
 }
 
-const transporter = env.smtp.host
-  ? nodemailer.createTransport({
-      host: env.smtp.host,
-      port: env.smtp.port,
-      secure: env.smtp.port === 465,
+/**
+ * Sends a transactional email using the Brevo HTTPS REST API.
+ * Endpoint: POST https://api.brevo.com/v3/smtp/email
+ *
+ * This bypasses outbound SMTP port restrictions (e.g. Render Free tier blocking ports 25, 465, 587).
+ */
+async function sendMail({ to, subject, html, text }) {
+  const apiKey = env.brevo.apiKey;
+  const fromEmail = env.brevo.fromEmail;
+  const fromName = env.brevo.fromName;
 
-      auth: env.smtp.user
-        ? {
-            user: env.smtp.user,
-            pass: env.smtp.pass,
-          }
-        : undefined,
+  if (!apiKey) {
+    if (env.nodeEnv === 'test') {
+      return { messageId: 'mock-test-id', accepted: [to ? to.trim() : ''] };
+    }
 
-      tls: {
-        rejectUnauthorized,
-      },
-    })
-  : null;
-
-async function sendMail({ to, subject, html }) {
-  if (!transporter) {
     // eslint-disable-next-line no-console
     console.error(
-      `[email] SMTP is not configured (SMTP_HOST missing) - ` +
-        `cannot send "${subject}" to ${to}. ` +
-        'Set SMTP_HOST/PORT/USER/PASS/FROM in .env.',
+      `[EMAIL] Brevo API key is not configured (BREVO_API_KEY missing) - ` +
+        `cannot send "${subject}" to ${getRecipientDomain(to)}. ` +
+        'Set BREVO_API_KEY in .env.',
     );
 
-    throw new Error(
-      'Email delivery is not configured on this server',
-    );
+    throw new Error('Email delivery is not configured on this server');
   }
 
-  if (env.nodeEnv === 'production' && !rejectUnauthorized) {
-    throw new Error(
-      'SMTP certificate verification cannot be disabled in production',
-    );
-  }
-
-  if (
-    typeof to !== 'string' ||
-    to.trim().length === 0
-  ) {
+  if (typeof to !== 'string' || to.trim().length === 0) {
     throw new Error('Email recipient is required');
   }
 
-  if (
-    typeof subject !== 'string' ||
-    subject.trim().length === 0
-  ) {
+  if (typeof subject !== 'string' || subject.trim().length === 0) {
     throw new Error('Email subject is required');
   }
 
-  if (
-    typeof html !== 'string' ||
-    html.trim().length === 0
-  ) {
+  if (typeof html !== 'string' || html.trim().length === 0) {
     throw new Error('Email content is required');
   }
 
-  await transporter.sendMail({
-    from: env.smtp.from,
-    to: to.trim(),
+  const recipientDomain = getRecipientDomain(to);
+  const startTime = Date.now();
+
+  // eslint-disable-next-line no-console
+  console.log(`[EMAIL] verification_email start: provider=brevo-https toDomain=${recipientDomain}`);
+
+  const payload = {
+    sender: {
+      name: fromName,
+      email: fromEmail,
+    },
+    to: [
+      {
+        email: to.trim(),
+      },
+    ],
     subject: subject.trim(),
-    html,
-  });
+    htmlContent: html,
+  };
+
+  if (text && typeof text === 'string' && text.trim().length > 0) {
+    payload.textContent = text.trim();
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  if (typeof timeoutId.unref === 'function') {
+    timeoutId.unref();
+  }
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'accept': 'application/json',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    const duration = Date.now() - startTime;
+
+    if (!response.ok) {
+      let errBody;
+      try {
+        errBody = await response.json();
+      } catch (_) {
+        errBody = await response.text();
+      }
+
+      // eslint-disable-next-line no-console
+      console.error(`[EMAIL] verification_email failed after ${duration} ms (status ${response.status}):`, {
+        status: response.status,
+        message: errBody?.message || 'Brevo API error',
+      });
+
+      const err = new Error(errBody?.message || `Brevo API returned status ${response.status}`);
+      err.code = 'BREVO_API_ERROR';
+      err.status = response.status;
+      throw err;
+    }
+
+    const data = await response.json().catch(() => ({}));
+    // eslint-disable-next-line no-console
+    console.log(`[EMAIL] Brevo HTTPS API completed in ${duration} ms`);
+    // eslint-disable-next-line no-console
+    console.log(`[EMAIL] verification_email success: messageId=${data?.messageId || 'accepted'}`);
+
+    return {
+      messageId: data?.messageId || 'accepted',
+      accepted: [to.trim()],
+    };
+  } catch (err) {
+    const duration = Date.now() - startTime;
+    if (err.name === 'AbortError') {
+      // eslint-disable-next-line no-console
+      console.error(`[EMAIL] verification_email failed after ${duration} ms: Request timed out after 8000ms`);
+      const timeoutErr = new Error('Brevo API request timed out');
+      timeoutErr.code = 'ETIMEDOUT';
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function verifyEmailService() {
+  const apiKey = env.brevo.apiKey;
+  if (!apiKey) {
+    return { ok: false, error: 'BREVO_API_KEY is not configured' };
+  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  if (typeof timeoutId.unref === 'function') {
+    timeoutId.unref();
+  }
+  try {
+    const res = await fetch('https://api.brevo.com/v3/account', {
+      method: 'GET',
+      headers: {
+        'api-key': apiKey,
+        'accept': 'application/json',
+      },
+      signal: controller.signal,
+    });
+    return { ok: res.ok, status: res.status };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 module.exports = {
   sendMail,
+  verifyEmailService,
+  verifySmtp: verifyEmailService,
 };
