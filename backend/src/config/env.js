@@ -27,10 +27,19 @@ const corsOrigin = process.env.CORS_ORIGIN || (
   nodeEnv === 'production' ? null : '*'
 );
 
-if (nodeEnv === 'production' && !corsOrigin) {
-  throw new Error(
-    'CORS_ORIGIN is required in production',
-  );
+if (nodeEnv === 'production') {
+  if (!corsOrigin) {
+    throw new Error('CORS_ORIGIN is required in production');
+  }
+  if (!process.env.SMTP_HOST || String(process.env.SMTP_HOST).trim() === '') {
+    throw new Error('SMTP_HOST is required in production');
+  }
+  if (!process.env.SMTP_USER || String(process.env.SMTP_USER).trim() === '') {
+    throw new Error('SMTP_USER is required in production');
+  }
+  if (!process.env.SMTP_PASS || String(process.env.SMTP_PASS).trim() === '') {
+    throw new Error('SMTP_PASS is required in production');
+  }
 }
 
 const accessSecret = required('JWT_ACCESS_SECRET');
