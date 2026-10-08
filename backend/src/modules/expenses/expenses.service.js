@@ -29,7 +29,7 @@ function resolvePeriodEnd(periodType, periodStart) {
       return nextYear.toISOString().slice(0, 10);
     }
     default:
-      return null; // 'custom' — caller supplies period_end explicitly
+      return null; // 'custom'  -  caller supplies period_end explicitly
   }
 }
 

@@ -6,7 +6,7 @@ const { requireBusinessType } = require('../../middlewares/businessType.middlewa
 /**
  * Deliberately thin: Products, Sales, Purchases(-as-cost-tracking) and
  * Suppliers are all CORE screens/endpoints a pharmacy account already
- * has full access to (`/products`, `/sales`, `/suppliers`) — Ch. 21's
+ * has full access to (`/products`, `/sales`, `/suppliers`)  -  Ch. 21's
  * "reuse existing APIs" rule means this router only adds the two
  * things that don't exist anywhere else yet: the dashboard aggregate
  * and the expiring-products list.

@@ -4,7 +4,7 @@ const { authMiddleware } = require('../../middlewares/auth.middleware');
 const { calculateFinancials } = require('../financial/financial.service');
 
 /**
- * Reports — All figures are calculated via the central financial calculation
+ * Reports  -  All figures are calculated via the central financial calculation
  * service (financial.service.js) guaranteeing identical calculation logic with
  * the Dashboard, zero double-counting, and strict date boundaries.
  */

@@ -3,7 +3,7 @@ const PDFDocument = require('pdfkit');
 // This app's invoices module had a deliberate placeholder
 // (invoices.controller.pdfPlaceholder: "PDF generation ... deliberately
 // deferred to a dedicated batch"). This file is that dedicated batch
-// for the Clinic module specifically (prescriptions + clinic invoices —
+// for the Clinic module specifically (prescriptions + clinic invoices  - 
 // Ch. 7/9/25), built as a small shared utility rather than duplicated
 // per-document-type layout code, so the generic invoices module can
 // adopt the same PDFDocument-based approach later instead of
@@ -40,7 +40,7 @@ function drawHeader(doc, company) {
 }
 
 /**
- * Ch. 7 — "Print Prescription". Renders directly onto the response
+ * Ch. 7  -  "Print Prescription". Renders directly onto the response
  * stream (no temp file on disk).
  */
 function streamPrescriptionPdf(res, { company, patient, prescription }) {
@@ -92,12 +92,12 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
 }
 
 /**
- * Ch. 9 — "Print Clinic Invoice". amounts are all taken verbatim from
+ * Ch. 9  -  "Print Clinic Invoice". amounts are all taken verbatim from
  * the same computed invoice view the JSON endpoint returns (built in
- * clinic.service.getVisitInvoice) — this function does no calculation
+ * clinic.service.getVisitInvoice)  -  this function does no calculation
  * of its own, so the printed total can never drift from the
  * backend-calculated one (Ch. 9: "Never calculate important financial
- * totals differently in the frontend and backend" — extended here to
+ * totals differently in the frontend and backend"  -  extended here to
  * mean "differently in the JSON view and the PDF view" too).
  */
 function streamClinicInvoicePdf(res, { company, invoice }) {
@@ -149,10 +149,10 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
 }
 
 /**
- * Ch. 9-equivalent for Restaurant — "Print Clinic Invoice" section's
+ * Ch. 9-equivalent for Restaurant  -  "Print Clinic Invoice" section's
  * amounts-from-one-source rule generalized: this itemized table comes
  * straight from invoice.items, which restaurant.service.getOrderInvoice
- * copies verbatim from restaurant_order_items — no recalculation here.
+ * copies verbatim from restaurant_order_items  -  no recalculation here.
  */
 function streamRestaurantInvoicePdf(res, { company, invoice }) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });

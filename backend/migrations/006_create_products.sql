@@ -1,5 +1,5 @@
 -- 006_create_products.sql
--- Inventory catalog (Ch. 10). expiration_date is nullable — required only
+-- Inventory catalog (Ch. 10). expiration_date is nullable  -  required only
 -- for grocery/pharmacy profiles at the application-validation layer, not
 -- enforced here at the DB level (business types vary too much for a DB CHECK).
 

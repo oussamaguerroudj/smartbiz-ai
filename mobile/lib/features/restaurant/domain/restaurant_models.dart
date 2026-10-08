@@ -2,7 +2,7 @@
 // brief Ch. 17). Same one-file convention as clinic_models.dart.
 
 /// Postgres NUMERIC columns come back over JSON as strings, not
-/// numbers — parsed centrally here exactly like clinic_models.dart's
+/// numbers  -  parsed centrally here exactly like clinic_models.dart's
 /// `_toDouble`.
 double _toDouble(dynamic v) {
   if (v == null) return 0;
@@ -74,7 +74,7 @@ class RestaurantMenuItem {
       );
 }
 
-/// Ch. 17 — same Paid / Partially paid / Unpaid / Refunded contract as
+/// Ch. 17  -  same Paid / Partially paid / Unpaid / Refunded contract as
 /// Clinic's ClinicPaymentStatus, never derived on the client.
 enum RestaurantPaymentStatus { unpaid, partiallyPaid, paid, refunded }
 
@@ -300,7 +300,7 @@ String restaurantReservationStatusToJson(RestaurantReservationStatus status) => 
       RestaurantReservationStatus.noShow => 'no_show',
     };
 
-/// Ch. 8/9-equivalent — computed, read-only invoice view (GET
+/// Ch. 8/9-equivalent  -  computed, read-only invoice view (GET
 /// /restaurant/orders/:id/invoice). See backend
 /// restaurant.service.getOrderInvoice for why this is derived from the
 /// order rather than a stored entity.
@@ -373,10 +373,10 @@ class RestaurantInvoice {
       );
 }
 
-/// Ch. 13/14 — raw-material/commodity inventory (ingredients, drinks,
+/// Ch. 13/14  -  raw-material/commodity inventory (ingredients, drinks,
 /// supplies), distinct from the menu (what's sold) and from the
 /// generic CORE Products/Stock tabs (which restaurant accounts don't
-/// get — see main_shell.dart's _middleTabsFor comment; this is
+/// get  -  see main_shell.dart's _middleTabsFor comment; this is
 /// additive, a different concept: what goes INTO dishes, not what's
 /// sold directly).
 class RestaurantInventoryItem {
@@ -427,7 +427,7 @@ class RestaurantInventoryItem {
       );
 }
 
-/// Ch. 16 — one recipe line: how much of one inventory item one menu
+/// Ch. 16  -  one recipe line: how much of one inventory item one menu
 /// item consumes. See backend migration 025's header comment for the
 /// "same unit as the inventory item, no conversion" limitation.
 class MenuItemIngredient {
@@ -528,7 +528,7 @@ class RestaurantDashboardStats {
   final int tablesAvailable;
   final int reservationsToday;
 
-  /// Ch. 17 — revenue = actual order payments, never a separate
+  /// Ch. 17  -  revenue = actual order payments, never a separate
   /// product-sale figure; profit = revenue - restaurant expenses.
   final double todayRevenue;
   final double weekRevenue;

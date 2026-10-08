@@ -11,7 +11,7 @@ class AuthRepository {
   final Ref _ref;
 
   /// Registering does NOT create the account yet and does NOT return a
-  /// session — the backend only stores a pending signup + emails a code.
+  /// session  -  the backend only stores a pending signup + emails a code.
   /// The account (and a usable session) only comes into existence once
   /// [verifyAccount] confirms the right code. So there is nothing to
   /// apply to the session here; the caller just moves on to the "enter
@@ -50,7 +50,7 @@ class AuthRepository {
   }
 
   /// Confirms the 6-digit code emailed to [email]. This is the moment the
-  /// account is actually created on the backend — success always comes
+  /// account is actually created on the backend  -  success always comes
   /// back with a real session (user + tokens), which we apply here so
   /// the user lands straight in the app already signed in.
   Future<void> verifyAccount({required String email, required String code}) async {
@@ -81,7 +81,7 @@ class AuthRepository {
 
   /// Step 1 of "Forgot password": asks the backend to email a reset code
   /// to [email]. Always succeeds from the UI's point of view even if the
-  /// email isn't registered, unless the backend says otherwise — that
+  /// email isn't registered, unless the backend says otherwise  -  that
   /// choice is left to the backend's error response.
   Future<void> requestPasswordReset({required String email}) async {
     final client = _ref.read(apiClientProvider);

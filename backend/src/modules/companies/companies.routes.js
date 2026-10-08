@@ -5,7 +5,7 @@ const ApiError = require('../../utils/ApiError');
 const { authMiddleware } = require('../../middlewares/auth.middleware');
 
 /**
- * Companies — one row per tenant.
+ * Companies  -  one row per tenant.
  *
  * The authenticated user's companyId is always taken from the
  * verified JWT through req.user.companyId.
@@ -13,10 +13,10 @@ const { authMiddleware } = require('../../middlewares/auth.middleware');
  * IMPORTANT:
  * Never accept companyId from req.body, req.query, or req.params.
  */
-// Ch. 1/16 — SPECIALIZED BUSINESS CONTENT: matches business_type_enum
+// Ch. 1/16  -  SPECIALIZED BUSINESS CONTENT: matches business_type_enum
 // after migration 016. Every value here works fully at the CORE level
 // regardless of whether a dedicated specialized module (clinic_*,
-// restaurant_*, ...) exists for it yet — see backend/SPECIALIZED_MODULES.md
+// restaurant_*, ...) exists for it yet  -  see backend/SPECIALIZED_MODULES.md
 // for which verticals currently have one.
 const VALID_TYPES = [
   'clothing',

@@ -139,7 +139,7 @@ class EnterpriseProjectSummary {
   final int overdue;
   final int total;
 
-  /// Planned + in progress + on hold — what "open projects" means on
+  /// Planned + in progress + on hold  -  what "open projects" means on
   /// the dashboard.
   int get open => planned + active + onHold;
 
@@ -177,7 +177,7 @@ class EnterpriseDashboardStats {
   });
 
   /// Revenue = invoiced sales + credit payments received; expenses =
-  /// operating expenses + payroll; profit = revenue - expenses — the
+  /// operating expenses + payroll; profit = revenue - expenses  -  the
   /// same formula as the CORE dashboard (see enterprise.service.js).
   final double todayRevenue;
   final double todayExpenses;

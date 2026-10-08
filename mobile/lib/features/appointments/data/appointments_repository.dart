@@ -8,7 +8,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/session.dart';
 import '../../../core/sync/sync_service.dart';
 
-/// Appointments — Spec Ch. 18.
+/// Appointments  -  Spec Ch. 18.
 /// Real Offline-First implementation backed by local SQLite & Sync Queue.
 class Appointment {
   Appointment({

@@ -14,7 +14,7 @@ import 'add_product_screen.dart';
 import 'product_details_screen.dart';
 import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 
-/// Products List — Spec Ch. 10.1. Wired to real data via
+/// Products List  -  Spec Ch. 10.1. Wired to real data via
 /// [productsRepositoryProvider] and renders each product using the
 /// universal [UniversalProductCard] component.
 class ProductsListScreen extends ConsumerStatefulWidget {

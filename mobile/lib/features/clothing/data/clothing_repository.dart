@@ -32,7 +32,7 @@ class ClothingRepository {
       } catch (_) {}
     }
 
-    // Offline fallback — scoped to the active company
+    // Offline fallback  -  scoped to the active company
     return LocalFinancialCalculator.calculateClothingDashboard(companyId: companyId);
   }
 }

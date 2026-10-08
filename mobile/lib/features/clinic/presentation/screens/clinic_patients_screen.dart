@@ -12,7 +12,7 @@ final clinicPatientsProvider = FutureProvider.autoDispose((ref) {
   return ref.read(clinicRepositoryProvider).listPatients();
 });
 
-/// Patients list (Ch. 3.B) — tapping a patient opens their full
+/// Patients list (Ch. 3.B)  -  tapping a patient opens their full
 /// Patient Profile (Ch. 3.C); the FAB opens the Add Patient form.
 class ClinicPatientsScreen extends ConsumerStatefulWidget {
   const ClinicPatientsScreen({super.key});

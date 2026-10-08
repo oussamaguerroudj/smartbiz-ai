@@ -1,13 +1,13 @@
 /**
- * Ch. 29 — the single most important test in this migration:
+ * Ch. 29  -  the single most important test in this migration:
  * a user must never be able to get another company's data out of the
  * AI, no matter what they ask or what the model tries to pass as tool
  * arguments.
  *
  * Approach: mock the DB layer and assert, for every tool, that (a) the
  * companyId actually bound into the SQL query is always exactly the
- * companyId this test passed in — never something pulled from `args`
- * — and (b) supplying a forged `companyId` inside `args` (as if a
+ * companyId this test passed in  -  never something pulled from `args`
+ *  -  and (b) supplying a forged `companyId` inside `args` (as if a
  * malicious/confused model tried to smuggle one in) has NO effect on
  * which company gets queried.
  */

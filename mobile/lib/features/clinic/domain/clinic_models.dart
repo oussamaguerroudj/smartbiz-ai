@@ -4,7 +4,7 @@
 // living directly inside customers_screen.dart).
 
 /// Postgres NUMERIC columns (consultation_price, amount_paid, every
-/// revenue figure below) come back over JSON as strings, not numbers —
+/// revenue figure below) come back over JSON as strings, not numbers  - 
 /// parsed centrally here so every model below stays a one-line call
 /// instead of repeating the same num-or-string branch.
 double _toDouble(dynamic v) {
@@ -43,7 +43,7 @@ class ClinicPatient {
       );
 }
 
-/// Ch. 8 — Paid / Partially paid / Unpaid / Refunded. Deliberately
+/// Ch. 8  -  Paid / Partially paid / Unpaid / Refunded. Deliberately
 /// never derived on the client: it always comes from the server's
 /// clinic_payments ledger, the single source of truth (Ch. 21).
 enum ClinicPaymentStatus { unpaid, partiallyPaid, paid, refunded }
@@ -79,7 +79,7 @@ class ClinicVisit {
   final String? prescription;
   final DateTime? followUpDate;
 
-  /// Ch. 7 — the consultation price, what was paid, and what's left.
+  /// Ch. 7  -  the consultation price, what was paid, and what's left.
   final double consultationPrice;
   final double amountPaid;
   final ClinicPaymentStatus paymentStatus;
@@ -102,7 +102,7 @@ class ClinicVisit {
 }
 
 /// One line of the consultation payment ledger (Ch. 5's "Payments" on
-/// the patient profile) — a negative [amount] is a refund.
+/// the patient profile)  -  a negative [amount] is a refund.
 class ClinicPayment {
   ClinicPayment({
     required this.id,
@@ -130,9 +130,9 @@ class ClinicPayment {
       );
 }
 
-/// Ch. 4 — one uploaded medical document (PDF report, analysis,
+/// Ch. 4  -  one uploaded medical document (PDF report, analysis,
 /// prescription scan, ...). File content itself is stored elsewhere
-/// (fileUrl only — this app has no binary upload storage service wired
+/// (fileUrl only  -  this app has no binary upload storage service wired
 /// up yet, see migration 017/022's notes); what's modeled here is the
 /// metadata the spec asks for: who uploaded it, when, how big, what type.
 class ClinicDocument {
@@ -171,7 +171,7 @@ class ClinicDocument {
       );
 }
 
-/// Ch. 6 — one line (medication) inside a prescription.
+/// Ch. 6  -  one line (medication) inside a prescription.
 class ClinicPrescriptionItem {
   ClinicPrescriptionItem({
     required this.medicationName,
@@ -208,7 +208,7 @@ class ClinicPrescriptionItem {
       };
 }
 
-/// Ch. 6 — a full prescription/ordonnance: patient + doctor + date +
+/// Ch. 6  -  a full prescription/ordonnance: patient + doctor + date +
 /// one or more medication items, with a unique prescriptionNumber
 /// ("RX-<n>", same per-company sequential pattern as invoice numbers).
 class ClinicPrescription {
@@ -244,8 +244,8 @@ class ClinicPrescription {
       );
 }
 
-/// Ch. 8/9 — computed, read-only invoice view (GET /clinic/visits/:id/invoice).
-/// Not a stored entity — see backend clinic.service.getVisitInvoice.
+/// Ch. 8/9  -  computed, read-only invoice view (GET /clinic/visits/:id/invoice).
+/// Not a stored entity  -  see backend clinic.service.getVisitInvoice.
 class ClinicInvoice {
   ClinicInvoice({
     required this.invoiceNumber,
@@ -301,7 +301,7 @@ class ClinicPatientProfile {
   final List<ClinicDocument> documents;
   final List<ClinicPrescription> prescriptions;
 
-  /// Ch. 5 — "Outstanding amount if applicable", summed server-side
+  /// Ch. 5  -  "Outstanding amount if applicable", summed server-side
   /// from this same patient's unpaid/partially-paid visits.
   final double outstandingBalance;
 
@@ -389,7 +389,7 @@ class ClinicDashboardStats {
   final int newPatientsToday;
   final int doctorCount;
 
-  /// Ch. 9-11 — revenue = actual patient payments, never product
+  /// Ch. 9-11  -  revenue = actual patient payments, never product
   /// sales; profit = revenue - clinic expenses.
   final double todayRevenue;
   final double weekRevenue;

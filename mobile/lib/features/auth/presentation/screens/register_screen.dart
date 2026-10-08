@@ -6,7 +6,7 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/auth_repository.dart';
 
-/// Register Screen — STEP 1 of Onboarding Flow
+/// Register Screen  -  STEP 1 of Onboarding Flow
 /// Initial account creation containing ONLY:
 /// 1. Full Name
 /// 2. Email

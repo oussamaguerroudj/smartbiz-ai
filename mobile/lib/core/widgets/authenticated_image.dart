@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/images_repository.dart';
 
-/// Ch. 17/18 — renders an image stored via ImagesRepository, network URL,
+/// Ch. 17/18  -  renders an image stored via ImagesRepository, network URL,
 /// or local file path. When a storage key is passed, the backend requires
 /// the caller's auth token (GET /images/file is behind authMiddleware,
 /// company-scoped), so bytes are fetched via fetchImageBytes and cached.

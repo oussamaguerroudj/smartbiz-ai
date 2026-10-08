@@ -17,7 +17,7 @@ final clinicPatientProfileProvider =
   return ref.read(clinicRepositoryProvider).patientProfile(patientId);
 });
 
-/// Patient Profile (Ch. 3.C) — personal info at top, full Visit
+/// Patient Profile (Ch. 3.C)  -  personal info at top, full Visit
 /// History (Ch. 3.H) below, plus a quick action to add this patient to
 /// today's Queue (Ch. 3.F) without needing to go back to the Queue
 /// screen and search for them again.
@@ -100,10 +100,10 @@ class ClinicPatientProfileScreen extends ConsumerWidget {
     }
   }
 
-  /// Ch. 4 (remaining-issues pass) — real file picker + real upload.
+  /// Ch. 4 (remaining-issues pass)  -  real file picker + real upload.
   /// Picks a PDF or image, reads its bytes, and uploads via
   /// ClinicRepository.addDocument (base64-in-JSON to the backend,
-  /// which now does real local-disk storage — see clinic_repository's
+  /// which now does real local-disk storage  -  see clinic_repository's
   /// doc comment for why base64 and not multipart).
   Future<void> _addDocument(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
@@ -200,7 +200,7 @@ class ClinicPatientProfileScreen extends ConsumerWidget {
     }
   }
 
-  /// Ch. 4 "preview when supported" — PDFs and images both go through
+  /// Ch. 4 "preview when supported"  -  PDFs and images both go through
   /// `printing`'s preview sheet (it renders images too, not just PDF,
   /// so this covers every ALLOWED_DOCUMENT_TYPES value without a
   /// separate image-viewer dependency).
@@ -302,7 +302,7 @@ class ClinicPatientProfileScreen extends ConsumerWidget {
                   Text(profile.patient.fullName, style: Theme.of(context).textTheme.titleLarge),
                   if (profile.patient.phone != null) Text(profile.patient.phone!),
                   if (profile.patient.gender != null) Text(profile.patient.gender!),
-                  // Ch. 5 — "Outstanding amount if applicable": only
+                  // Ch. 5  -  "Outstanding amount if applicable": only
                   // shown when the patient actually owes something, so
                   // a fully-settled patient's profile stays uncluttered.
                   if (profile.outstandingBalance > 0) ...[

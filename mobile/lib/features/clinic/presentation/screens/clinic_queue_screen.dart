@@ -12,7 +12,7 @@ final clinicQueueProvider = FutureProvider.autoDispose((ref) {
   return ref.read(clinicRepositoryProvider).queue();
 });
 
-/// Waiting Room / Queue Management (Ch. 3.F) — explicitly called out as
+/// Waiting Room / Queue Management (Ch. 3.F)  -  explicitly called out as
 /// one of the most important clinic features. Shows the live queue in
 /// order (#01, #02, ...), the "Next Patient: X" banner, and the single
 /// "Call Next Patient" action that moves the earliest WAITING entry to
@@ -71,7 +71,7 @@ class _ClinicQueueScreenState extends ConsumerState<ClinicQueueScreen> {
     }
   }
 
-  /// Ch. 7 — captures the consultation price and (if paid on the spot)
+  /// Ch. 7  -  captures the consultation price and (if paid on the spot)
   /// the amount paid right when the consultation is marked complete,
   /// since that's the one moment the doctor/receptionist is already
   /// looking at this patient and knows both numbers.
@@ -150,7 +150,7 @@ class _ClinicQueueScreenState extends ConsumerState<ClinicQueueScreen> {
     }
   }
 
-  /// Ch. 3.F — "Allow adding a patient directly to the queue from the
+  /// Ch. 3.F  -  "Allow adding a patient directly to the queue from the
   /// Waiting Room page. The user should be able to select an existing
   /// patient." Opens a search-and-pick sheet; the actual duplicate-entry
   /// guard lives server-side (clinic.repository.addToQueue), so whatever
@@ -304,7 +304,7 @@ class _ClinicQueueScreenState extends ConsumerState<ClinicQueueScreen> {
 }
 
 /// Search-and-select sheet reusing the same patients list the Patients
-/// tab already loads (clinicPatientsProvider) — no second "list all
+/// tab already loads (clinicPatientsProvider)  -  no second "list all
 /// patients" code path to keep in sync.
 class _PatientPickerSheet extends ConsumerStatefulWidget {
   const _PatientPickerSheet();

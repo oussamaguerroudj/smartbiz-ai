@@ -1,4 +1,4 @@
-/// Expense model — mirrors `expenses` table (Phase 3 migration 009,
+/// Expense model  -  mirrors `expenses` table (Phase 3 migration 009,
 /// extended by migration 013 with period_type/period_start/period_end)
 /// and GET /expenses response shape.
 enum ExpensePeriodType { oneTime, daily, monthly, yearly, custom }
@@ -68,7 +68,7 @@ class Expense {
   final DateTime periodStart;
   final DateTime periodEnd;
 
-  /// Whole days covered by this expense — used client-side to show
+  /// Whole days covered by this expense  -  used client-side to show
   /// "covers 92 days" / a per-day cost hint next to the amount field.
   int get periodDays => periodEnd.difference(periodStart).inDays + 1;
 

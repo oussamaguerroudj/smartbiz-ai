@@ -30,7 +30,7 @@ class ClothingLowStockProduct {
   final int minimumStock;
 
   /// Short "Size M · Blue · Nike"-style tag built from whichever
-  /// attributes are actually set — none of them are required (Ch. 18
+  /// attributes are actually set  -  none of them are required (Ch. 18
   /// attributes are optional per product, see migration 020).
   String? get attributeSummary {
     final parts = <String>[

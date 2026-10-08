@@ -4,7 +4,7 @@ const { query } = require('../../config/db');
  * Enterprise / Company vertical (business-specialization brief Ch. 19).
  *
  * Only ONE new table backs this vertical (`enterprise_projects`,
- * migration 021) — Clients, Employees/Salaries, Suppliers, Invoices,
+ * migration 021)  -  Clients, Employees/Salaries, Suppliers, Invoices,
  * Payments and Expenses are all CORE data reused as-is (Ch. 21).
  *
  * Every function takes companyId as its first argument and binds it
@@ -18,7 +18,7 @@ const OPEN_STATUSES = ['planned', 'active', 'on_hold'];
 // Financial building blocks (CORE tables)
 // ---------------------------------------------------------------------
 
-/** Invoiced sales revenue for a date range — the same `SUM(total)` over
+/** Invoiced sales revenue for a date range  -  the same `SUM(total)` over
  * `sales.sold_at` the CORE dashboard uses. Credit payments are added
  * on top in the service, exactly like the CORE dashboard does. */
 async function salesRevenueForRange(companyId, rangeStart, rangeEnd) {
@@ -36,7 +36,7 @@ async function salesRevenueForRange(companyId, rangeStart, rangeEnd) {
 
 /** Ch. 19's "Outstanding invoices": every invoice still `unpaid`, with
  * the amount taken from its sale's total (invoices are 1:1 with sales
- * — migration 008). Oldest first, since those are the ones to chase. */
+ *  -  migration 008). Oldest first, since those are the ones to chase. */
 async function unpaidInvoices(companyId, limit = 5) {
   const [totalResult, listResult] = await Promise.all([
     query(
@@ -152,7 +152,7 @@ const PROJECT_SELECT = `
   LEFT JOIN customers c ON c.id = p.customer_id AND c.company_id = p.company_id
 `;
 
-/** Open projects (planned/active/on hold), most urgent due date first —
+/** Open projects (planned/active/on hold), most urgent due date first  - 
  * what the dashboard's Projects card shows. */
 async function openProjects(companyId, limit = 5) {
   const result = await query(

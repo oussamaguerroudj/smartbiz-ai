@@ -196,7 +196,7 @@ class ClinicRepository {
       if (treatment != null && treatment.isNotEmpty) 'treatment': treatment,
       if (prescription != null && prescription.isNotEmpty) 'prescription': prescription,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
-      // Ch. 7 — the consultation price and, if the patient paid on the
+      // Ch. 7  -  the consultation price and, if the patient paid on the
       // spot, that first payment (recorded as a real ledger entry
       // server-side, never a raw column write).
       if (consultationPrice != null) 'consultationPrice': consultationPrice,
@@ -210,7 +210,7 @@ class ClinicRepository {
     await client.post('/clinic/queue/$queueId/cancel');
   }
 
-  /// Ch. 7/8 — record a payment (full or partial) against a visit.
+  /// Ch. 7/8  -  record a payment (full or partial) against a visit.
   Future<void> recordPayment(
     String visitId, {
     required double amount,
@@ -225,7 +225,7 @@ class ClinicRepository {
     });
   }
 
-  /// Ch. 8 — refund everything paid so far on this visit.
+  /// Ch. 8  -  refund everything paid so far on this visit.
   Future<void> refundVisit(String visitId, {String? note}) async {
     final client = _ref.read(apiClientProvider);
     await client.post('/clinic/visits/$visitId/refund', body: {
@@ -233,12 +233,12 @@ class ClinicRepository {
     });
   }
 
-  /// Ch. 4 (remaining-issues pass) — real binary upload: base64-encodes
+  /// Ch. 4 (remaining-issues pass)  -  real binary upload: base64-encodes
   /// [bytes] client-side and sends them in the JSON body, the same
   /// pattern the AI Invoice Scanner already uses to send a photo to
-  /// this backend (see api_client's body-limit history) — reused
+  /// this backend (see api_client's body-limit history)  -  reused
   /// rather than introducing a second, multipart-based upload path.
-  /// fileSize/fileType are no longer sent — the backend computes both
+  /// fileSize/fileType are no longer sent  -  the backend computes both
   /// itself from the real decoded bytes.
   Future<ClinicDocument> addDocument({
     required String patientId,
@@ -260,7 +260,7 @@ class ClinicRepository {
     return ClinicDocument.fromJson(response['data'] as Map<String, dynamic>);
   }
 
-  /// Fetches the raw bytes of a document for preview — always goes
+  /// Fetches the raw bytes of a document for preview  -  always goes
   /// through this authenticated, company-scoped endpoint, never a raw
   /// stored URL (there isn't one anymore).
   Future<Uint8List> fetchDocumentBytes(String documentId) async {
@@ -273,7 +273,7 @@ class ClinicRepository {
     await client.delete('/clinic/documents/$documentId');
   }
 
-  /// Ch. 6 — create a prescription with one or more medication items.
+  /// Ch. 6  -  create a prescription with one or more medication items.
   Future<ClinicPrescription> createPrescription({
     required String patientId,
     required List<ClinicPrescriptionItem> items,
@@ -298,15 +298,15 @@ class ClinicRepository {
     return ClinicPrescription.fromJson(response['data'] as Map<String, dynamic>);
   }
 
-  /// Ch. 7 — PDF bytes ready to hand to the `printing` package's print
+  /// Ch. 7  -  PDF bytes ready to hand to the `printing` package's print
   /// preview / share sheet (Printing.layoutPdf / Printing.sharePdf).
   Future<Uint8List> fetchPrescriptionPdf(String prescriptionId) async {
     final client = _ref.read(apiClientProvider);
     return client.getBytes('/clinic/prescriptions/$prescriptionId/pdf');
   }
 
-  /// Ch. 8 — computed, read-only invoice view over the visit+payment
-  /// ledger (no separate clinic invoice entity — see backend
+  /// Ch. 8  -  computed, read-only invoice view over the visit+payment
+  /// ledger (no separate clinic invoice entity  -  see backend
   /// clinic.service.getVisitInvoice for why).
   Future<ClinicInvoice> getVisitInvoice(String visitId) async {
     final client = _ref.read(apiClientProvider);
@@ -314,7 +314,7 @@ class ClinicRepository {
     return ClinicInvoice.fromJson(response['data'] as Map<String, dynamic>);
   }
 
-  /// Ch. 9 — PDF bytes for the same computed invoice.
+  /// Ch. 9  -  PDF bytes for the same computed invoice.
   Future<Uint8List> fetchVisitInvoicePdf(String visitId) async {
     final client = _ref.read(apiClientProvider);
     return client.getBytes('/clinic/visits/$visitId/invoice/pdf');

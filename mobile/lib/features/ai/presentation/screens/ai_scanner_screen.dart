@@ -16,18 +16,18 @@ import '../../../sales/data/sales_repository.dart';
 import '../../../sales/domain/sale.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// AI Invoice Scanner — Spec Ch. 15.
+/// AI Invoice Scanner  -  Spec Ch. 15.
 ///
 /// Phase 6 update: "Take Photo" / "Choose from Gallery" now capture a
 /// real image and send it to the real POST /ai/invoices/scan endpoint
 /// (OpenAI vision-based extraction, server-side). "Try Demo Invoice"
-/// is kept as a fixed, offline mock — useful for trying the review
+/// is kept as a fixed, offline mock  -  useful for trying the review
 /// flow without a camera/OpenAI key handy, and as a fallback if AI
 /// isn't configured on the server yet (503 AI_NOT_CONFIGURED).
 ///
 /// What's real and enforced regardless of which path got the items
 /// here: they are NEVER written to ProductsRepository/SalesRepository
-/// until the user reviews and taps Confirm — matching the spec's "AI
+/// until the user reviews and taps Confirm  -  matching the spec's "AI
 /// layer never writes directly to inventory" design principle
 /// (Ch. 15.2), and matching the ai_logs table's own `confirmed` column
 /// (true only once the client calls the confirm endpoint below, after
@@ -37,20 +37,20 @@ import '../../../../l10n/app_localizations.dart';
 /// from the Dashboard's scan-invoice chooser (see dashboard_screen.dart
 /// `showScanInvoiceChooser`), because they have opposite effects on
 /// inventory and can't be told apart from the photo alone:
-///   - [InvoiceScanMode.stock]: a purchase/supplier invoice — goods
+///   - [InvoiceScanMode.stock]: a purchase/supplier invoice  -  goods
 ///     coming IN. Confirming creates brand-new products in inventory
 ///     (original, unchanged behavior).
-///   - [InvoiceScanMode.sales]: a sales receipt/invoice — goods going
+///   - [InvoiceScanMode.sales]: a sales receipt/invoice  -  goods going
 ///     OUT. Confirming records one real Sale, so every line has to be
 ///     matched to a product that already exists in stock (you can't
-///     sell something you don't have on the shelf) — see
+///     sell something you don't have on the shelf)  -  see
 ///     _AiReviewScreenState's sales-mode branch.
 ///   - [InvoiceScanMode.restaurantInventory] (Restaurant Ch. 15): same
 ///     shape as [stock] (a purchase invoice, goods coming IN, reviewed
 ///     with the same _StockReviewCard) but confirming creates/updates
 ///     items in the Restaurant module's own inventory ledger
 ///     (POST /restaurant/inventory + /adjust) instead of the CORE
-///     Products table — restaurant accounts don't have CORE
+///     Products table  -  restaurant accounts don't have CORE
 ///     Products/Stock (see main_shell.dart's _middleTabsFor comment).
 enum InvoiceScanMode { stock, sales, restaurantInventory }
 
@@ -77,15 +77,15 @@ class ScannedItem {
 
   /// Sales mode only: which existing product this scanned line has been
   /// matched to. Null means "no match yet / needs the user to pick one"
-  /// — a sale cannot be submitted while any item is still null.
+  ///  -  a sale cannot be submitted while any item is still null.
   String? matchedProductId;
 
-  /// Stock mode only (Phase 2 finding) — an invoice/receipt scan can't
+  /// Stock mode only (Phase 2 finding)  -  an invoice/receipt scan can't
   /// OCR an expiration date or clothing attributes that aren't printed
   /// on it, so these are user-entered on the review card, exactly like
   /// name/quantity/purchasePrice already were. Null unless the account
   /// is pharmacy (expirationDate) / clothing (size/color/brand) and the
-  /// user actually filled them in — see _StockReviewCard.
+  /// user actually filled them in  -  see _StockReviewCard.
   DateTime? expirationDate;
   String? size;
   String? color;
@@ -238,7 +238,7 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
     _errorMessage = null;
     _currentScanId = 'SCAN_${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
 
-    // Alive ticker timer — purely increments elapsed seconds for UI display.
+    // Alive ticker timer  -  purely increments elapsed seconds for UI display.
     // It does NOT advance any stages or fake progress.
     _tickerTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted || _isDisposed) {
@@ -662,7 +662,7 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
 
     if (widget.mode == InvoiceScanMode.sales) {
       // Best-effort auto-match by name so the user usually just has to
-      // confirm rather than pick every line from scratch — this is a
+      // confirm rather than pick every line from scratch  -  this is a
       // convenience default, never assumed to be correct: the dropdown
       // is always fully editable, and submission is blocked until every
       // line has an explicit match (auto- or manually-chosen).
@@ -694,7 +694,7 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
   /// Marks the ai_logs entry for this scan as confirmed, now that its
   /// items were actually turned into real products/a real sale. Best-
   /// effort only: this is an audit-trail nicety (see ai_logs.confirmed
-  /// in migration 012), not part of the critical path — the products/
+  /// in migration 012), not part of the critical path  -  the products/
   /// sale were already successfully created by the time this runs, so
   /// a failure here is logged and otherwise ignored rather than shown
   /// to the user or retried.
@@ -706,14 +706,14 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
       final client = ref.read(apiClientProvider);
       await client.post('/ai/invoices/scan/$logId/confirm');
     } catch (err) {
-      // Deliberately swallowed — see doc comment above.
+      // Deliberately swallowed  -  see doc comment above.
       // ignore: avoid_print
       print('Could not confirm ai_logs entry $logId: $err');
     }
   }
 
   // ---- Stock mode: unchanged original behavior. Also handles
-  // restaurantInventory mode (Ch. 15) — same review UI, different
+  // restaurantInventory mode (Ch. 15)  -  same review UI, different
   // repository on confirm. ----
 
   Future<void> _confirmAndAddToInventory() async {
@@ -853,7 +853,7 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
           break;
         }
       }
-      // Falls back to the scanned name for display only — the server
+      // Falls back to the scanned name for display only  -  the server
       // trusts productId, not this string, for anything that matters.
       saleItems.add(SaleItemInput(
         productId: item.matchedProductId!,
@@ -875,7 +875,7 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
         );
       }
     } on ApiException catch (e) {
-      // e.g. INSUFFICIENT_STOCK — nothing was written server-side, so
+      // e.g. INSUFFICIENT_STOCK  -  nothing was written server-side, so
       // the review stays exactly as the user left it to adjust and retry.
       _showSnack(e.message);
     } catch (_) {
@@ -1000,7 +1000,7 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
   }
 }
 
-/// Stock-mode review card — name/quantity/purchase price/sale price, all editable.
+/// Stock-mode review card  -  name/quantity/purchase price/sale price, all editable.
 /// Shows dedicated editable Sale Price field with live unit profit calculation,
 /// warning if selling price is below purchase price, expiration-date picker
 /// (pharmacy accounts) and size/color/brand fields (clothing accounts).
@@ -1263,7 +1263,7 @@ class _StockReviewCardState extends State<_StockReviewCard> {
   }
 }
 
-/// Sales-mode review card — the scanned line has to be matched to a
+/// Sales-mode review card  -  the scanned line has to be matched to a
 /// real, already-in-stock product (via dropdown) before it counts
 /// toward the sale; quantity is still editable, price is shown from
 /// the matched product's own selling price rather than the OCR guess,

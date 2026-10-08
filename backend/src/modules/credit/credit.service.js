@@ -40,18 +40,18 @@ function validateItems(items) {
 /**
  * Creates one Credit Sale: validates stock, decrements inventory
  * (reusing the exact same products.repository functions the regular
- * Sales flow uses — Ch. 13/18: "حدّث المخزون حسب نظام Inventory
+ * Sales flow uses  -  Ch. 13/18: "حدّث المخزون حسب نظام Inventory
  * الموجود حاليًا"), records the purchase + line items, applies
  * "Amount to Pay Now" as an immediate payment, and updates the
- * customer's balance_due — all inside one transaction so a mid-way
+ * customer's balance_due  -  all inside one transaction so a mid-way
  * failure leaves nothing partially applied.
  *
  * Ledger (Ch. 14 "يجب أن تظهر العملية كاملة في Transaction History"):
- * writes TWO customer_transactions rows when amountPaidNow > 0 — the
- * full purchase amount as new debt, then the payment reducing it —
+ * writes TWO customer_transactions rows when amountPaidNow > 0  -  the
+ * full purchase amount as new debt, then the payment reducing it  - 
  * rather than one opaque net figure, so both halves of the operation
  * are visible. The net change to balance_due is still exactly
- * (subtotal - amountPaidNow) either way — see Double Counting note
+ * (subtotal - amountPaidNow) either way  -  see Double Counting note
  * below.
  */
 async function createCreditPurchase(
@@ -106,7 +106,7 @@ async function createCreditPurchase(
     }
     subtotal = round2(subtotal);
 
-    // "لا تسمح بقيمة دفع أكبر من إجمالي العملية" — no explicit
+    // "لا تسمح بقيمة دفع أكبر من إجمالي العملية"  -  no explicit
     // overpayment support, so this is a hard validation error rather
     // than silently clamping the value.
     if (amountPaidNow > subtotal) {
@@ -170,7 +170,7 @@ async function createCreditPurchase(
 
       // Ledger entry 2: immediately reduces that same debt. Net effect
       // on balance_due across both entries = +remainingCredit, applied
-      // exactly once — never double-counted.
+      // exactly once  -  never double-counted.
       runningBalance = await repo.adjustCustomerBalance(
         client,
         companyId,
@@ -197,7 +197,7 @@ async function createCreditPurchase(
 
 /**
  * Records a standalone payment against a customer's existing balance
- * (not tied to a specific purchase) — e.g. the customer comes back
+ * (not tied to a specific purchase)  -  e.g. the customer comes back
  * later and pays some/all of what they owe.
  */
 async function recordPayment(companyId, userId, { customerId, amount, note, clientId }) {

@@ -1,5 +1,5 @@
 /// Mirrors the backend's uniform error shape exactly
-/// ({ error: true, message, code } — see backend/src/middlewares/error.middleware.js).
+/// ({ error: true, message, code }  -  see backend/src/middlewares/error.middleware.js).
 class ApiException implements Exception {
   ApiException({required this.statusCode, required this.message, this.code});
 

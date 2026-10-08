@@ -173,7 +173,7 @@ class RestaurantRepository {
     await client.patch('/restaurant/menu-items/$itemId/availability', body: {'isAvailable': isAvailable});
   }
 
-  /// Ch. 17/18 — saves an already-uploaded image
+  /// Ch. 17/18  -  saves an already-uploaded image
   /// (ImagesRepository.uploadImage(namespace: 'restaurant-menu')) onto
   /// this menu item.
   Future<void> setMenuItemImage(String itemId, String imageUrl) async {
@@ -360,7 +360,7 @@ class RestaurantRepository {
     return serverOrder;
   }
 
-  /// `items` — each entry is either `{menuItemId, quantity}` (pulls the
+  /// `items`  -  each entry is either `{menuItemId, quantity}` (pulls the
   /// current menu price/name) or `{name, unitPrice, quantity}`.
   Future<RestaurantOrder> createOrder({
     String? tableId,
@@ -836,7 +836,7 @@ class RestaurantRepository {
   }
 
   /// Ch. 14 manual adjustment AND Ch. 15's AI-scan-confirm landing spot
-  /// — see restaurant.service.adjustInventoryQuantity's doc comment.
+  ///  -  see restaurant.service.adjustInventoryQuantity's doc comment.
   Future<RestaurantInventoryItem> adjustInventoryQuantity(
     String itemId, {
     required String movementType,
@@ -854,7 +854,7 @@ class RestaurantRepository {
     return RestaurantInventoryItem.fromJson(response['data'] as Map<String, dynamic>);
   }
 
-  /// Ch. 17/18 — saves an already-uploaded image (via
+  /// Ch. 17/18  -  saves an already-uploaded image (via
   /// ImagesRepository.uploadImage(namespace: 'restaurant-inventory'))
   /// onto this item.
   Future<RestaurantInventoryItem> updateInventoryItemImage(String itemId, String imageUrl) async {

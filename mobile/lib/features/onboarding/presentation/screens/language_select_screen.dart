@@ -5,11 +5,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../settings/data/settings_providers.dart';
 
-/// First-launch language picker — shown exactly once, before
+/// First-launch language picker  -  shown exactly once, before
 /// Onboarding, the very first time the app is ever opened on a device
 /// (see main.dart's boot logic: `LocaleNotifier.hasChosenLanguage`).
 /// Not localized itself for the obvious reason that no language has
-/// been chosen yet — each option is labeled in its own language/script,
+/// been chosen yet  -  each option is labeled in its own language/script,
 /// matching how virtually every app's first-run language picker works.
 class LanguageSelectScreen extends ConsumerWidget {
   const LanguageSelectScreen({super.key, required this.onSelected});
@@ -69,7 +69,7 @@ class LanguageSelectScreen extends ConsumerWidget {
                       ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                // Trilingual prompt, one line per language — nobody has
+                // Trilingual prompt, one line per language  -  nobody has
                 // to already read one specific script to know what to do.
                 const Text('اختر لغة التطبيق', style: TextStyle(fontSize: 16)),
                 const SizedBox(height: 4),

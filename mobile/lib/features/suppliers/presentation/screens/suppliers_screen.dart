@@ -228,7 +228,7 @@ final suppliersRepositoryProvider =
   },
 );
 
-/// Suppliers — Spec Ch. 21.2. Real API-backed with full CRUD support.
+/// Suppliers  -  Spec Ch. 21.2. Real API-backed with full CRUD support.
 class SuppliersScreen extends ConsumerWidget {
   const SuppliersScreen({super.key});
 

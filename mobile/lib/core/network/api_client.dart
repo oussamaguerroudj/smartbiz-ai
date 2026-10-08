@@ -166,15 +166,15 @@ class ApiClient {
       );
     }
 
-    // FIX (reported bug): a merely-expired access token (30 min TTL —
+    // FIX (reported bug): a merely-expired access token (30 min TTL  - 
     // see backend env.js) used to surface as a raw 401 on whatever
     // screen the user happened to be on, with nothing renewing the
-    // session — indistinguishable from being logged out. Now: on the
+    // session  -  indistinguishable from being logged out. Now: on the
     // FIRST 401 for a given request, try the refresh token once; if
     // that succeeds, transparently retry the exact same request with
     // the new access token. Only if refresh itself fails (refresh
     // token also expired/revoked, or there wasn't one) does the
-    // session actually get cleared — that's the one case update where
+    // session actually get cleared  -  that's the one case update where
     // logging the user out is actually correct.
     if (response.statusCode == 401 && !isRetryAfterRefresh) {
       final refreshResult = await _tryRefreshSession();
@@ -252,7 +252,7 @@ class ApiClient {
     return _decode(response);
   }
 
-  /// Ch. 7/9 printing (Clinic remaining-issues pass) — for endpoints
+  /// Ch. 7/9 printing (Clinic remaining-issues pass)  -  for endpoints
   /// that return a binary body (application/pdf) instead of JSON, so
   /// _decode's jsonDecode would just fail/return {}. Same auth/refresh
   /// handling as [get] (goes through the same [_request]); only the
@@ -325,7 +325,7 @@ class ApiClient {
 
   /// Added alongside the Restaurant module: every PATCH-declared route
   /// in this backend (clinic appointments, restaurant tables/orders/
-  /// menu/reservations) previously had no matching client verb — only
+  /// menu/reservations) previously had no matching client verb  -  only
   /// get/post/put/delete existed. Purely additive; no existing call
   /// site is touched.
   Future<dynamic> patch(

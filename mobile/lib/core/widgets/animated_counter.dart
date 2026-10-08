@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// matching how the rest of the app displays DZD amounts.
 ///
 /// Motion here answers real data arriving (the dashboard/report loading),
-/// not decoration — it plays once per value change, not on a loop.
+/// not decoration  -  it plays once per value change, not on a loop.
 class AnimatedCounter extends StatelessWidget {
   const AnimatedCounter({
     super.key,

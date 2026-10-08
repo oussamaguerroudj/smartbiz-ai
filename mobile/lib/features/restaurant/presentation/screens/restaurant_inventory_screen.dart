@@ -12,9 +12,9 @@ import '../../data/restaurant_repository.dart';
 import '../../domain/restaurant_models.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Ch. 13 "Restaurant Inventory Page" — did not exist at all before
+/// Ch. 13 "Restaurant Inventory Page"  -  did not exist at all before
 /// this audit pass (no backend table, no route, no screen). Raw
-/// materials/commodities (ingredients, drinks, supplies) — see
+/// materials/commodities (ingredients, drinks, supplies)  -  see
 /// RestaurantInventoryItem's doc comment for how this differs from the
 /// menu and from CORE's Products/Stock tabs.
 final restaurantInventoryProvider =
@@ -37,12 +37,12 @@ class _RestaurantInventoryScreenState extends ConsumerState<RestaurantInventoryS
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Ch. 15 — reuses the SAME AI invoice extraction screen the generic
+  /// Ch. 15  -  reuses the SAME AI invoice extraction screen the generic
   /// Stock module already has (AiScannerScreen/AiReviewScreen,
   /// POST /ai/invoices/scan) rather than building a second AI pipeline.
   /// InvoiceScanMode.restaurantInventory (new) makes AiReviewScreen's
   /// confirm step call restaurant inventory endpoints instead of
-  /// ProductsRepository — nothing about extraction itself changes, and
+  /// ProductsRepository  -  nothing about extraction itself changes, and
   /// items are still never written anywhere until the user reviews and
   /// taps Confirm (Ch. 15's "AI must NEVER directly modify inventory
   /// without user confirmation").
@@ -206,7 +206,7 @@ class _RestaurantInventoryScreenState extends ConsumerState<RestaurantInventoryS
     }
   }
 
-  /// Ch. 17/18 — pick a photo, upload it (ImagesRepository, namespace
+  /// Ch. 17/18  -  pick a photo, upload it (ImagesRepository, namespace
   /// 'restaurant-inventory'), then save the returned storage key onto
   /// this item.
   Future<void> _changePhoto(RestaurantInventoryItem item) async {

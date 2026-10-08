@@ -5,10 +5,10 @@ const ApiError = require('../../utils/ApiError');
 const fileStorage = require('../../utils/fileStorage');
 const { authMiddleware } = require('../../middlewares/auth.middleware');
 
-// Ch. 17 "Product Images — All Business Types": one shared upload/serve
+// Ch. 17 "Product Images  -  All Business Types": one shared upload/serve
 // pair reused by every products/items table that gets an image_url
 // column (products, restaurant_menu_items, restaurant_inventory_items,
-// and any future one) instead of duplicating this per module — same
+// and any future one) instead of duplicating this per module  -  same
 // base64-in-JSON-to-local-disk approach as clinic documents
 // (fileStorage.js), just with a smaller size cap and a plain image-only
 // allowlist (no PDF) since these are always photos.
@@ -67,7 +67,7 @@ const SAFE_STORAGE_KEY_REGEX = /^([a-z0-9-]+)\/([a-f0-9-]{36})\/([a-zA-Z0-9._-]+
  * Serves an image by storage key.
  *
  * SECURITY FIX (SEC-IMAGE-001):
- * 1. Requires authentication (`authMiddleware`) — mobile uses
+ * 1. Requires authentication (`authMiddleware`)  -  mobile uses
  *    `AuthenticatedImage` with Bearer token.
  * 2. Validates strict 3-segment key `<namespace>/<companyId>/<filename>`
  *    with no `..` traversal segments.

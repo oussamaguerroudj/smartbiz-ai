@@ -16,7 +16,7 @@ const router = express.Router();
 router.use(authMiddleware);
 // Dashboard-family simplification: 'dental_clinic' is a legacy/
 // compatibility business_type value now folded into the Clinic family
-// (mobile picker only offers 'clinic' to new signups — see
+// (mobile picker only offers 'clinic' to new signups  -  see
 // business_type_screen.dart's kSelectableBusinessTypes and
 // backend/SPECIALIZED_MODULES.md).
 router.use(requireBusinessType('clinic', 'dental_clinic'));

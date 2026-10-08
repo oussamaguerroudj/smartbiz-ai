@@ -46,8 +46,8 @@ import '../../auth/presentation/screens/business_type_screen.dart';
 import '../../auth/presentation/screens/business_setup_screen.dart';
 import '../../../core/network/session.dart';
 
-/// Main App Shell — Spec Ch. 7 (Navigation)
-/// 4-item bottom nav: Dashboard, Sales, Inventory, More — for CORE/retail
+/// Main App Shell  -  Spec Ch. 7 (Navigation)
+/// 4-item bottom nav: Dashboard, Sales, Inventory, More  -  for CORE/retail
 /// business types.
 ///
 /// Business-specialization brief (Ch. 1-27): every business type sees pages

@@ -16,11 +16,11 @@ const { expandSearchAliases } = require('./language.detector');
 /**
  * Tool/function-calling architecture (Ch. 8).
  *
- * SECURITY (Ch. 29 — this is the load-bearing guarantee of the whole
+ * SECURITY (Ch. 29  -  this is the load-bearing guarantee of the whole
  * module): the LLM never sees a raw SQL connection or a company_id it
  * could tamper with. `executeTool` below ALWAYS takes companyId from
  * the authenticated request (ai.service.js passes it through, itself
- * taken from req.user.companyId in ai.controller.js) — never from the
+ * taken from req.user.companyId in ai.controller.js)  -  never from the
  * model's tool-call arguments. Every query in this file has a
  * `WHERE company_id = $1` (or equivalent join) using that same
  * server-supplied value. A user asking "show me another company's
@@ -80,7 +80,7 @@ async function salesTotals(companyId, start, end) {
 }
 
 // ---------------------------------------------------------------------
-// Tool implementations — each takes (companyId, args)
+// Tool implementations  -  each takes (companyId, args)
 // ---------------------------------------------------------------------
 
 async function get_sales_summary(companyId, { period = 'this_month' } = {}) {
@@ -525,7 +525,7 @@ async function get_low_stock_products(companyId) {
   return { lowStockProducts: result.rows };
 }
 
-/** Not business-type gated — `products.expiration_date` exists for
+/** Not business-type gated  -  `products.expiration_date` exists for
  * every company (migration 006), so this is useful for any account
  * that tracks perishables/expiry (pharmacy first, but also grocery/
  * supérette), same "harmless empty result elsewhere" rule as the
@@ -734,7 +734,7 @@ async function get_appointments(companyId, { period = 'upcoming', limit = 10 } =
 
 async function get_suppliers(companyId) {
   // NOTE: the current schema has no purchases/supplier-transactions
-  // table, so this tool can only report the supplier list itself —
+  // table, so this tool can only report the supplier list itself  - 
   // not purchase volume or "which supplier do we buy most from"
   // (Ch. 7's supplier example). Documented as a known gap in
   // AI_MIGRATION.md rather than fabricated.
@@ -746,7 +746,7 @@ async function get_suppliers(companyId) {
 }
 
 // ---------------------------------------------------------------------
-// Clinic-specific tools (Ch. 3/23) — only ever return meaningful data
+// Clinic-specific tools (Ch. 3/23)  -  only ever return meaningful data
 // for a company whose business_type is 'clinic'; for any other
 // business these tables are simply empty, so the model naturally has
 // nothing to report rather than needing to be told not to call these.
@@ -767,7 +767,7 @@ async function get_clinic_dashboard(companyId) {
   // Reuses the same service.getDashboard the Clinic dashboard screen
   // calls (not just clinicRepo.dashboardStats' patient/appointment
   // counts), so the model can also answer revenue/profit/outstanding-
-  // payments questions with the exact same numbers the UI shows —
+  // payments questions with the exact same numbers the UI shows  - 
   // single source of truth, per Ch. 21.
   return clinicService.getDashboard(companyId);
 }
@@ -789,7 +789,7 @@ async function get_patient_last_visit(companyId, { patientName } = {}) {
 }
 
 // ---------------------------------------------------------------------
-// Restaurant-specific tools (Ch. 17/23) — same pattern as the Clinic
+// Restaurant-specific tools (Ch. 17/23)  -  same pattern as the Clinic
 // tools above: only meaningful for a company whose business_type is
 // 'restaurant', harmlessly empty otherwise.
 // ---------------------------------------------------------------------
@@ -895,7 +895,7 @@ async function get_restaurant_menu(companyId, { category, availableOnly = false 
 }
 
 // ---------------------------------------------------------------------
-// Pharmacy-specific tool (Ch. 15) — reuses the exact same
+// Pharmacy-specific tool (Ch. 15)  -  reuses the exact same
 // pharmacy.service.getDashboard the Pharmacy dashboard screen calls,
 // so revenue/profit answers always match the UI (Ch. 21).
 // ---------------------------------------------------------------------
@@ -905,7 +905,7 @@ async function get_pharmacy_dashboard(companyId) {
 }
 
 // ---------------------------------------------------------------------
-// Supérette / general-retail tool (Ch. 16) — reuses the exact same
+// Supérette / general-retail tool (Ch. 16)  -  reuses the exact same
 // superette.service.getDashboard the Supérette dashboard screen calls,
 // so revenue/profit/debt answers always match the UI (Ch. 21).
 // ---------------------------------------------------------------------
@@ -915,7 +915,7 @@ async function get_superette_dashboard(companyId) {
 }
 
 // ---------------------------------------------------------------------
-// Enterprise / Company tool (Ch. 19) — reuses the exact same
+// Enterprise / Company tool (Ch. 19)  -  reuses the exact same
 // enterprise.service.getDashboard the Enterprise dashboard screen
 // calls, so revenue/profit/invoice/project answers always match the UI.
 // ---------------------------------------------------------------------
@@ -925,7 +925,7 @@ async function get_enterprise_dashboard(companyId) {
 }
 
 // ---------------------------------------------------------------------
-// Clothing store tool (Ch. 18) — reuses the exact same
+// Clothing store tool (Ch. 18)  -  reuses the exact same
 // clothing.service.getDashboard the Clothing dashboard screen calls,
 // so revenue/profit/debt answers always match the UI (Ch. 21).
 // ---------------------------------------------------------------------
@@ -968,7 +968,7 @@ const TOOL_IMPLEMENTATIONS = {
   get_enterprise_dashboard,
 };
 
-// OpenAI-compatible tool/function schema — sent as the `tools` param.
+// OpenAI-compatible tool/function schema  -  sent as the `tools` param.
 // Kept intentionally small and specific (Ch. 23: don't send unnecessary
 // data/complexity to the model) rather than one giant generic
 // "run_query" escape hatch, which is exactly the "unrestricted direct
@@ -1315,7 +1315,7 @@ const TOOL_DEFINITIONS = [
 
 /**
  * Dispatches a tool call by name. `companyId` comes from the
- * authenticated request only (see security note above) — `args` comes
+ * authenticated request only (see security note above)  -  `args` comes
  * from the model and is treated as untrusted input to each tool
  * implementation (each function clamps/validates its own args, e.g.
  * `limit`/`days` bounds above).

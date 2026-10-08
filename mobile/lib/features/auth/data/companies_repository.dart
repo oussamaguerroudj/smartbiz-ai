@@ -7,7 +7,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
 
-/// Backs the Business Setup screen (Ch. 8.4) — persists the real
+/// Backs the Business Setup screen (Ch. 8.4)  -  persists the real
 /// business name/type/currency/phone/address onto the placeholder
 /// company that auth.service.js created during registration.
 class CompaniesRepository {

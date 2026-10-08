@@ -11,7 +11,7 @@ import '../../data/credit_repository.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 
-/// Create Credit Sale — Ch. 13/14.
+/// Create Credit Sale  -  Ch. 13/14.
 ///
 /// Deliberately mirrors CreateSaleScreen's cart + barcode-scan pattern
 /// closely (same _CartLine shape, same _addOrIncrement/_scanBarcode
@@ -187,7 +187,7 @@ class _CreateCreditSaleScreenState extends ConsumerState<CreateCreditSaleScreen>
             items: items,
             amountPaidNow: _amountPaidNow,
           );
-      // Stock changed (decremented) and the customer's balance changed —
+      // Stock changed (decremented) and the customer's balance changed  - 
       // refresh both so every other screen reading them stays correct.
       await ref.read(productsRepositoryProvider.notifier).load();
       await ref.read(customersRepositoryProvider.notifier).load();

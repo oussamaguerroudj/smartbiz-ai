@@ -127,7 +127,7 @@ async function requireOrder(companyId, orderId) {
 /**
  * `items` may reference an existing menu item (`menuItemId`) to pull
  * its current name/price, or be a free-form line (name + unitPrice
- * given directly) — either way the order stores its own snapshot, per
+ * given directly)  -  either way the order stores its own snapshot, per
  * Ch. 17's "Menu items" + line-item pattern.
  */
 async function createOrder(companyId, data) {
@@ -230,12 +230,12 @@ async function updateOrderStatus(companyId, id, status) {
 }
 
 // ---------------------------------------------------------------------
-// Payments (Ch. 17 — revenue = actual order payments, never a separate
+// Payments (Ch. 17  -  revenue = actual order payments, never a separate
 // product-sale calculation)
 // ---------------------------------------------------------------------
 
 /**
- * Ch. 11 "Prevent duplicate payment" — amount validated here; the
+ * Ch. 11 "Prevent duplicate payment"  -  amount validated here; the
  * actual "already fully paid?" guard lives inside repo.recordPayment's
  * own FOR UPDATE-locked transaction (see its comment for why it can't
  * live here as a separate pre-check).
@@ -280,18 +280,18 @@ async function refundOrder(companyId, orderId, note) {
 }
 
 // ---------------------------------------------------------------------
-// Order invoice (Ch. 8/9-equivalent) — computed, read-only view, same
+// Order invoice (Ch. 8/9-equivalent)  -  computed, read-only view, same
 // choice already made for Clinic (see clinic.service.getVisitInvoice's
 // doc comment): the generic `invoices` table is tightly bound 1:1 to
-// `sales` (invoices.sale_id is NOT NULL UNIQUE REFERENCES sales(id) —
+// `sales` (invoices.sale_id is NOT NULL UNIQUE REFERENCES sales(id)  - 
 // migration 008), which restaurant_orders is not and was never meant
 // to be, so reusing it here would mean an invasive schema change to a
 // core, heavily-used table just to bolt restaurant orders onto it.
 // Deriving the invoice live from restaurant_orders +
 // restaurant_order_items instead means it is automatically "created"
 // (available) the instant an order's payment_status changes, is
-// naturally idempotent — nothing is stored, so "call it twice after
-// paying twice by accident" cannot produce two invoice rows — and can
+// naturally idempotent  -  nothing is stored, so "call it twice after
+// paying twice by accident" cannot produce two invoice rows  -  and can
 // never drift from the order it represents.
 // ---------------------------------------------------------------------
 
@@ -413,7 +413,7 @@ async function deleteReservation(companyId, id) {
 }
 
 // ---------------------------------------------------------------------
-// Dashboard (Ch. 17 — revenue/profit computed the same way as Clinic:
+// Dashboard (Ch. 17  -  revenue/profit computed the same way as Clinic:
 // revenue from the payments ledger, expenses from the shared generic
 // expenses module, profit = revenue - expenses)
 // ---------------------------------------------------------------------
@@ -477,12 +477,12 @@ const VALID_MOVEMENT_TYPES = new Set(['purchase', 'consumption', 'adjustment']);
 
 /**
  * Ch. 14's manual-adjustment entry point, and Ch. 15's landing spot
- * once the user has reviewed and confirmed AI-scanned purchase lines —
+ * once the user has reviewed and confirmed AI-scanned purchase lines  - 
  * the mobile client calls this once per confirmed line (same "loop and
  * call the existing per-item endpoint" pattern the generic Stock
  * module's own AiReviewScreen._confirmAndAddToInventory already uses;
  * see that screen's doc comment). Nothing on this path ever accepts an
- * AI-proposed quantity/price directly — by the time this is called the
+ * AI-proposed quantity/price directly  -  by the time this is called the
  * user has already reviewed and could have edited every field.
  */
 async function adjustInventoryQuantity(companyId, userId, itemId, data) {
@@ -539,7 +539,7 @@ async function getDashboard(companyId) {
     repo.revenueForRange(companyId, monthStart, todayStr),
     expensesRepo.totalForRange(companyId, todayStr, todayStr),
     employeesRepo.totalSalaryCostForRange(companyId, todayStr, todayStr),
-    // Ch. 16 — see repo.costOfGoodsSoldForRange's doc comment: valued
+    // Ch. 16  -  see repo.costOfGoodsSoldForRange's doc comment: valued
     // from auto-deducted recipe consumption only, at current
     // purchase price.
     repo.costOfGoodsSoldForRange(companyId, todayStr, todayStr),

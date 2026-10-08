@@ -24,17 +24,17 @@ import '../../../../l10n/app_localizations.dart';
 /// brief, Ch. 1-14; SPECIALIZED_MODULES.md §6/§7's flagged follow-up).
 ///
 /// This is deliberately NOT a new design: it reuses the exact same
-/// structural chrome as [DashboardScreen] (dashboard_screen.dart) —
+/// structural chrome as [DashboardScreen] (dashboard_screen.dart)  - 
 /// GradientHero header, the overlapping KPI-card row, AppSpacing/
 /// AppTypography/AppColors, the same FadeSlideIn stagger, the same
-/// AnimatedCounter — only the CONTENT changes:
+/// AnimatedCounter  -  only the CONTENT changes:
 ///   - KPIs: patients / waiting / today's revenue (never product sales)
 ///   - Body: patient queue snapshot (next patient, current consultation)
 ///     instead of the sales trend chart, and clinic quick actions
 ///     instead of "New Sale" / "Scan Invoice".
 ///
 /// [MainShell] selects this screen for tab 0 instead of the generic
-/// [DashboardScreen] only when `company.businessType == 'clinic'` — the
+/// [DashboardScreen] only when `company.businessType == 'clinic'`  -  the
 /// generic dashboard file itself is completely untouched, keeping this
 /// change purely additive, per the brief's own "small blast radius" rule.
 const double _kKpiCardHeight = 96;
@@ -99,7 +99,7 @@ class ClinicMainDashboardScreen extends ConsumerWidget {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
 
-                    // Second KPI row — clinic's own analytics beyond the
+                    // Second KPI row  -  clinic's own analytics beyond the
                     // top-of-header three, same money-card / stat-card
                     // visual language already used on ClinicDashboardScreen
                     // (Ch. 12), just surfaced here on the MAIN dashboard.
@@ -280,7 +280,7 @@ class _ClinicDashboardHeader extends StatelessWidget {
   }
 }
 
-/// Same visual contract as dashboard_screen.dart's private `_KpiCard` —
+/// Same visual contract as dashboard_screen.dart's private `_KpiCard`  - 
 /// duplicated (not imported, since the original is file-private) rather
 /// than exposing dashboard_screen.dart's internals, keeping this file's
 /// diff fully additive. Kept pixel-identical on purpose.
@@ -360,9 +360,9 @@ class _ClinicMiniStat extends StatelessWidget {
   }
 }
 
-/// Ch. 4 — "who is waiting / who is being seen / who is next", surfaced
+/// Ch. 4  -  "who is waiting / who is being seen / who is next", surfaced
 /// directly on the main Dashboard tab instead of only inside the
-/// dedicated Waiting Room screen, so this — the brief's own words —
+/// dedicated Waiting Room screen, so this  -  the brief's own words  - 
 /// "one of the most important features" is visible within a few seconds
 /// of opening the app, with zero extra taps.
 class _PatientQueueCard extends StatelessWidget {
@@ -505,7 +505,7 @@ class _QueueLine extends StatelessWidget {
   }
 }
 
-/// Ch. 14 — fast access to the clinic's most important actions, in the
+/// Ch. 14  -  fast access to the clinic's most important actions, in the
 /// same ElevatedButton/OutlinedButton visual language as the generic
 /// dashboard's "New Sale" / "Scan Invoice" row (never a new button style).
 class _ClinicQuickActions extends ConsumerWidget {

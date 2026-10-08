@@ -28,15 +28,15 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 /// Supérette).
 ///
 /// Like Pharmacy and Supérette, a clothing store does NOT get its own
-/// tabs or More-menu items — `main_shell.dart` only swaps THIS screen
+/// tabs or More-menu items  -  `main_shell.dart` only swaps THIS screen
 /// in for tab 0; tabs 1-2 (Sales/Inventory) and the full CORE More menu
-/// already fit (Ch. 21: "reuse existing APIs") — a clothing store's
+/// already fit (Ch. 21: "reuse existing APIs")  -  a clothing store's
 /// "Products" screen already shows Size/Color/Brand once set (migration
 /// 020 added those columns to the CORE products table/form).
 ///
 /// Deliberately NOT a new design: same GradientHero header, overlapping
 /// KPI-card row, FadeSlideIn stagger and AnimatedCounter as every other
-/// vertical's main dashboard — only the CONTENT changes: today's sales/
+/// vertical's main dashboard  -  only the CONTENT changes: today's sales/
 /// profit, stock alerts (with size/color/brand tags), a stock-by-
 /// category breakdown (Ch. 18's own "Categories" ask), and outstanding
 /// customer credit/debt, same as Supérette's dashboard.
@@ -297,7 +297,7 @@ class _ClothingDashboardHeader extends StatelessWidget {
   }
 }
 
-/// Same visual contract as every other vertical's private `_KpiCard` —
+/// Same visual contract as every other vertical's private `_KpiCard`  - 
 /// duplicated (file-private here too) rather than exposing internals.
 class _KpiCard extends StatelessWidget {
   const _KpiCard({
@@ -379,7 +379,7 @@ class _ClothingMiniStat extends StatelessWidget {
 }
 
 /// Ch. 18's "Low-stock items" alert, with size/color/brand shown inline
-/// when set — same "most important right now" role as Pharmacy's/
+/// when set  -  same "most important right now" role as Pharmacy's/
 /// Supérette's Stock Alerts card.
 class _StockAlertsCard extends StatelessWidget {
   const _StockAlertsCard({required this.stats});
@@ -464,7 +464,7 @@ class _StockAlertsCard extends StatelessWidget {
   }
 }
 
-/// Ch. 18's "Categories" — a compact stock-by-category breakdown
+/// Ch. 18's "Categories"  -  a compact stock-by-category breakdown
 /// (e.g. Men/Women/Kids), reusing the same `category` column every
 /// other vertical already has.
 class _CategoryBreakdownCard extends StatelessWidget {
@@ -522,7 +522,7 @@ class _CategoryBreakdownCard extends StatelessWidget {
   }
 }
 
-/// Ch. 18's "Credit/customer debt" — same card as
+/// Ch. 18's "Credit/customer debt"  -  same card as
 /// SuperetteMainDashboardScreen's `_CustomerDebtCard`, duplicated
 /// file-private here rather than shared, matching this codebase's
 /// existing per-vertical-file convention.
@@ -663,7 +663,7 @@ class _RecentClothingProductsCard extends ConsumerWidget {
   }
 }
 
-/// Ch. 18/14 — fast access to a clothing store's most important
+/// Ch. 18/14  -  fast access to a clothing store's most important
 /// actions.
 class _ClothingQuickActions extends StatelessWidget {
   @override

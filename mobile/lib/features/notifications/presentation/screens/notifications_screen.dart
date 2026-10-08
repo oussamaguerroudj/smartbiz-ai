@@ -18,7 +18,7 @@ class NotificationItem {
       );
 }
 
-/// GET /notifications — real API-backed (Phase 5 wiring). Mirrors the
+/// GET /notifications  -  real API-backed (Phase 5 wiring). Mirrors the
 /// same "derive from real data, never fabricate" principle as before,
 /// now genuinely computed server-side from live low-stock/unpaid-invoice
 /// queries (notifications.routes.js), verified in Phase 5 testing.

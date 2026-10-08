@@ -17,7 +17,7 @@ const router = express.Router();
 router.use(authMiddleware);
 // Dashboard-family simplification: 'cafe' is a legacy/compatibility
 // business_type value now folded into the Restaurant family (mobile
-// picker only offers 'restaurant' to new signups — see
+// picker only offers 'restaurant' to new signups  -  see
 // business_type_screen.dart's kSelectableBusinessTypes and
 // backend/SPECIALIZED_MODULES.md).
 router.use(requireBusinessType('restaurant', 'cafe'));

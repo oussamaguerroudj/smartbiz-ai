@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_client.dart';
 
-/// Ch. 17/18 "Product Images — All Business Types". Thin wrapper around
-/// the shared backend images module (POST /images, GET /images/file) —
+/// Ch. 17/18 "Product Images  -  All Business Types". Thin wrapper around
+/// the shared backend images module (POST /images, GET /images/file)  - 
 /// one client-side entry point reused by every products/items screen
 /// instead of duplicating base64-encode-and-post in each one.
 class ImagesRepository {
@@ -15,7 +15,7 @@ class ImagesRepository {
   /// 'restaurant-menu', 'restaurant-inventory'. Returns the storage key
   /// to save on the owning record (products.image_url,
   /// restaurant_menu_items.image_url, restaurant_inventory_items.image_url)
-  /// — never a directly-usable URL; fetching it back always goes
+  ///  -  never a directly-usable URL; fetching it back always goes
   /// through [fetchImageBytes] so the company-ownership check on the
   /// way out always runs.
   Future<String> uploadImage({

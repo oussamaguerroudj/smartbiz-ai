@@ -1,6 +1,6 @@
 -- 001_create_companies.sql
 -- The tenant-root table. Every other operational table references this
--- via company_id (see Phase 1, Ch. 24 — Design Rationale).
+-- via company_id (see Phase 1, Ch. 24  -  Design Rationale).
 
 CREATE TYPE business_type_enum AS ENUM (
   'clothing', 'grocery', 'pharmacy', 'clinic', 'restaurant', 'company', 'workshop'

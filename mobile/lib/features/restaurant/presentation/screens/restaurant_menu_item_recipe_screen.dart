@@ -6,10 +6,10 @@ import '../../data/restaurant_repository.dart';
 import '../../domain/restaurant_models.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Ch. 16 — lets the user define which inventory items (and how much
+/// Ch. 16  -  lets the user define which inventory items (and how much
 /// of each) one menu item consumes. Saving this is what makes
 /// restaurant.repository.deductIngredientsForOrder able to auto-deduct
-/// stock and compute real COGS when an order is completed — a menu
+/// stock and compute real COGS when an order is completed  -  a menu
 /// item with no recipe defined here just contributes 0 COGS (Ch. 16's
 /// "display a clearly defined metric rather than pretending the
 /// calculation is complete"), it does not block completing orders.

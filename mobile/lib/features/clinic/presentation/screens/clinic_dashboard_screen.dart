@@ -11,7 +11,7 @@ final clinicDashboardProvider = FutureProvider.autoDispose((ref) {
   return ref.read(clinicRepositoryProvider).dashboard();
 });
 
-/// Clinic Dashboard (Ch. 3.A) — adapts the app's Dashboard concept to a
+/// Clinic Dashboard (Ch. 3.A)  -  adapts the app's Dashboard concept to a
 /// clinic's own KPIs, without touching or removing the CORE Dashboard
 /// (dashboard_screen.dart) at all; this is a fully separate screen only
 /// ever reached when company.businessType == 'clinic' (see
@@ -50,10 +50,10 @@ class ClinicDashboardScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              // Ch. 9-11 — revenue is real patient consultation payments
+              // Ch. 9-11  -  revenue is real patient consultation payments
               // (never product sales), profit = revenue - clinic
               // expenses. Same _MoneyCard visual language as the
-              // count-based stats above — only the content differs.
+              // count-based stats above  -  only the content differs.
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,

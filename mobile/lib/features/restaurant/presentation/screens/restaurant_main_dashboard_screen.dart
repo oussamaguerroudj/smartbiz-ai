@@ -27,8 +27,8 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 ///
 /// Deliberately NOT a new design: reuses the exact same structural
 /// chrome as [ClinicMainDashboardScreen] (itself matching the generic
-/// [DashboardScreen]) — GradientHero header, the overlapping KPI-card
-/// row, the same FadeSlideIn stagger, the same AnimatedCounter — only
+/// [DashboardScreen])  -  GradientHero header, the overlapping KPI-card
+/// row, the same FadeSlideIn stagger, the same AnimatedCounter  -  only
 /// the CONTENT changes:
 ///   - KPIs: orders today / active orders / today's revenue (never
 ///     product-sale figures)
@@ -98,7 +98,7 @@ class RestaurantMainDashboardScreen extends ConsumerWidget {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
 
-                    // Second KPI row — tables / reservations / outstanding
+                    // Second KPI row  -  tables / reservations / outstanding
                     // payments, same money-card / stat-card visual
                     // language as Clinic's own second row.
                     FadeSlideIn(
@@ -278,7 +278,7 @@ class _RestaurantDashboardHeader extends StatelessWidget {
 }
 
 /// Same visual contract as ClinicMainDashboardScreen's private
-/// `_KpiCard` — duplicated (file-private in that file too) rather than
+/// `_KpiCard`  -  duplicated (file-private in that file too) rather than
 /// exposing its internals, keeping this file's diff fully additive.
 class _KpiCard extends StatelessWidget {
   const _KpiCard({
@@ -357,7 +357,7 @@ class _RestaurantMiniStat extends StatelessWidget {
 }
 
 /// Ch. 17's "Kitchen/order status", surfaced directly on the main
-/// Dashboard tab — same role as Clinic's `_PatientQueueCard`: the most
+/// Dashboard tab  -  same role as Clinic's `_PatientQueueCard`: the most
 /// important "what's happening right now" snapshot, zero extra taps.
 class _ActiveOrdersCard extends StatelessWidget {
   const _ActiveOrdersCard({required this.ordersAsync});
@@ -498,7 +498,7 @@ class _OrderLine extends StatelessWidget {
   }
 }
 
-/// Ch. 17/14 — fast access to a restaurant's most important actions, in
+/// Ch. 17/14  -  fast access to a restaurant's most important actions, in
 /// the same ElevatedButton/OutlinedButton visual language as the
 /// generic dashboard's own quick actions (never a new button style).
 class _RestaurantQuickActions extends StatelessWidget {

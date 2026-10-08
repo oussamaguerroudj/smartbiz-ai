@@ -42,7 +42,7 @@ const ALL_TYPES = [
 
 // Mirrors the switch in mobile/lib/features/shell/presentation/main_shell.dart.
 // Dashboard-family simplification: 'dental_clinic' and 'cafe' are now
-// also admitted (folded into clinic/restaurant respectively) — see
+// also admitted (folded into clinic/restaurant respectively)  -  see
 // clinic.routes.js / restaurant.routes.js and
 // backend/SPECIALIZED_MODULES.md. The mobile picker itself only ever
 // sends the canonical 'clinic'/'restaurant' values to new signups; these

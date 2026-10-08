@@ -25,7 +25,7 @@ Color _statusColor(EnterpriseProjectStatus status) => switch (status) {
 String _dateStr(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-/// Projects (Ch. 19 — "Projects"). The one Enterprise-only list: open
+/// Projects (Ch. 19  -  "Projects"). The one Enterprise-only list: open
 /// projects first (most urgent due date on top), then finished ones,
 /// with a quick status change per project.
 class EnterpriseProjectsScreen extends ConsumerWidget {

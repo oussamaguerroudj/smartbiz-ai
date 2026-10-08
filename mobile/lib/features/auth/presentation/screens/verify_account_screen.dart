@@ -240,7 +240,7 @@ try {
         // FIX (reported bug): the digit typed here rendered huge and
         // hard to read. The box had a fixed height but the default
         // TextField internals (counter row + default vertical padding)
-        // needed more vertical space than that, so the field clipped —
+        // needed more vertical space than that, so the field clipped  - 
         // only the top sliver of the glyph was visible, which read as
         // "giant and invisible". isDense + zero content padding +
         // textAlignVertical.center makes the whole digit fit and sit

@@ -1,17 +1,17 @@
 -- 017_create_clinic_tables.sql
--- Ch. 3 — CLINIC SPECIAL CONTENT. First fully-implemented specialized
+-- Ch. 3  -  CLINIC SPECIAL CONTENT. First fully-implemented specialized
 -- vertical; every other vertical (restaurant, gym, hotel, ...) follows
--- this exact same pattern — see backend/SPECIALIZED_MODULES.md.
+-- this exact same pattern  -  see backend/SPECIALIZED_MODULES.md.
 --
--- SECURITY (Ch. 24 — data isolation): every table below carries its own
+-- SECURITY (Ch. 24  -  data isolation): every table below carries its own
 -- company_id, not just a join through patient_id/appointment_id, so
 -- every query can filter directly on `WHERE company_id = $1` the same
--- way every existing CORE table already does — no new isolation
+-- way every existing CORE table already does  -  no new isolation
 -- mechanism to reason about, no risk of a missing JOIN silently
 -- widening visibility across tenants.
 --
 -- Doctors are NOT a new table: `employees.position` (already free-text,
--- see 003_create_employees.sql) is reused — a clinic's doctors are just
+-- see 003_create_employees.sql) is reused  -  a clinic's doctors are just
 -- employees whose position happens to say "Doctor". This avoids a
 -- redundant doctors table (Ch. 31: reuse existing components).
 
@@ -63,7 +63,7 @@ CREATE TRIGGER trg_clinic_appointments_updated_at
   BEFORE UPDATE ON clinic_appointments
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Waiting Room / Queue (Ch. 3.F — "من أهم الخصائص"). Deliberately
+-- Waiting Room / Queue (Ch. 3.F  -  "من أهم الخصائص"). Deliberately
 -- separate from clinic_appointments: an appointment is a planned slot:
 -- a queue entry is "this specific patient is physically here right
 -- now", created either from a scheduled appointment or as a walk-in
@@ -90,7 +90,7 @@ CREATE TABLE clinic_queue (
 CREATE INDEX ix_clinic_queue_company_status ON clinic_queue (company_id, status, position);
 
 -- One row per real consultation (Ch. 3.H). A queue entry becomes a
--- visit the moment a doctor starts consulting — see clinic.service.js.
+-- visit the moment a doctor starts consulting  -  see clinic.service.js.
 CREATE TABLE clinic_visits (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -111,7 +111,7 @@ CREATE TABLE clinic_visits (
 CREATE INDEX ix_clinic_visits_company ON clinic_visits (company_id);
 CREATE INDEX ix_clinic_visits_patient ON clinic_visits (patient_id, visited_at);
 
--- Patient documents (Ch. 3.D) — stores a URL/reference only (this
+-- Patient documents (Ch. 3.D)  -  stores a URL/reference only (this
 -- project has no file-upload storage service wired up yet; documented
 -- as a follow-up in SPECIALIZED_MODULES.md rather than built ad hoc
 -- here).

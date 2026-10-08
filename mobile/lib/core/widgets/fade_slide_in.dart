@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 /// Fades and slides its child up into place once, on first build (or
 /// after [delay]). Used to give list rows and cards a gentle staggered
-/// entrance instead of popping in — motion that answers the screen
+/// entrance instead of popping in  -  motion that answers the screen
 /// appearing, played once, not looped.
 class FadeSlideIn extends StatefulWidget {
   const FadeSlideIn({

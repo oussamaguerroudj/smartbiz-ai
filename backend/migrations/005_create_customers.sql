@@ -1,6 +1,6 @@
 -- 005_create_customers.sql
 -- Customer / patient records with outstanding balance (Ch. 21.1).
--- Relabeled to "Patients" in UI for clinic business_type — same table.
+-- Relabeled to "Patients" in UI for clinic business_type  -  same table.
 
 CREATE TABLE customers (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),

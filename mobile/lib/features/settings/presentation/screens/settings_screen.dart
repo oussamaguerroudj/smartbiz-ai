@@ -8,8 +8,8 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'profile_screen.dart';
 
-/// Settings — Spec Ch. 23. Business profile / currency editing from
-/// Settings still needs its own dedicated edit screen — PUT /companies/me
+/// Settings  -  Spec Ch. 23. Business profile / currency editing from
+/// Settings still needs its own dedicated edit screen  -  PUT /companies/me
 /// exists and IS used already (Business Setup screen, onboarding), but
 /// there's no "edit later" UI wired to it yet from here. Theme and
 /// language are fully functional (Phase 5 wiring). Logout is real.
@@ -105,7 +105,7 @@ class SettingsScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.of(dialogContext).pop();
               ref.read(authRepositoryProvider).logout();
-              // Pop every pushed screen back to the app's base route —
+              // Pop every pushed screen back to the app's base route  - 
               // main.dart's _AppFlow will then rebuild and, seeing the
               // now-empty session, fall back to the Login screen.
               Navigator.of(context).popUntil((route) => route.isFirst);

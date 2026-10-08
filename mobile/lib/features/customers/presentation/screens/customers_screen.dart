@@ -11,7 +11,7 @@ import '../../data/customers_repository.dart';
 
 export '../../data/customers_repository.dart';
 
-/// Customers — Spec Ch. 21.1. Full Offline-First SQLite CRUD & Search support.
+/// Customers  -  Spec Ch. 21.1. Full Offline-First SQLite CRUD & Search support.
 class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
 

@@ -1,11 +1,11 @@
 -- 023_restaurant_inventory.sql
 -- Restaurant audit Ch. 13/14 "Inventory Page" / "Inventory Stock
--- Calculation" — this table did not exist at all before this pass.
+-- Calculation"  -  this table did not exist at all before this pass.
 --
 -- Stock is NOT a bare mutable quantity column the app can overwrite
 -- freely: quantity is a denormalized cache kept in sync ONLY by
 -- restaurant.repository's stock-movement functions, each of which
--- inserts a row here in the SAME transaction that updates the cache —
+-- inserts a row here in the SAME transaction that updates the cache  - 
 -- the exact pattern clinic_visits.amount_paid/payment_status already
 -- uses for clinic_payments (018_add_clinic_consultation_payments.sql).
 -- The ledger (this table) is the source of truth; `quantity` on
@@ -41,7 +41,7 @@ CREATE INDEX ix_restaurant_inventory_items_low_stock
 -- entry an item is created with; 'purchase' (Ch. 15 AI-scan-confirmed
 -- restocks, or a manual restock), 'consumption'/'adjustment' cover the
 -- rest. quantity_change is signed (positive = stock in, negative =
--- stock out) so current stock is always SUM(quantity_change) — a
+-- stock out) so current stock is always SUM(quantity_change)  -  a
 -- single formula, not different arithmetic per movement_type scattered
 -- through application code.
 CREATE TABLE restaurant_inventory_movements (

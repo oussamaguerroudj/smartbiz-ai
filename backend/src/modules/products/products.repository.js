@@ -2,7 +2,7 @@ const { query } = require('../../config/db');
 
 /**
  * Every function here takes companyId as a REQUIRED first argument and
- * bakes it into the WHERE clause — this is enforcement layer #2 of the
+ * bakes it into the WHERE clause  -  this is enforcement layer #2 of the
  * multi-tenant architecture (layer #1 is auth.middleware extracting
  * companyId only from the verified JWT). A caller literally cannot
  * fetch/mutate another company's products through this repository.
@@ -59,7 +59,7 @@ async function create(companyId, data) {
       data.minimumStock ?? 5,
       data.expirationDate || null,
       data.supplierId || null,
-      // Ch. 18 (Clothing) attributes — optional for every business
+      // Ch. 18 (Clothing) attributes  -  optional for every business
       // type, NULL for anyone who doesn't set them (migration 020).
       data.size || null,
       data.color || null,
@@ -127,7 +127,7 @@ async function softDelete(companyId, id) {
 
 /**
  * Used inside the Sales transaction (sales.service.js). MUST be called
- * with the transaction's own `client`, not the shared pool — otherwise
+ * with the transaction's own `client`, not the shared pool  -  otherwise
  * the stock check and the sale insert wouldn't share the same
  * transaction and the ROLLBACK guarantee would break.
  */

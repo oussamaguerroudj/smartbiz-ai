@@ -8,7 +8,7 @@ function toDateStr(d) {
 /**
  * Ch. 18's dashboard, built entirely from CORE data (products, sales,
  * suppliers, customers, expenses) plus the Ch. 18-specific attribute
- * columns added by migration 020 — clothing revenue IS product-sale
+ * columns added by migration 020  -  clothing revenue IS product-sale
  * revenue (Ch. 21), same as Pharmacy and Supérette.
  *
  * `todayNetProfit` follows the exact same formula as CORE/Reports/

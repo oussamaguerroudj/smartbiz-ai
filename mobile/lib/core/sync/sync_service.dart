@@ -127,7 +127,7 @@ class SyncService extends StateNotifier<SyncState> {
 
     await db.insert('sync_queue', {
       'id': id,
-      'company_id': companyId, // Tag with active company — only this company will process it
+      'company_id': companyId, // Tag with active company  -  only this company will process it
       'client_transaction_id': clientTransactionId,
       'entity_type': entityType,
       'entity_id': entityId,

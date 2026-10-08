@@ -7,7 +7,7 @@ import '../../../../l10n/app_localizations.dart';
 /// This enum is the single source of truth used to drive the
 /// feature-matrix elsewhere in the app, and mirrors backend
 /// `business_type_enum` exactly (see migration 016_expand_business_types.sql)
-/// — `apiValue` below must match a DB enum label 1:1.
+///  -  `apiValue` below must match a DB enum label 1:1.
 enum BusinessType {
   clothing,
   grocery,
@@ -16,10 +16,10 @@ enum BusinessType {
   restaurant,
   company,
   workshop,
-  // Ch. 1 additions (migration 016) — full AR/FR/EN translations exist
+  // Ch. 1 additions (migration 016)  -  full AR/FR/EN translations exist
   // only for the 7 original types above; these 17 show their English
   // label/description regardless of app locale until translated (see
-  // localizedLabel/localizedDescription below) — a real gap, flagged
+  // localizedLabel/localizedDescription below)  -  a real gap, flagged
   // rather than silently shipped as broken/mistranslated text.
   retailStore,
   cafe,
@@ -41,32 +41,32 @@ enum BusinessType {
 }
 
 /// Dashboard-family simplification (post-Phase-4 architecture change,
-/// corrected post-Phase-4.1 to restore Enterprise/Company — see
+/// corrected post-Phase-4.1 to restore Enterprise/Company  -  see
 /// `backend/SPECIALIZED_MODULES.md` §15): the app used to expose all 24
 /// `BusinessType` values as separate picker tiles. New signups now only
-/// ever see these 6 — one per actually-built dashboard family, Enterprise
+/// ever see these 6  -  one per actually-built dashboard family, Enterprise
 /// included since it has always had a real, working dashboard
 /// (`EnterpriseMainDashboardScreen`). Every other enum member (and every
 /// legacy DB value like `cafe`/`dental_clinic`/`supermarket`/
 /// `retail_store`/`workshop`/...) is kept for backward compatibility
 /// (existing accounts, `fromApiValue`, `main_shell.dart`'s routing) but is
-/// deliberately NOT offered to a new user anymore — see
+/// deliberately NOT offered to a new user anymore  -  see
 /// `backend/SPECIALIZED_MODULES.md` for the full rationale and mapping.
 const List<BusinessType> kSelectableBusinessTypes = [
-  BusinessType.grocery, // "Market / Store" — covers supermarket/mini
+  BusinessType.grocery, // "Market / Store"  -  covers supermarket/mini
   // market/grocery/convenience/general store; routes to the existing
   // Supérette dashboard, same as `supermarket`/`retail_store` already did.
-  BusinessType.clothing, // "Clothing Store" — unchanged, already its own family.
-  BusinessType.restaurant, // "Restaurant / Café" — now also covers `cafe`.
-  BusinessType.clinic, // "Clinic / Medical" — now also covers `dental_clinic`.
-  BusinessType.pharmacy, // "Pharmacy" — unchanged, already its own family.
-  BusinessType.company, // "Enterprise / Company" — restored: has a real,
+  BusinessType.clothing, // "Clothing Store"  -  unchanged, already its own family.
+  BusinessType.restaurant, // "Restaurant / Café"  -  now also covers `cafe`.
+  BusinessType.clinic, // "Clinic / Medical"  -  now also covers `dental_clinic`.
+  BusinessType.pharmacy, // "Pharmacy"  -  unchanged, already its own family.
+  BusinessType.company, // "Enterprise / Company"  -  restored: has a real,
   // fully-implemented dashboard (`EnterpriseMainDashboardScreen`) and was
   // wrongly dropped from the picker in the prior pass despite that.
 ];
 
 extension BusinessTypeApi on BusinessType {
-  /// Exact string sent to/received from the backend — must match
+  /// Exact string sent to/received from the backend  -  must match
   /// business_type_enum's labels (snake_case), not this enum's Dart
   /// (camelCase) member names.
   String get apiValue => switch (this) {
@@ -159,10 +159,10 @@ extension BusinessTypeLabels on BusinessType {
         BusinessType.other => 'General business management',
       };
 
-  /// Localized label — matches the arb keys exactly (businessType* /
+  /// Localized label  -  matches the arb keys exactly (businessType* /
   /// businessType*Desc) for the 7 original types. The 17 newer types
   /// (Ch. 1) fall back to the plain English [label] regardless of
-  /// locale — translating them is a follow-up, tracked in
+  /// locale  -  translating them is a follow-up, tracked in
   /// backend/SPECIALIZED_MODULES.md, not silently faked here.
   String localizedLabel(AppLocalizations l10n) => switch (this) {
         BusinessType.clothing => l10n.businessTypeClothing,
@@ -213,7 +213,7 @@ extension BusinessTypeLabels on BusinessType {
         BusinessType.other => 'OT',
       };
 
-  /// Proper semantic icon per business type — replaces the old
+  /// Proper semantic icon per business type  -  replaces the old
   /// text-initials avatar (e.g. Pharmacy showing literal "PH") on the
   /// Business Type selection screen. [shortCode] above is kept in case
   /// anything else references it, but the tile below no longer uses it.
@@ -245,7 +245,7 @@ extension BusinessTypeLabels on BusinessType {
       };
 }
 
-/// Business Type Selection — Spec Ch. 5, screen shown on p.10 of the spec.
+/// Business Type Selection  -  Spec Ch. 5, screen shown on p.10 of the spec.
 class BusinessTypeScreen extends StatefulWidget {
   const BusinessTypeScreen({super.key, required this.onContinue});
 

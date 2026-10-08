@@ -127,7 +127,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDesc2.
   ///
   /// In en, this message translates to:
-  /// **'Never run out of stock — get alerts before products sell out.'**
+  /// **'Never run out of stock  -  get alerts before products sell out.'**
   String get onboardingDesc2;
 
   /// No description provided for @onboardingTitle3.
@@ -295,7 +295,7 @@ abstract class AppLocalizations {
   /// No description provided for @businessTypeClinicDesc.
   ///
   /// In en, this message translates to:
-  /// **'Patients, appointments — medical & dental'**
+  /// **'Patients, appointments  -  medical & dental'**
   String get businessTypeClinicDesc;
 
   /// No description provided for @businessTypeRestaurant.
@@ -307,7 +307,7 @@ abstract class AppLocalizations {
   /// No description provided for @businessTypeRestaurantDesc.
   ///
   /// In en, this message translates to:
-  /// **'Menu, orders, tables — restaurants & cafés'**
+  /// **'Menu, orders, tables  -  restaurants & cafés'**
   String get businessTypeRestaurantDesc;
 
   /// No description provided for @businessTypeCompany.
@@ -619,7 +619,7 @@ abstract class AppLocalizations {
   /// No description provided for @networkError.
   ///
   /// In en, this message translates to:
-  /// **'Could not reach the server — check your connection'**
+  /// **'Could not reach the server  -  check your connection'**
   String get networkError;
 
   /// No description provided for @forgotPasswordTitle.
@@ -667,7 +667,7 @@ abstract class AppLocalizations {
   /// No description provided for @passwordResetSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Password reset — please log in'**
+  /// **'Password reset  -  please log in'**
   String get passwordResetSuccess;
 
   /// No description provided for @emailRequired.
@@ -763,7 +763,7 @@ abstract class AppLocalizations {
   /// No description provided for @salesEmptyState.
   ///
   /// In en, this message translates to:
-  /// **'No sales yet — tap + to record one'**
+  /// **'No sales yet  -  tap + to record one'**
   String get salesEmptyState;
 
   /// No description provided for @saleNumberFallback.
@@ -1057,7 +1057,7 @@ abstract class AppLocalizations {
   /// No description provided for @noNotifications.
   ///
   /// In en, this message translates to:
-  /// **'No notifications — everything looks good'**
+  /// **'No notifications  -  everything looks good'**
   String get noNotifications;
 
   /// No description provided for @settingsTitle.
@@ -1081,7 +1081,7 @@ abstract class AppLocalizations {
   /// No description provided for @businessProfileSnack.
   ///
   /// In en, this message translates to:
-  /// **'Business profile is set during onboarding — an edit screen is a follow-up'**
+  /// **'Business profile is set during onboarding  -  an edit screen is a follow-up'**
   String get businessProfileSnack;
 
   /// No description provided for @currencyTitle.
@@ -1129,7 +1129,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Rate limits, usage — Phase 6'**
+  /// **'Rate limits, usage  -  Phase 6'**
   String get aiSettingsSubtitle;
 
   /// No description provided for @logoutTitle.
@@ -1189,13 +1189,13 @@ abstract class AppLocalizations {
   /// No description provided for @qtyOutOfStock.
   ///
   /// In en, this message translates to:
-  /// **'Qty: 0 — Out of stock'**
+  /// **'Qty: 0  -  Out of stock'**
   String get qtyOutOfStock;
 
   /// No description provided for @qtyLowStock.
   ///
   /// In en, this message translates to:
-  /// **'Qty: {qty} — Low stock'**
+  /// **'Qty: {qty}  -  Low stock'**
   String qtyLowStock(Object qty);
 
   /// No description provided for @qtyOnly.
@@ -1357,7 +1357,7 @@ abstract class AppLocalizations {
   /// No description provided for @appointmentTimeName.
   ///
   /// In en, this message translates to:
-  /// **'{time} — {name}'**
+  /// **'{time}  -  {name}'**
   String appointmentTimeName(Object time, Object name);
 
   /// No description provided for @newAppointmentTitle.
@@ -1573,7 +1573,7 @@ abstract class AppLocalizations {
   /// No description provided for @noProductsLoadedYet.
   ///
   /// In en, this message translates to:
-  /// **'No products loaded yet — check your connection and try again'**
+  /// **'No products loaded yet  -  check your connection and try again'**
   String get noProductsLoadedYet;
 
   /// No description provided for @onlyNInStock.
@@ -1741,7 +1741,7 @@ abstract class AppLocalizations {
   /// No description provided for @noMatchFound.
   ///
   /// In en, this message translates to:
-  /// **'No match found — select manually'**
+  /// **'No match found  -  select manually'**
   String get noMatchFound;
 
   /// No description provided for @unitPriceLabel.
@@ -1771,7 +1771,7 @@ abstract class AppLocalizations {
   /// No description provided for @noItemsDetected.
   ///
   /// In en, this message translates to:
-  /// **'No items were detected in that photo — try again with better lighting.'**
+  /// **'No items were detected in that photo  -  try again with better lighting.'**
   String get noItemsDetected;
 
   /// No description provided for @expensePeriodTypeLabel.
@@ -1825,7 +1825,7 @@ abstract class AppLocalizations {
   /// No description provided for @noCustomersYet.
   ///
   /// In en, this message translates to:
-  /// **'No customers yet — add one first'**
+  /// **'No customers yet  -  add one first'**
   String get noCustomersYet;
 
   /// No description provided for @amountExceedsTotal.
@@ -2491,7 +2491,7 @@ abstract class AppLocalizations {
   /// No description provided for @tableOptionalLabel.
   ///
   /// In en, this message translates to:
-  /// **'Table (optional — takeaway if empty)'**
+  /// **'Table (optional  -  takeaway if empty)'**
   String get tableOptionalLabel;
 
   /// No description provided for @takeawayNoTableOption.
@@ -2503,7 +2503,7 @@ abstract class AppLocalizations {
   /// No description provided for @noMenuItemsYetMessage.
   ///
   /// In en, this message translates to:
-  /// **'No menu items yet — add some from the Menu screen'**
+  /// **'No menu items yet  -  add some from the Menu screen'**
   String get noMenuItemsYetMessage;
 
   /// No description provided for @addAtLeastOneItemMessage.
@@ -2665,7 +2665,7 @@ abstract class AppLocalizations {
   /// No description provided for @adjustQuantityHint.
   ///
   /// In en, this message translates to:
-  /// **'Change ({unit}) — negative to remove'**
+  /// **'Change ({unit})  -  negative to remove'**
   String adjustQuantityHint(Object unit);
 
   /// No description provided for @todayRevenueLabel.
@@ -2719,7 +2719,7 @@ abstract class AppLocalizations {
   /// No description provided for @cartEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Cart is empty — add a product above'**
+  /// **'Cart is empty  -  add a product above'**
   String get cartEmpty;
 
   /// No description provided for @cartLineLabel.
@@ -3181,7 +3181,7 @@ abstract class AppLocalizations {
   /// No description provided for @recipeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Recipe — {name}'**
+  /// **'Recipe  -  {name}'**
   String recipeTitle(Object name);
 
   /// No description provided for @quantityRequiredUnit.
@@ -3997,13 +3997,13 @@ abstract class AppLocalizations {
   /// No description provided for @connectionOffline.
   ///
   /// In en, this message translates to:
-  /// **'Offline — Data saved on device'**
+  /// **'Offline  -  Data saved on device'**
   String get connectionOffline;
 
   /// No description provided for @connectionServerUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Server unavailable — Working offline'**
+  /// **'Server unavailable  -  Working offline'**
   String get connectionServerUnavailable;
 
   /// No description provided for @syncingPending.
@@ -4135,7 +4135,7 @@ abstract class AppLocalizations {
   /// No description provided for @noOpenCarts.
   ///
   /// In en, this message translates to:
-  /// **'No open carts — tap + to start'**
+  /// **'No open carts  -  tap + to start'**
   String get noOpenCarts;
 
   /// No description provided for @cartLabel.

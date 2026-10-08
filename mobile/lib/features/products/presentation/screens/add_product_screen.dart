@@ -8,12 +8,12 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../auth/data/companies_repository.dart';
 import '../../data/products_repository.dart';
 
-/// Add Product — Spec Ch. 10.2. Now calls POST /products for real
+/// Add Product  -  Spec Ch. 10.2. Now calls POST /products for real
 /// (Phase 5 wiring) instead of writing straight into local state.
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key, this.initialBarcode});
 
-  /// Prefills the barcode field — used when scanning a barcode on the
+  /// Prefills the barcode field  -  used when scanning a barcode on the
   /// Stock page finds no existing match, so the user isn't asked to
   /// scan (or type) the same code twice.
   final String? initialBarcode;
@@ -30,11 +30,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _sellingPriceController = TextEditingController();
   final _quantityController = TextEditingController();
   late final _barcodeController = TextEditingController(text: widget.initialBarcode ?? '');
-  // Clothing (Ch. 18) attributes — only rendered/sent for clothing accounts.
+  // Clothing (Ch. 18) attributes  -  only rendered/sent for clothing accounts.
   final _sizeController = TextEditingController();
   final _colorController = TextEditingController();
   final _brandController = TextEditingController();
-  // Pharmacy (Ch. 15) — only rendered/sent for pharmacy accounts.
+  // Pharmacy (Ch. 15)  -  only rendered/sent for pharmacy accounts.
   DateTime? _expirationDate;
 
   @override
@@ -84,7 +84,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   }
 
   // Spec: selling price below purchase price is a WARNING, not a hard
-  // block — so this stays out of the validator (which would prevent
+  // block  -  so this stays out of the validator (which would prevent
   // submission) and is instead surfaced as a banner below the field.
   bool get _sellingBelowPurchase {
     final purchase = double.tryParse(_purchasePriceController.text);

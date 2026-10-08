@@ -22,7 +22,7 @@ Color _reservationStatusColor(RestaurantReservationStatus status) => switch (sta
       RestaurantReservationStatus.noShow => AppColors.danger,
     };
 
-// NOTE (Ch. 19 localization pass): left hardcoded English — same
+// NOTE (Ch. 19 localization pass): left hardcoded English  -  same
 // no-BuildContext structural reason noted in restaurant_orders_screen.
 String _reservationStatusLabel(RestaurantReservationStatus status) => switch (status) {
       RestaurantReservationStatus.pending => 'Pending',
@@ -32,7 +32,7 @@ String _reservationStatusLabel(RestaurantReservationStatus status) => switch (st
       RestaurantReservationStatus.noShow => 'No-show',
     };
 
-/// Reservations (Ch. 17 — "Reservations"). Today-and-forward list, with
+/// Reservations (Ch. 17  -  "Reservations"). Today-and-forward list, with
 /// a quick status change (confirm / seat / cancel) per reservation.
 class RestaurantReservationsScreen extends ConsumerWidget {
   const RestaurantReservationsScreen({super.key});

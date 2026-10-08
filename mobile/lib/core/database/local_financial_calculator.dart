@@ -27,7 +27,7 @@ class LocalFinancialCalculator {
     final rangeStart = resolved['rangeStart']!;
     final rangeEnd = resolved['rangeEnd']!;
 
-    // 1. Global all-time numbers — scoped to this company
+    // 1. Global all-time numbers  -  scoped to this company
     final globalSalesRes = await activeDb.rawQuery(
       '''
       SELECT COALESCE(SUM(si.line_profit), 0) AS revenue
@@ -51,7 +51,7 @@ class LocalFinancialCalculator {
     final globalNetProfit = allRevenue - allExpenses;
     final inventoryValue = (globalInventoryRes.first['inventory_value'] as num?)?.toDouble() ?? 0.0;
 
-    // 2. Period Revenue (Sales profit in period) — scoped to this company
+    // 2. Period Revenue (Sales profit in period)  -  scoped to this company
     final periodSalesRes = await activeDb.rawQuery(
       '''
       SELECT
@@ -67,7 +67,7 @@ class LocalFinancialCalculator {
     final coreRevenue = (periodSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
     final salesCount = (periodSalesRes.first['sales_count'] as num?)?.toInt() ?? 0;
 
-    // 3. Operating expenses in period (excluding salary categories) — scoped to this company
+    // 3. Operating expenses in period (excluding salary categories)  -  scoped to this company
     final opExpensesRes = await activeDb.rawQuery(
       '''
       SELECT COALESCE(SUM(amount), 0) AS total
@@ -80,7 +80,7 @@ class LocalFinancialCalculator {
     );
     final operatingExpenses = (opExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
 
-    // 4. Employee salaries in period — scoped to this company
+    // 4. Employee salaries in period  -  scoped to this company
     final salaryExpensesRes = await activeDb.rawQuery(
       '''
       SELECT COALESCE(SUM(amount), 0) AS total
@@ -99,7 +99,7 @@ class LocalFinancialCalculator {
     final netProfit = revenue - totalExpenses;
     final profitMargin = revenue > 0 ? ((netProfit / revenue) * 100) : 0.0;
 
-    // 5. Top Products — scoped to this company
+    // 5. Top Products  -  scoped to this company
     final topProductsRes = await activeDb.rawQuery(
       '''
       SELECT
@@ -124,7 +124,7 @@ class LocalFinancialCalculator {
       );
     }).toList();
 
-    // 6. Expenses by Category — scoped to this company
+    // 6. Expenses by Category  -  scoped to this company
     final expCategoryRes = await activeDb.rawQuery(
       '''
       SELECT category, COALESCE(SUM(amount), 0) AS total
@@ -147,7 +147,7 @@ class LocalFinancialCalculator {
       );
     }).toList();
 
-    // 7. Activity Counts — scoped to this company
+    // 7. Activity Counts  -  scoped to this company
     final expCountRes = await activeDb.rawQuery(
       'SELECT COUNT(*) AS count FROM expenses WHERE company_id = ? AND date(expense_date) BETWEEN date(?) AND date(?)',
       [companyId, rangeStart, rangeEnd],
@@ -169,7 +169,7 @@ class LocalFinancialCalculator {
       invoicesCount: (invCountRes.first['count'] as num?)?.toInt() ?? 0,
     );
 
-    // 8. Recent Transactions — scoped to this company
+    // 8. Recent Transactions  -  scoped to this company
     final recentSales = await activeDb.rawQuery(
       '''
       SELECT id, total AS amount, sold_at AS date, customer_name, 'sale' AS type
@@ -221,7 +221,7 @@ class LocalFinancialCalculator {
     }
     recentTransactions.sort((a, b) => (b.date ?? DateTime(0)).compareTo(a.date ?? DateTime(0)));
 
-    // 9. Monthly breakdown (for yearly view) — scoped to this company
+    // 9. Monthly breakdown (for yearly view)  -  scoped to this company
     List<MonthlyBreakdownItem> monthlyBreakdown = [];
     if (period == 'yearly') {
       final yr = int.tryParse(rangeStart.substring(0, 4)) ?? DateTime.now().year;
@@ -752,7 +752,7 @@ class LocalFinancialCalculator {
             ))
         .toList();
 
-    // Expiring within 30 days — scoped to this company
+    // Expiring within 30 days  -  scoped to this company
     final in30Days = now.add(const Duration(days: 30));
     final in30DaysStr = _toIsoDate(in30Days);
 

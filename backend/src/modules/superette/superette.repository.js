@@ -6,13 +6,13 @@ const { query } = require('../../config/db');
  * Pharmacy pattern to the letter: `products`/`sales`/`sale_items`/
  * `suppliers`/`customers` already model everything Ch. 16 asks for
  * (Products, Stock, Sales, Purchases-as-cost-tracking, Suppliers,
- * Customers, Credit/customer debt) — per Ch. 21's "reuse existing
+ * Customers, Credit/customer debt)  -  per Ch. 21's "reuse existing
  * backend/database/business logic whenever possible", NO new tables
  * and NO migration were added for this vertical either.
  *
  * The one deliberate difference from Pharmacy: no expiry-alert
  * emphasis here (Ch. 16 doesn't list it the way Ch. 15 does for
- * Pharmacy) — instead this module surfaces customer credit/debt
+ * Pharmacy)  -  instead this module surfaces customer credit/debt
  * (`customers.balance_due`), which Pharmacy's dashboard doesn't.
  * `expiringProducts`/`expiringCount` are intentionally NOT duplicated
  * here: `pharmacy.repository.js`'s versions are already
@@ -46,7 +46,7 @@ async function lowStockCount(companyId) {
   return result.rows[0].count;
 }
 
-/** Stock value at cost and at retail — Ch. 16's "Stock value", same
+/** Stock value at cost and at retail  -  Ch. 16's "Stock value", same
  * shape as pharmacy.repository.js's inventoryValue. */
 async function stockValue(companyId) {
   const result = await query(
@@ -66,7 +66,7 @@ async function stockValue(companyId) {
 }
 
 /** Today's/period sales, revenue and cost-of-goods-aware gross profit
- * — identical shape/formula to pharmacy.repository.js's
+ *  -  identical shape/formula to pharmacy.repository.js's
  * salesSummaryForRange, reused rather than reinvented (Ch. 21). */
 async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
   const result = await query(
@@ -102,7 +102,7 @@ async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
   };
 }
 
-/** Best-selling products this week — same query shape as Reports'
+/** Best-selling products this week  -  same query shape as Reports'
  * `topProducts` / pharmacy.repository.js's bestSellingProducts. */
 async function bestSellingProducts(companyId, rangeStart, rangeEnd, limit = 5) {
   const result = await query(
@@ -128,7 +128,7 @@ async function suppliersCount(companyId) {
   return result.rows[0].count;
 }
 
-/** Ch. 16's "Credit/customer debt when applicable" — total outstanding
+/** Ch. 16's "Credit/customer debt when applicable"  -  total outstanding
  * balance across every customer, plus a short list of the biggest
  * debtors (same query `get_customers_with_debt` already uses in
  * ai.tools.js, kept in sync here rather than reinvented). */

@@ -7,7 +7,7 @@ const getDashboard = asyncHandler(async (req, res) => {
 });
 
 /** Full expiring-products list (the dashboard aggregate above only
- * returns a top-10 preview) — its own endpoint so a dedicated "Expiry
+ * returns a top-10 preview)  -  its own endpoint so a dedicated "Expiry
  * Alerts" screen can page through everything, per Ch. 15. */
 const getExpiringProducts = asyncHandler(async (req, res) => {
   const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
