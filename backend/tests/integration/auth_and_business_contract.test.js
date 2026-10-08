@@ -60,7 +60,14 @@ describe('Auth & Business Onboarding Integration Suite (Real PostgreSQL)', () =>
   });
 
   beforeEach(async () => {
-    // Clean test tables before each test
+    // Clean test tables before each test (child tables first)
+    await testPool.query('DELETE FROM sale_items');
+    await testPool.query('DELETE FROM sales');
+    await testPool.query('DELETE FROM invoices');
+    await testPool.query('DELETE FROM products');
+    await testPool.query('DELETE FROM customers');
+    await testPool.query('DELETE FROM expenses');
+    await testPool.query('DELETE FROM employees');
     await testPool.query('DELETE FROM pending_registrations');
     await testPool.query('DELETE FROM users');
     await testPool.query('DELETE FROM companies');
