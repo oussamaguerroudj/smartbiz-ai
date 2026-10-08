@@ -2,13 +2,13 @@
 -- Business-specialization brief Ch. 18 (Clothing Store) asks for
 -- Size / Color / Brand as visible product attributes. Per Ch. 21's
 -- "do not fake data" rule, these did not exist anywhere in the schema
--- (only `category` does)  -  so, exactly like migration 006's
+-- (only `category` does) — so, exactly like migration 006's
 -- `expiration_date` was reserved ahead of Pharmacy needing it, this
 -- migration adds three plain nullable columns to the existing CORE
 -- `products` table rather than creating a new `clothing_*` table.
 --
 -- Purely additive, zero risk to existing rows: every other business
--- type simply never sets these columns and they stay NULL forever  - 
+-- type simply never sets these columns and they stay NULL forever —
 -- same "safe default" property every other ALTER TABLE ... ADD COLUMN
 -- in this codebase has (e.g. 013_add_expense_periods.sql,
 -- 018_add_clinic_consultation_payments.sql).

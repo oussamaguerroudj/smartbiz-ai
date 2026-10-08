@@ -2,12 +2,12 @@
 -- Ch. 16 "Revenue / Cost of Goods Sold / Gross Profit / Net Profit":
 -- computing COGS per order requires knowing which inventory items (and
 -- how much of each) one menu item consumes. That mapping did not exist
--- anywhere in this schema  -  this table is it, additive to both
+-- anywhere in this schema — this table is it, additive to both
 -- restaurant_menu_items (023) and restaurant_inventory_items (023),
 -- FK'd to both rather than duplicating either.
 --
 -- quantity_required is in the SAME unit as the referenced
--- restaurant_inventory_items.unit  -  this migration does not attempt
+-- restaurant_inventory_items.unit — this migration does not attempt
 -- unit conversion (e.g. grams vs kg); the person defining a recipe is
 -- expected to use the inventory item's own unit. Documented here so
 -- it's an explicit, known limitation rather than a silent wrong
@@ -29,7 +29,7 @@ CREATE INDEX ix_restaurant_menu_item_ingredients_menu_item
 -- Ch. 16 idempotency guard: when an order is completed, ingredient
 -- consumption is recorded as restaurant_inventory_movements rows with
 -- reference = 'order:<order_id>' (application code, not this
--- migration)  -  checking for an existing row with that reference before
+-- migration) — checking for an existing row with that reference before
 -- deducting again is what makes "mark the same order completed twice"
 -- safe, the same "don't duplicate stock changes when retried" rule
 -- 023's ledger already follows for manual/AI-scan movements.

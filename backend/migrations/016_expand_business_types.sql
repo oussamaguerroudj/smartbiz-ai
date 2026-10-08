@@ -1,5 +1,5 @@
 -- 016_expand_business_types.sql
--- Ch. 1/29/30  -  SPECIALIZED BUSINESS CONTENT.
+-- Ch. 1/29/30 — SPECIALIZED BUSINESS CONTENT.
 --
 -- Purely additive: ALTER TYPE ... ADD VALUE never removes or renames an
 -- existing enum label, so every company row that already has
@@ -13,7 +13,7 @@
 -- every file in one implicit transaction, run the ADD VALUE statements
 -- below first, commit, THEN run 017_create_clinic_tables.sql (which
 -- doesn't touch this enum, so this isn't actually a problem for this
--- pair of migrations)  -  flagged here regardless for future specialized
+-- pair of migrations) — flagged here regardless for future specialized
 -- migrations that might insert a row using a type added in this same
 -- file.
 
@@ -38,7 +38,7 @@ ALTER TYPE business_type_enum ADD VALUE IF NOT EXISTS 'other';
 -- Every value this project currently knows how to build a Specialized
 -- Module for (Ch. 2's CORE + SPECIALIZED split). A business_type NOT in
 -- this list still works fully at the CORE level (Sales/Invoices/
--- Expenses/etc.)  -  it just has no extra specialized screens yet, which
+-- Expenses/etc.) — it just has no extra specialized screens yet, which
 -- is the correct, safe default for a type someone picks before its
 -- module is built (e.g. 'gym', 'hotel' as of this migration).
 --
@@ -47,4 +47,4 @@ ALTER TYPE business_type_enum ADD VALUE IF NOT EXISTS 'other';
 -- one migration per vertical as each is implemented, never all at once,
 -- so a half-built vertical never leaves a company account half-broken.
 COMMENT ON TYPE business_type_enum IS
-  'Ch. 1/29: core CRM works for every value; SPECIALIZED modules (clinic_*, restaurant_* tables, dedicated Flutter screens) exist only for the subset actually implemented so far  -  see backend/SPECIALIZED_MODULES.md.';
+  'Ch. 1/29: core CRM works for every value; SPECIALIZED modules (clinic_*, restaurant_* tables, dedicated Flutter screens) exist only for the subset actually implemented so far — see backend/SPECIALIZED_MODULES.md.';

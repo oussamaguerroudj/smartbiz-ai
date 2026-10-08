@@ -1,6 +1,6 @@
 -- seed_dev_data.sql
 -- Demo tenant matching the examples used throughout the Product Specification
--- (Amine Grocery, DZD currency, Whole Milk 1L etc.)  -  for local dev/testing only.
+-- (Amine Grocery, DZD currency, Whole Milk 1L etc.) — for local dev/testing only.
 -- Safe to re-run: wipes and recreates the demo company only.
 
 BEGIN;
@@ -15,7 +15,7 @@ WITH new_company AS (
 new_owner AS (
   INSERT INTO users (company_id, name, email, password_hash, role)
   SELECT id, 'Amine K.', 'amine@smartbiz.demo',
-         -- bcrypt hash of "password123"  -  DEV ONLY, never use in production
+         -- bcrypt hash of "password123" — DEV ONLY, never use in production
          '$2b$10$CwTycUXWue0Thq9StjUM0uJ8i8vC0F1FeS8yjZ8jZ8h5nO0Y0m3Ke',
          'owner'
   FROM new_company

@@ -1,8 +1,8 @@
 -- 018_add_clinic_consultation_payments.sql
--- Clinic Consultation Payments (spec §7-11  -  "VERY IMPORTANT"):
+-- Clinic Consultation Payments (spec §7-11 — "VERY IMPORTANT"):
 -- clinic revenue must come from actual patient consultation payments,
 -- never from product-sale logic. This was the one piece of the Clinic
--- vertical that 017_create_clinic_tables.sql did not build yet  -  this
+-- vertical that 017_create_clinic_tables.sql did not build yet — this
 -- migration adds it without touching any existing clinic/core table.
 --
 -- Design:
@@ -10,7 +10,7 @@
 --     amount_paid, payment_status) so a single visit row always shows
 --     its own current payment state without a JOIN.
 --   * clinic_payments is the append-only ledger of every payment (and
---     refund, as a negative amount) ever recorded against a visit  - 
+--     refund, as a negative amount) ever recorded against a visit —
 --     this is what "Today's / This week's / This month's consultation
 --     revenue" actually sums, keyed by paid_at (the day money changed
 --     hands), not visited_at (the day the consultation happened). A
@@ -18,7 +18,7 @@
 --     revenue, matching how cash actually moves.
 --   * amount_paid on clinic_visits is a denormalized running total of
 --     its own clinic_payments rows, kept in sync by the service layer
---     inside the same transaction as every insert  -  read-heavy screens
+--     inside the same transaction as every insert — read-heavy screens
 --     (patient profile, queue) never need to re-sum the ledger.
 
 CREATE TYPE clinic_payment_status_enum AS ENUM (
@@ -46,7 +46,7 @@ CREATE TABLE clinic_payments (
 );
 
 -- company_id is denormalized onto every payment row (never derived only
--- via a JOIN to clinic_visits/clinic_patients)  -  same tenant-isolation
+-- via a JOIN to clinic_visits/clinic_patients) — same tenant-isolation
 -- rule every other clinic/CORE table already follows (Ch. 24).
 CREATE INDEX ix_clinic_payments_company_paidat ON clinic_payments (company_id, paid_at);
 CREATE INDEX ix_clinic_payments_visit ON clinic_payments (visit_id);

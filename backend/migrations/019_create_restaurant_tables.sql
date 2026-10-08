@@ -1,16 +1,16 @@
 -- 019_create_restaurant_tables.sql
--- Restaurant vertical (business-specialization brief Ch. 17)  -  second
+-- Restaurant vertical (business-specialization brief Ch. 17) — second
 -- fully-implemented specialized vertical after Clinic, following the
 -- exact pattern documented in backend/SPECIALIZED_MODULES.md §3.
 --
--- SECURITY (Ch. 24  -  data isolation): every table below carries its own
+-- SECURITY (Ch. 24 — data isolation): every table below carries its own
 -- company_id, not just a join through table_id/order_id, so every
 -- query can filter directly on `WHERE company_id = $1` the same way
 -- every existing CORE and clinic_* table already does.
 --
 -- Waiters/Cashiers are NOT a new table: `employees.position` (already
 -- free-text, see 003_create_employees.sql) is reused, exactly like
--- Clinic reused it for "Doctor"  -  no redundant staff table.
+-- Clinic reused it for "Doctor" — no redundant staff table.
 
 CREATE TYPE restaurant_table_status_enum AS ENUM (
   'available', 'occupied', 'reserved', 'cleaning'
@@ -51,7 +51,7 @@ CREATE TRIGGER trg_restaurant_menu_items_updated_at
   BEFORE UPDATE ON restaurant_menu_items
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Orders (Ch. 17.A)  -  mirrors clinic_visits' price/paid/payment_status
+-- Orders (Ch. 17.A) — mirrors clinic_visits' price/paid/payment_status
 -- snapshot columns exactly, so revenue logic can reuse the same
 -- pattern proven there: never product-sale/invoice logic, a real
 -- append-only payments ledger is the source of truth for revenue.
@@ -86,7 +86,7 @@ CREATE TRIGGER trg_restaurant_orders_updated_at
   BEFORE UPDATE ON restaurant_orders
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Order line items  -  name/price are snapshotted at order time (never
+-- Order line items — name/price are snapshotted at order time (never
 -- re-read from restaurant_menu_items later) so a later menu price
 -- change never rewrites a past order's total, same principle as
 -- sales_items already uses for product sales elsewhere in this app.
@@ -129,7 +129,7 @@ CREATE TRIGGER trg_restaurant_reservations_updated_at
   BEFORE UPDATE ON restaurant_reservations
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Order payments ledger  -  same append-only design as clinic_payments
+-- Order payments ledger — same append-only design as clinic_payments
 -- (018_add_clinic_consultation_payments.sql): a negative amount is a
 -- refund, revenue is always summed from this table by paid_at (the day
 -- money actually moved), never from restaurant_orders directly.

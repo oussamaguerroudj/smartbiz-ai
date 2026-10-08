@@ -1,5 +1,5 @@
 -- 022_clinic_documents_and_prescriptions.sql
--- Clinic module audit (Chunks 4/5/6/7 of the Clinic spec)  -  two gaps
+-- Clinic module audit (Chunks 4/5/6/7 of the Clinic spec) — two gaps
 -- found in 017_create_clinic_tables.sql that this migration closes
 -- without touching any existing clinic/core table or column:
 --
@@ -7,14 +7,14 @@
 --      description, and no soft-delete column, so "who uploaded this",
 --      "how big is it", and "delete a document" (spec Ch. 4) had
 --      nowhere to be recorded. Added as new nullable/defaulted columns
---       -  existing rows remain valid with no backfill required.
+--      — existing rows remain valid with no backfill required.
 --
---   2. There was no prescription entity at all  -  `clinic_visits.prescription`
+--   2. There was no prescription entity at all — `clinic_visits.prescription`
 --      is a single free-text column, so "multiple medications per
 --      prescription" (spec Ch. 6) and "unique identifier" / "view it
 --      later" (Ch. 6) had no structure to live in. clinic_visits.prescription
 --      is left exactly as-is (still used for the quick free-text note a
---      doctor types while finishing a consultation)  -  clinic_prescriptions
+--      doctor types while finishing a consultation) — clinic_prescriptions
 --      is an additive, optional, more structured record a doctor can
 --      create for a patient when they need one, same relationship
 --      appointments already have to visits (planned vs. what happened).
@@ -45,7 +45,7 @@ CREATE TABLE clinic_prescriptions (
 
 -- Same per-company sequential numbering pattern as invoices
 -- (sales.repository.nextInvoiceNumber: "INV-<n>", FOR UPDATE-locked
--- company row)  -  reused here as "RX-<n>", not a new numbering scheme.
+-- company row) — reused here as "RX-<n>", not a new numbering scheme.
 CREATE UNIQUE INDEX ux_clinic_prescriptions_company_number
   ON clinic_prescriptions (company_id, prescription_number);
 CREATE INDEX ix_clinic_prescriptions_patient ON clinic_prescriptions (patient_id, issued_at);
