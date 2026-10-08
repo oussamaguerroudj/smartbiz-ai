@@ -8,6 +8,9 @@ const { apiGlobalLimiter } = require('./middlewares/rateLimit.middleware');
 
 const app = express();
 
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
 // Request logger at the very top so EVERY incoming request is logged immediately
 app.use((req, res, next) => {
   const start = Date.now();

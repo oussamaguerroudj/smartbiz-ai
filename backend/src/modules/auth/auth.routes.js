@@ -13,6 +13,7 @@ const {
 const { authMiddleware } = require('../../middlewares/auth.middleware');
 const {
   authAccountLimiter,
+  loginIpLimiter,
   otpVerifyLimiter,
 } = require('../../middlewares/rateLimit.middleware');
 
@@ -20,7 +21,7 @@ const router = express.Router();
 
 // Public auth endpoints (protected by per-account/IP rate limiters)
 router.post('/register', authAccountLimiter, validateRegister, controller.register);
-router.post('/login', authAccountLimiter, validateLogin, controller.login);
+router.post('/login', loginIpLimiter, authAccountLimiter, validateLogin, controller.login);
 router.post('/refresh', validateRefresh, controller.refresh);
 router.post('/verify-email', otpVerifyLimiter, validateVerifyEmail, controller.verifyEmail);
 router.post('/resend-verification', otpVerifyLimiter, validateResendVerification, controller.resendVerification);

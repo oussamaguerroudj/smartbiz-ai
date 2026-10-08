@@ -77,6 +77,14 @@ const authAccountLimiter = createRateLimiter({
   message: 'Too many authentication attempts for this account. Please try again later.',
 });
 
+const loginIpLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  keyPrefix: 'auth-login-ip',
+  includeEmail: false,
+  message: 'Too many login attempts from this IP address. Please try again later.',
+});
+
 const otpVerifyLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 10,
@@ -96,6 +104,7 @@ module.exports = {
   createRateLimiter,
   resetRateLimiters,
   authAccountLimiter,
+  loginIpLimiter,
   otpVerifyLimiter,
   apiGlobalLimiter,
 };
