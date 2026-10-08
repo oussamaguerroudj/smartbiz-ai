@@ -34,11 +34,17 @@ if (nodeEnv === 'production') {
   if (!process.env.SMTP_HOST || String(process.env.SMTP_HOST).trim() === '') {
     throw new Error('SMTP_HOST is required in production');
   }
+  if (!process.env.SMTP_PORT || String(process.env.SMTP_PORT).trim() === '') {
+    throw new Error('SMTP_PORT is required in production');
+  }
   if (!process.env.SMTP_USER || String(process.env.SMTP_USER).trim() === '') {
     throw new Error('SMTP_USER is required in production');
   }
   if (!process.env.SMTP_PASS || String(process.env.SMTP_PASS).trim() === '') {
     throw new Error('SMTP_PASS is required in production');
+  }
+  if (!process.env.SMTP_FROM || String(process.env.SMTP_FROM).trim() === '') {
+    throw new Error('SMTP_FROM is required in production');
   }
 }
 

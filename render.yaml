@@ -24,6 +24,16 @@ services:
         value: 30d
       - key: CORS_ORIGIN
         value: "*"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
       - key: AI_BASE_URL
         value: http://localhost:11434/v1
       - key: AI_API_KEY
