@@ -1,6 +1,6 @@
 const ApiError = require('../../utils/ApiError');
 
-// ~6MB of base64 text (~4.5MB decoded)  -  comfortably fits a real phone
+// ~6MB of base64 text (~4.5MB decoded) — comfortably fits a real phone
 // photo (especially since the client compresses before sending) while
 // still bounding the worst case for both the request body and the
 // self-hosted inference server's GPU queue.

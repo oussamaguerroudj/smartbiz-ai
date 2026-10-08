@@ -19,12 +19,12 @@ const {
 const { parseInvoiceText } = require('./invoice.parser');
 
 /**
- * AI module  -  migrated off OpenAI's cloud API onto a self-hosted,
+ * AI module — migrated off OpenAI's cloud API onto a self-hosted,
  * open-source Qwen stack (Ch. 25: ZERO OpenAI dependency). See
  * backend/AI_MIGRATION.md for the full migration report, model
  * choices, and setup instructions.
  *
- * The `openai` npm package is still used here  -  but only as a generic
+ * The `openai` npm package is still used here — but only as a generic
  * HTTP client for the OpenAI-*API-shape*, pointed at env.ai.baseUrl
  * (your own vLLM/Ollama server via config/env.js). No request from
  * this file ever reaches openai.com; no OpenAI account or billing is
@@ -34,7 +34,7 @@ const { parseInvoiceText } = require('./invoice.parser');
  *
  * Design principle carried over unchanged from before the migration:
  * the AI layer never writes directly to products/sales/customers.
- * Every AI call here is read-only from the business's point of view  - 
+ * Every AI call here is read-only from the business's point of view —
  * invoice scanning returns extracted items for the client to review
  * and submit through the normal, already-validated /products or
  * /sales endpoints; chat/insights only ever read data via ai.tools.js.
@@ -152,7 +152,7 @@ function getClient() {
   return cachedClient;
 }
 
-// Generous but bounded  -  protects the self-hosted server (and its GPU
+// Generous but bounded — protects the self-hosted server (and its GPU
 // queue) from a runaway client bug or a compromised token, without
 // getting in the way of any real, legitimate usage pattern for a small
 // business.
@@ -210,7 +210,7 @@ async function confirmAiLog(companyId, logId) {
 
 /**
  * Records user feedback / a corrected answer against a previous AI
- * interaction (Ch. 26-27: future dataset pipeline). Purely additive  - 
+ * interaction (Ch. 26-27: future dataset pipeline). Purely additive —
  * writes to the SAME ai_logs row rather than a new parallel table,
  * avoiding duplicate infrastructure (Ch. 30). Never stores anything
  * beyond what the user explicitly submits here; no passwords, tokens,
@@ -309,8 +309,8 @@ async function pingOllama(requiredModels = []) {
 
 /**
  * Best-effort call to the optional companion OCR microservice
- * (PaddleOCR  -  see backend/ocr-service/) or specialized fast Ollama OCR model (GLM-OCR).
- * Returns '' (not an error) if OCR fails  -  invoice scanning still
+ * (PaddleOCR — see backend/ocr-service/) or specialized fast Ollama OCR model (GLM-OCR).
+ * Returns '' (not an error) if OCR fails — invoice scanning still
  * falls back gracefully to the vision model (Qwen2.5-VL).
  */
 async function runOcr(imageBase64, mimeType = 'image/jpeg') {
@@ -447,7 +447,7 @@ async function extractOcr({ companyId, userId, imageBase64, mimeType }) {
  * Open-source models (served via vLLM/Ollama) are not always as
  * strict about `response_format: json_object` as OpenAI's own models.
  * This extracts the first {...} block from a response as a fallback
- * before giving up  -  a small robustness allowance for Ch. 21's
+ * before giving up — a small robustness allowance for Ch. 21's
  * "malformed JSON" failure mode.
  */
 function parseJsonLoose(raw) {
@@ -593,7 +593,7 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType, scanId: c
     }
   }
 
-  // Defensive sanitation  -  quantities must be >= 1, prices >= 0, names non-empty, max 100 items
+  // Defensive sanitation — quantities must be >= 1, prices >= 0, names non-empty, max 100 items
   const items = rawItems
     .filter((item) => item && typeof item.name === 'string' && item.name.trim().length > 0)
     .slice(0, 100)
@@ -645,7 +645,7 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType, scanId: c
 }
 
 // ---------------------------------------------------------------------
-// AI Assistant (chat)  -  tool-calling loop, grounded in real data only
+// AI Assistant (chat) — tool-calling loop, grounded in real data only
 // ---------------------------------------------------------------------
 
 const MAX_TOOL_CALL_ROUNDS = 4;
@@ -756,7 +756,7 @@ async function chat({ companyId, userId, message, history }) {
   let finalReply = null;
 
   // Standard tool-calling loop (Ch. 8): the model can ask for one or
-  // more tools, we run them (scoped to companyId  -  see ai.tools.js),
+  // more tools, we run them (scoped to companyId — see ai.tools.js),
   // feed the results back, and repeat until it answers in plain text
   // or we hit the round cap (protects against a model stuck looping).
   while (toolCallCount < MAX_TOOL_CALL_ROUNDS) {
@@ -839,7 +839,7 @@ async function chat({ companyId, userId, message, history }) {
     type: 'assistant_chat',
     inputRef: cleanMessage.slice(0, 500),
     result: { reply },
-    // Read-only/advisory  -  nothing for the user to "confirm" the way
+    // Read-only/advisory — nothing for the user to "confirm" the way
     // there is for a scanned invoice.
     confirmed: true,
   });
@@ -848,7 +848,7 @@ async function chat({ companyId, userId, message, history }) {
 }
 
 // ---------------------------------------------------------------------
-// AI Insights  -  deterministic metrics (Ch. 6) narrated by Qwen
+// AI Insights — deterministic metrics (Ch. 6) narrated by Qwen
 // ---------------------------------------------------------------------
 
 async function insights({ companyId, userId }) {
@@ -857,7 +857,7 @@ async function insights({ companyId, userId }) {
   }
   await checkRateLimit(companyId);
 
-  // Backend performs every calculation deterministically first  -  the
+  // Backend performs every calculation deterministically first — the
   // model only ever narrates numbers it's handed, never computes them
   // (Ch. 6 "Use deterministic backend calculations... The LLM should
   // interpret the data, NOT perform critical calculations blindly").

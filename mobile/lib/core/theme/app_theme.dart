@@ -3,9 +3,9 @@ import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 
-/// Modiri AI  -  Design System v2 ("Indigo")  -  ThemeData
+/// Modiri AI — Design System v2 ("Indigo") — ThemeData
 /// Light and dark themes built from the same tokens (unchanged structure
-/// from v1  -  only the tokens themselves changed, plus a few new theme
+/// from v1 — only the tokens themselves changed, plus a few new theme
 /// extensions for the rounder, shadow-driven, motion-friendly redesign).
 class AppTheme {
   AppTheme._();
@@ -51,7 +51,7 @@ class AppTheme {
         surface: surface,
         onSurface: textPrimary,
       ),
-      // Calmer, consistent cross-platform page transitions  -  a soft fade
+      // Calmer, consistent cross-platform page transitions — a soft fade
       // + slide instead of the default (which differs jarringly between
       // Android's zoom and iOS's full-screen slide).
       pageTransitionsTheme: const PageTransitionsTheme(

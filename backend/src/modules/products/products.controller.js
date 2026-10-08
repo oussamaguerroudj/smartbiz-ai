@@ -13,7 +13,7 @@ const getOne = asyncHandler(async (req, res) => {
 
 const getByBarcode = asyncHandler(async (req, res) => {
   const product = await service.getByBarcode(req.user.companyId, req.params.code);
-  // No match is a normal, expected result of a scan  -  200 with a null
+  // No match is a normal, expected result of a scan — 200 with a null
   // payload, not a 404, so the client doesn't need to special-case an
   // error status just to mean "nothing found".
   res.json({ data: product || null });

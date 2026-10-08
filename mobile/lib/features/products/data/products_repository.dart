@@ -15,7 +15,7 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
   final Ref _ref;
 
   /// Returns the active company ID from the session.
-  /// If null (not logged in), all local reads return empty  -  preventing any
+  /// If null (not logged in), all local reads return empty — preventing any
   /// data from leaking to an unauthenticated state.
   String? get _companyId => _ref.read(sessionProvider).companyId;
 
@@ -132,7 +132,7 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     final newId = const Uuid().v4();
     final db = await AppDatabase.instance.database;
 
-    // Save locally first  -  always tagged with the active company
+    // Save locally first — always tagged with the active company
     await db.insert('products', {
       'id': newId,
       'company_id': companyId,
@@ -256,7 +256,7 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     if (imageUrl != null) updates['image_url'] = imageUrl;
 
     if (updates.isNotEmpty) {
-      // Scoped by company_id  -  cannot accidentally update another company's product
+      // Scoped by company_id — cannot accidentally update another company's product
       await db.update(
         'products',
         updates,
@@ -291,7 +291,7 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
-    // Scoped by company_id  -  cannot delete another company's product
+    // Scoped by company_id — cannot delete another company's product
     await db.delete(
       'products',
       where: 'id = ? AND company_id = ?',

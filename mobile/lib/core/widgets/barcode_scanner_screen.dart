@@ -5,7 +5,7 @@ import '../theme/app_spacing.dart';
 import '../utils/barcode_validator.dart';
 import '../../l10n/app_localizations.dart';
 
-/// Shared full-screen barcode scanner  -  used by both the Sales page
+/// Shared full-screen barcode scanner — used by both the Sales page
 /// ("scan a product straight into the cart") and the Stock page
 /// ("scan a product to look it up or add it"). One implementation so
 /// both pages get the exact same camera behavior and UI.
@@ -33,7 +33,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   );
 
   // Guards against a single physical scan producing multiple detections
-  // (the camera keeps streaming frames)  -  the very first good read wins
+  // (the camera keeps streaming frames) — the very first good read wins
   // and immediately closes the screen.
   bool _handled = false;
 
@@ -208,7 +208,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   }
 }
 
-/// Dark scrim with a cut-out rounded rectangle in the middle  -  the
+/// Dark scrim with a cut-out rounded rectangle in the middle — the
 /// standard "viewfinder" look for a barcode/QR scanner, built with a
 /// single [CustomPainter] rather than four separate positioned boxes so
 /// the corner radius stays clean at every screen size.
@@ -247,7 +247,7 @@ class _ScrimPainter extends CustomPainter {
     final combined = Path.combine(PathOperation.difference, fullPath, cutoutPath);
     canvas.drawPath(combined, scrimPaint);
 
-    // Corner brackets on the viewfinder  -  a small detail that makes it
+    // Corner brackets on the viewfinder — a small detail that makes it
     // read instantly as "a scanner" rather than just a rounded box.
     final bracketPaint = Paint()
       ..color = AppColors.primaryLight

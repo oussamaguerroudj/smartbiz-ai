@@ -10,7 +10,7 @@ import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/auth_repository.dart';
 
-/// Login Screen  -  Spec Ch. 8.3
+/// Login Screen — Spec Ch. 8.3
 /// Now wired to the real backend (Phase 5): calls POST /auth/login via
 /// AuthRepository, shows a loading state, and surfaces backend errors
 /// (e.g. wrong password) as a snackbar instead of always succeeding.
@@ -30,7 +30,7 @@ class LoginScreen extends ConsumerStatefulWidget {
   /// Called (with the email just typed in) when the backend rejects the
   /// login attempt because the account hasn't been verified yet. Takes
   /// the user straight to the "enter your code" screen instead of
-  /// leaving them stuck with no way forward  -  they don't have a token
+  /// leaving them stuck with no way forward — they don't have a token
   /// (login failed) so re-registering was previously the only escape
   /// hatch, which then wrongly complained the email was already taken.
   final void Function(String email) onGoToVerify;
@@ -206,7 +206,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             TextButton(
                               // FIX (reported bug): this was a no-op
-                              // `onPressed: () {}`  -  the link did nothing.
+                              // `onPressed: () {}` — the link did nothing.
                               onPressed: widget.onGoToForgotPassword,
                               child: Text(l10n.forgotPassword),
                             ),

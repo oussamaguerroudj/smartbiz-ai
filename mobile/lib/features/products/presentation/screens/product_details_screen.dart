@@ -11,7 +11,7 @@ import '../../domain/product.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'edit_product_screen.dart';
 
-/// Product Details  -  Spec Ch. 10.3 with Edit and Delete support.
+/// Product Details — Spec Ch. 10.3 with Edit and Delete support.
 class ProductDetailsScreen extends ConsumerWidget {
   const ProductDetailsScreen({super.key, required this.productId});
 

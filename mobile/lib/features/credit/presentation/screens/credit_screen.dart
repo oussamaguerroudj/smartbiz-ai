@@ -9,7 +9,7 @@ import 'create_credit_sale_screen.dart';
 import 'customer_credit_history_screen.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Credit page  -  Ch. 15/16. Refetched (not cached) every time this
+/// Credit page — Ch. 15/16. Refetched (not cached) every time this
 /// screen is opened, since balances change the moment any Credit Sale
 /// or payment is recorded elsewhere in the app.
 final creditSummaryProvider = FutureProvider.autoDispose<CreditSummary>((ref) async {

@@ -9,7 +9,7 @@ import '../../data/credit_repository.dart';
 import 'credit_screen.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Transaction History for one customer (Ch. 14/20)  -  every credit
+/// Transaction History for one customer (Ch. 14/20) — every credit
 /// purchase and every payment shown as its own line, running balance
 /// visible after each, plus the ability to record a new payment
 /// against the current outstanding balance.

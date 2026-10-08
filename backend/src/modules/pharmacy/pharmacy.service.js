@@ -7,7 +7,7 @@ function toDateStr(d) {
 
 /**
  * Ch. 15's dashboard, built entirely from CORE data plus the two
- * pharmacy-only reads (expiry, inventory value)  -  no separate
+ * pharmacy-only reads (expiry, inventory value) — no separate
  * "pharmacy revenue" concept exists because pharmacy revenue IS
  * product-sale revenue (Ch. 21: "Pharmacy revenue = actual product
  * sales"), unlike Clinic where revenue explicitly is NOT a sales
@@ -15,7 +15,7 @@ function toDateStr(d) {
  *
  * `todayNetProfit` follows the exact same formula as the CORE
  * dashboard (dashboard.routes.js) and Reports (reports.routes.js):
- * revenue - operating expenses, NOT revenue - COGS - expenses  - 
+ * revenue - operating expenses, NOT revenue - COGS - expenses —
  * `todayGrossProfit` (cost-of-goods aware, from sale_items.line_profit)
  * is reported alongside it as its own field, matching how Reports
  * already separates `netProfit` from `grossProfit` rather than

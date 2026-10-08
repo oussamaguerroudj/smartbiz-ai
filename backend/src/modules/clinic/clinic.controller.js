@@ -87,7 +87,7 @@ const getPrescription = asyncHandler(async (req, res) => {
   res.json({ data: prescription });
 });
 
-/** Ch. 4 "preview / download"  -  streams the file itself; ownership
+/** Ch. 4 "preview / download" — streams the file itself; ownership
  * already verified inside service.getDocumentFile (company-scoped
  * lookup), so nothing here trusts req.params.id beyond that check. */
 const downloadDocument = asyncHandler(async (req, res) => {

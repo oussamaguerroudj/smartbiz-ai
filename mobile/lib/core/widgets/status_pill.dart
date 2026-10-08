@@ -4,7 +4,7 @@ import '../theme/app_spacing.dart';
 
 enum PillTone { brand, danger, neutral }
 
-/// Small rounded status label  -  "Paid" / "Present" / "Scheduled" / "Done"  - 
+/// Small rounded status label — "Paid" / "Present" / "Scheduled" / "Done" —
 /// matching the badge treatment in the approved redesign. [pulse] adds a
 /// subtle glowing dot for "live" statuses (present, scheduled, in stock)
 /// so the eye is drawn to state that can change, without animating text

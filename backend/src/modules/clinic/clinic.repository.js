@@ -241,7 +241,7 @@ async function addToQueue(companyId, { patientId, appointmentId, doctorId, visit
   });
 }
 
-/** Today's queue, ordered for display exactly like the spec's example (#01 Ahmed  -  Waiting...). */
+/** Today's queue, ordered for display exactly like the spec's example (#01 Ahmed — Waiting...). */
 async function getActiveQueue(companyId) {
   const result = await query(
     `SELECT cq.*, cp.full_name AS patient_name, e.name AS doctor_name
@@ -372,12 +372,12 @@ async function findVisitById(companyId, visitId) {
 }
 
 // ---------------------------------------------------------------------
-// Consultation Payments (Ch. 7-11  -  clinic revenue = patient payments,
+// Consultation Payments (Ch. 7-11 — clinic revenue = patient payments,
 // never product-sale logic; see 018_add_clinic_consultation_payments.sql)
 // ---------------------------------------------------------------------
 
 /** unpaid / partially_paid / paid, derived purely from the two numbers
- * on the visit  -  'refunded' is never derived here, only ever set
+ * on the visit — 'refunded' is never derived here, only ever set
  * explicitly by refundVisit below, since it means something happened
  * (money went back out), not just "nothing paid yet". */
 function derivePaymentStatus(consultationPrice, amountPaid) {
@@ -427,7 +427,7 @@ async function recordPayment(companyId, visitId, { amount, method, note, paidAt 
 /**
  * A full refund (Ch. 8's "Refunded" status): logs a negative ledger
  * line for whatever is currently paid, and forces payment_status to
- * 'refunded' explicitly rather than letting it fall back to 'unpaid'  - 
+ * 'refunded' explicitly rather than letting it fall back to 'unpaid' —
  * "never charged" and "charged then refunded" must stay distinguishable.
  */
 async function refundVisit(companyId, visitId, note) {
@@ -468,7 +468,7 @@ async function findPaymentsByPatient(companyId, patientId) {
 }
 
 /** Net revenue actually collected in [rangeStart, rangeEnd] (inclusive
- * dates)  -  sums every clinic_payments row by paid_at, so a refund
+ * dates) — sums every clinic_payments row by paid_at, so a refund
  * (negative amount) correctly reduces the same day's revenue instead
  * of needing separate handling. */
 async function revenueForRange(companyId, rangeStart, rangeEnd) {
@@ -481,7 +481,7 @@ async function revenueForRange(companyId, rangeStart, rangeEnd) {
 }
 
 /** Total still owed across every unpaid/partially-paid visit (Ch. 9's
- * "Outstanding Patient Payments")  -  never includes refunded visits,
+ * "Outstanding Patient Payments") — never includes refunded visits,
  * since a refund closes the visit out rather than leaving it owed. */
 async function outstandingTotal(companyId) {
   const result = await query(

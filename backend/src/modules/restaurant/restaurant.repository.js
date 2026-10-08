@@ -100,7 +100,7 @@ async function updateMenuItemAvailability(companyId, id, isAvailable) {
   return result.rows[0] || null;
 }
 
-/** Ch. 17/18  -  same narrow single-purpose setter style as
+/** Ch. 17/18 — same narrow single-purpose setter style as
  * updateMenuItemAvailability just above, rather than a broader PATCH
  * this module never had. */
 async function updateMenuItemImage(companyId, id, imageUrl) {
@@ -147,7 +147,7 @@ async function softDeleteMenuItem(companyId, id) {
 // Orders
 // ---------------------------------------------------------------------
 
-/** Per-company-per-day order number ("#01, #02, ...")  -  same pattern
+/** Per-company-per-day order number ("#01, #02, ...") — same pattern
  * as clinic_queue's nextQueuePosition. */
 async function nextOrderNumber(client, companyId) {
   const result = await client.query(
@@ -161,7 +161,7 @@ async function nextOrderNumber(client, companyId) {
 
 /**
  * Creates an order with its line items in one transaction. `items` is
- * an array of `{ menuItemId?, name, unitPrice, quantity }`  -  name/price
+ * an array of `{ menuItemId?, name, unitPrice, quantity }` — name/price
  * are snapshotted onto restaurant_order_items so a later menu price
  * change never rewrites this order's total.
  */
@@ -218,7 +218,7 @@ async function findOrderItems(companyId, orderId) {
   return result.rows;
 }
 
-/** Today's active orders (kitchen/order board  -  Ch. 17.A), plus their table name. */
+/** Today's active orders (kitchen/order board — Ch. 17.A), plus their table name. */
 async function getActiveOrders(companyId) {
   const result = await query(
     `SELECT ro.*, rt.name AS table_name
@@ -813,7 +813,7 @@ async function dashboardStats(companyId) {
 }
 
 // ---------------------------------------------------------------------
-// Inventory (Ch. 13/14)  -  items + stock-movements ledger. See
+// Inventory (Ch. 13/14) — items + stock-movements ledger. See
 // migration 023's header comment for the "quantity is a cache, the
 // ledger is the source of truth" design and why it mirrors
 // clinic_visits.amount_paid.
@@ -935,10 +935,10 @@ async function archiveInventoryItem(companyId, itemId) {
 }
 
 /**
- * Ch. 14  -  the ONLY way quantity ever changes after item creation. Locks
+ * Ch. 14 — the ONLY way quantity ever changes after item creation. Locks
  * the item row (FOR UPDATE) so two concurrent adjustments (e.g. two AI
  * scan confirmations landing at once) can't both read the same starting
- * quantity and silently drop one of them  -  same concurrency pattern as
+ * quantity and silently drop one of them — same concurrency pattern as
  * clinic_visits payments and restaurant_orders payments.
  */
 async function adjustInventoryQuantity(companyId, itemId, { movementType, quantityChange, reference, note, userId }) {

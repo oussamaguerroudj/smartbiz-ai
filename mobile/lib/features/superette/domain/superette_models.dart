@@ -46,7 +46,7 @@ class SuperetteBestSeller {
       );
 }
 
-/// Ch. 16's "Credit/customer debt when applicable"  -  a single debtor.
+/// Ch. 16's "Credit/customer debt when applicable" — a single debtor.
 class SuperetteDebtor {
   SuperetteDebtor({required this.id, required this.name, this.phone, required this.balanceDue});
 
@@ -88,13 +88,13 @@ class SuperetteDashboardStats {
 
   final double todayRevenue;
 
-  /// Cost-of-goods-aware  -  from sale_items.line_profit, same as
+  /// Cost-of-goods-aware — from sale_items.line_profit, same as
   /// Reports'/Pharmacy's `grossProfit`.
   final double todayGrossProfit;
 
   /// revenue - operating expenses, same formula as the CORE dashboard,
   /// Reports and Pharmacy's dashboard (does NOT additionally subtract
-  /// COGS  -  see superette.service.js's getDashboard doc comment).
+  /// COGS — see superette.service.js's getDashboard doc comment).
   final double todayNetProfit;
   final double todayExpenses;
   final int transactionsToday;

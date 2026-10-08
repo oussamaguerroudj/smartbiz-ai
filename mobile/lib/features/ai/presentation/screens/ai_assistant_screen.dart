@@ -8,7 +8,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// AI Assistant  -  Spec Ch. 16.1.
+/// AI Assistant — Spec Ch. 16.1.
 ///
 /// Phase 6 update: questions are now answered by a real POST /ai/chat
 /// call (OpenAI, server-side) instead of local keyword routing. The
@@ -16,7 +16,7 @@ import '../../../../l10n/app_localizations.dart';
 /// enforced server-side there: the backend hands the model a snapshot
 /// of the company's real current data and instructs it to never state
 /// a figure that isn't in that snapshot (see ai.service.js
-/// CHAT_SYSTEM_PROMPT)  -  the client here just displays whatever comes
+/// CHAT_SYSTEM_PROMPT) — the client here just displays whatever comes
 /// back, the same as any other chat UI.
 ///
 /// Design System v2: gradient hero background + styled bubbles, matching
@@ -61,7 +61,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     if (text.isEmpty) return;
 
     // Sent as conversation context so the assistant can handle
-    // follow-up questions ("and how about expenses?")  -  capped
+    // follow-up questions ("and how about expenses?") — capped
     // server-side too, but trimmed here as well to keep the request
     // itself small.
     final history = _messages
@@ -92,7 +92,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           : l10n.networkError;
     } on ApiException catch (e) {
       // e.g. 503 AI_NOT_CONFIGURED if the server has no OpenAI key yet,
-      // or AI_RATE_LIMIT  -  shown as the assistant's own reply so it
+      // or AI_RATE_LIMIT — shown as the assistant's own reply so it
       // reads naturally in the conversation rather than as a toast.
       answer = e.message;
     } catch (_) {
@@ -463,7 +463,7 @@ class _Insight {
 }
 
 /// Fetches fresh each time the Insights screen is opened (autoDispose,
-/// no caching across visits)  -  insights are meant to reflect the
+/// no caching across visits) — insights are meant to reflect the
 /// business's current state, not a snapshot from an earlier session.
 final _aiInsightsProvider = FutureProvider.autoDispose<List<_Insight>>((ref) async {
   final client = ref.read(apiClientProvider);
@@ -486,12 +486,12 @@ final _aiInsightsProvider = FutureProvider.autoDispose<List<_Insight>>((ref) asy
   }).toList();
 });
 
-/// AI Insights  -  Spec Ch. 16.2.
+/// AI Insights — Spec Ch. 16.2.
 ///
 /// Phase 6 update: insights now come from a real GET /ai/insights call
 /// (OpenAI, server-side), which is itself grounded in the same real
 /// dashboard/report data the rule-based version used to read locally
-/// (see ai.service.js gatherBusinessContext)  -  kept deliberately simple
+/// (see ai.service.js gatherBusinessContext) — kept deliberately simple
 /// per the spec's own MVP guidance ("avoid overstating AI capability").
 class AiInsightsScreen extends ConsumerWidget {
   const AiInsightsScreen({super.key});

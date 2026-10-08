@@ -7,7 +7,7 @@ function toDateStr(d) {
 
 /**
  * Ch. 16's dashboard, built entirely from CORE data (products, sales,
- * suppliers, customers, expenses)  -  no separate "supérette revenue"
+ * suppliers, customers, expenses) — no separate "supérette revenue"
  * concept exists because, exactly like Pharmacy, supérette revenue IS
  * product-sale revenue (Ch. 21: "Retail revenue = actual product
  * sales").

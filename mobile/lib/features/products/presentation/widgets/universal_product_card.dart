@@ -8,7 +8,7 @@ import '../../../auth/data/companies_repository.dart';
 import '../../domain/product.dart';
 import '../screens/product_details_screen.dart';
 
-/// Universal Product Card  -  the single source of truth for rich product
+/// Universal Product Card — the single source of truth for rich product
 /// presentation across all business types (Clothing, Pharmacy, Grocery /
 /// Supermarket, Retail, Restaurant, Company, etc.).
 ///

@@ -2,14 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// A small set of gradient bars that grow in from zero, staggered by
-/// index  -  matches the reference `.bars`/`.bars i` CSS exactly:
+/// index — matches the reference `.bars`/`.bars i` CSS exactly:
 /// 5px gap, 44px default height, top-rounded (5px) / bottom-barely-
 /// rounded (2px) corners, and a fixed `linear-gradient(180deg,#8fa0fb,
 /// #3d55f5)` fill (not a computed tint) so the color is pixel-identical
 /// to the web reference, not just "close".
 ///
 /// [values] should already be normalized to 0..1 (fraction of the
-/// tallest bar); pass real, computed data  -  never invented figures.
+/// tallest bar); pass real, computed data — never invented figures.
 class MiniBarChart extends StatefulWidget {
   const MiniBarChart({
     super.key,
@@ -47,7 +47,7 @@ class _MiniBarChartState extends State<MiniBarChart> {
   void didUpdateWidget(covariant MiniBarChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.values != widget.values) {
-      // Data changed (e.g. Reports period switch)  -  replay the grow-in,
+      // Data changed (e.g. Reports period switch) — replay the grow-in,
       // matching the reference's tab-switch bar re-animation.
       setState(() => _grown = false);
       WidgetsBinding.instance.addPostFrameCallback((_) {

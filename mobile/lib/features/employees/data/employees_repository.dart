@@ -178,7 +178,7 @@ class EmployeesRepository extends StateNotifier<AsyncValue<List<Employee>>> {
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
-    // Scoped by company_id  -  cannot update another company's employee
+    // Scoped by company_id — cannot update another company's employee
     await db.update(
       'employees',
       {
@@ -217,7 +217,7 @@ class EmployeesRepository extends StateNotifier<AsyncValue<List<Employee>>> {
 
     final db = await AppDatabase.instance.database;
     final nowIso = DateTime.now().toIso8601String();
-    // Scoped by company_id  -  cannot soft-delete another company's employee
+    // Scoped by company_id — cannot soft-delete another company's employee
     await db.update(
       'employees',
       {'deleted_at': nowIso, 'synced': 0},

@@ -4,7 +4,7 @@ import '../../../products/presentation/widgets/universal_product_card.dart';
 
 export '../../../products/presentation/widgets/universal_product_card.dart';
 
-/// Legacy ClothingProductCard wrapper  -  delegates directly to [UniversalProductCard]
+/// Legacy ClothingProductCard wrapper — delegates directly to [UniversalProductCard]
 /// to guarantee ONE single source of truth for product-card UI across the entire
 /// application without duplicating code.
 class ClothingProductCard extends StatelessWidget {

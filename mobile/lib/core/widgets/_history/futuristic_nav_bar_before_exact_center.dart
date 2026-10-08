@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 /// Data for a single nav destination. Kept API-compatible with the old
 /// `PillNavItem` (icon/activeIcon/label) so this is a drop-in swap in
-/// `main_shell.dart`  -  the Material `icon`/`activeIcon` are only used as
+/// `main_shell.dart` — the Material `icon`/`activeIcon` are only used as
 /// a fallback if more than 4 items are supplied; for the standard 4-tab
 /// layout the bespoke icons below (matching the approved Futuristic Nav
 /// spec: Home/POS/Storage/More) are drawn instead.

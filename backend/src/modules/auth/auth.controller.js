@@ -16,7 +16,7 @@ const refresh = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
-// Unauthenticated by design  -  see auth.service.js. Identified by email,
+// Unauthenticated by design — see auth.service.js. Identified by email,
 // not a token, because at this point (pending registration) no account
 // or token exists yet.
 const resendVerification = asyncHandler(async (req, res) => {
@@ -36,7 +36,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
   });
 
   // Same top-level shape as /register and /login: { user, accessToken,
-  // refreshToken }  -  this is the moment the account (and its session)
+  // refreshToken } — this is the moment the account (and its session)
   // first comes into existence.
   res.status(200).json(result);
 });
@@ -46,7 +46,7 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
     email: req.body.email,
   });
 
-  // Always 200 regardless of whether the email exists  -  see the
+  // Always 200 regardless of whether the email exists — see the
   // matching doc comment in auth.service.js.
   res.status(200).json({
     data: {

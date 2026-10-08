@@ -8,15 +8,15 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/companies_repository.dart';
 import 'business_type_screen.dart';
 
-/// Business Setup  -  Spec Ch. 8.4
+/// Business Setup — Spec Ch. 8.4
 /// Persists to the real backend via PUT /companies/me (Phase 5 wiring),
 /// filling in the placeholder company auth.service.js created at
 /// registration time.
 ///
-/// FIX (reported bug  -  "Finish Setup" not navigating to Dashboard):
+/// FIX (reported bug — "Finish Setup" not navigating to Dashboard):
 /// the save/validate/navigate flow below was already structurally
 /// correct (validate → await the real PUT → only call onFinish() after
-/// it succeeds → show a real error and stay put on failure)  -  this pass
+/// it succeeds → show a real error and stay put on failure) — this pass
 /// hardened it rather than rewriting it:
 ///   - the read-only "Business type" field used to build a brand new
 ///     TextEditingController on every single rebuild without disposing
@@ -30,10 +30,10 @@ import 'business_type_screen.dart';
 ///     navigate on your device: the top-level app-phase guard in
 ///     main.dart was mutating state during build() (a real anti-pattern)
 ///     in a way that could re-override a just-set "go to Dashboard"
-///     transition  -  see main.dart's _AppFlowState for that fix. If the
+///     transition — see main.dart's _AppFlowState for that fix. If the
 ///     issue persists after both fixes, check the actual network
 ///     response for PUT /companies/me (auth header validity, route
-///     existing, 4xx/5xx body)  -  that's the next thing to inspect.
+///     existing, 4xx/5xx body) — that's the next thing to inspect.
 class BusinessSetupScreen extends ConsumerStatefulWidget {
   const BusinessSetupScreen({
     super.key,
@@ -61,7 +61,7 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
   void initState() {
     super.initState();
     // FIX: was `TextEditingController(text: widget.businessType.label)`
-    // created inline inside build()  -  a new controller every rebuild,
+    // created inline inside build() — a new controller every rebuild,
     // never disposed. Created once here instead.
     _businessTypeController = TextEditingController(text: widget.businessType.label);
   }
@@ -104,7 +104,7 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
         await _showErrorDialog('Could not reach the server — check your connection and try again.');
       }
     } finally {
-      // Always reached whether the request succeeded, failed, or threw  - 
+      // Always reached whether the request succeeded, failed, or threw —
       // the button can never get stuck permanently disabled.
       if (mounted) setState(() => _isLoading = false);
     }

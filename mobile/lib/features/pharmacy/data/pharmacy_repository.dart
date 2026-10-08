@@ -33,7 +33,7 @@ class PharmacyRepository {
       } catch (_) {}
     }
 
-    // Offline fallback  -  scoped to the active company
+    // Offline fallback — scoped to the active company
     return LocalFinancialCalculator.calculatePharmacyDashboard(companyId: companyId);
   }
 
@@ -49,7 +49,7 @@ class PharmacyRepository {
       } catch (_) {}
     }
 
-    // Local calculation from SQLite  -  scoped to this company
+    // Local calculation from SQLite — scoped to this company
     if (companyId == null) return [];
 
     final db = await AppDatabase.instance.database;

@@ -29,7 +29,7 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
 
     final companyId = _companyId ?? 'default';
 
-    // 1. Immediately calculate from authoritative local SQLite  -  scoped to this company
+    // 1. Immediately calculate from authoritative local SQLite — scoped to this company
     DashboardData? local;
     try {
       local = await LocalFinancialCalculator.calculateDashboard(

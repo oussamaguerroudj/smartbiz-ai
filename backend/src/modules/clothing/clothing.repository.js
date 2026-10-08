@@ -4,7 +4,7 @@ const { query } = require('../../config/db');
  * Clothing Store vertical (business-specialization brief Ch. 18).
  * Fifth specialized vertical. Reuses `products`/`sales`/`sale_items`/
  * `suppliers`/`customers` exactly like Pharmacy (§11) and Supérette
- * (§12)  -  per Ch. 21, no `clothing_*` tables were created.
+ * (§12) — per Ch. 21, no `clothing_*` tables were created.
  *
  * Ch. 18 explicitly asks for Size/Color/Brand attributes, which did
  * NOT exist anywhere in the schema until migration
@@ -13,7 +13,7 @@ const { query } = require('../../config/db');
  * comment for why a column, not a new table, was the right call).
  *
  * Deliberately NOT built here: a Returns KPI/flow. There is no
- * returns/refunds table or column anywhere in this codebase  -  same
+ * returns/refunds table or column anywhere in this codebase — same
  * "don't fake data" call pharmacy.repository.js already documented
  * for its missing Purchase-costs figure. A `product_returns` table
  * (or a `sales.status = 'returned'` column) would be the natural next
@@ -44,7 +44,7 @@ async function lowStockCount(companyId) {
   return result.rows[0].count;
 }
 
-/** Stock value at cost and at retail  -  same shape as
+/** Stock value at cost and at retail — same shape as
  * pharmacy.repository.js's inventoryValue / superette.repository.js's
  * stockValue. */
 async function stockValue(companyId) {
@@ -65,7 +65,7 @@ async function stockValue(companyId) {
 }
 
 /** Today's/period sales, revenue and cost-of-goods-aware gross profit
- *  -  identical shape/formula to pharmacy/superette's salesSummaryForRange. */
+ * — identical shape/formula to pharmacy/superette's salesSummaryForRange. */
 async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
   const result = await query(
     `SELECT
@@ -100,7 +100,7 @@ async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
   };
 }
 
-/** Best-selling items this week  -  same query shape as
+/** Best-selling items this week — same query shape as
  * pharmacy/superette's bestSellingProducts, plus size/color/brand so
  * the Clothing dashboard can show "what's actually selling" at the
  * attribute level Ch. 18 asks for, not just by product name. */
@@ -121,7 +121,7 @@ async function bestSellingProducts(companyId, rangeStart, rangeEnd, limit = 5) {
   return result.rows;
 }
 
-/** Ch. 18's "Categories"  -  stock split by category (e.g. Men/Women/
+/** Ch. 18's "Categories" — stock split by category (e.g. Men/Women/
  * Kids), reusing the same `category` column every other vertical
  * already uses, not a new clothing-only concept. */
 async function stockByCategory(companyId, limit = 10) {
@@ -147,7 +147,7 @@ async function suppliersCount(companyId) {
   return result.rows[0].count;
 }
 
-/** Ch. 18's "Customers" + "Credit/customer debt"  -  same shape as
+/** Ch. 18's "Customers" + "Credit/customer debt" — same shape as
  * superette.repository.js's customerDebt. */
 async function customerDebt(companyId, limit = 5) {
   const [totalResult, listResult] = await Promise.all([

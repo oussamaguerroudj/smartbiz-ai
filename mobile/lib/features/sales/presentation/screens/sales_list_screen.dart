@@ -10,7 +10,7 @@ import 'create_sale_screen.dart';
 import '../../../invoices/presentation/screens/invoices_screen.dart';
 import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 
-/// Sales Screen  -  POS / Active Open Carts Overview.
+/// Sales Screen — POS / Active Open Carts Overview.
 ///
 /// Dedicated to current in-progress sales and open cart sessions.
 /// Displays each open cart with:

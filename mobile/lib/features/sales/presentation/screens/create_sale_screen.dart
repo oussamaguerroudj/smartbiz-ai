@@ -15,7 +15,7 @@ import '../../../invoices/presentation/screens/invoices_screen.dart';
 import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 import '../../../customers/data/customers_repository.dart';
 
-/// Create Sale  -  Multi-Cart POS System (Part 1 & Part 11).
+/// Create Sale — Multi-Cart POS System (Part 1 & Part 11).
 ///
 /// Supports multiple simultaneous customers / shopping carts:
 /// - Cashier can switch between Client 1, Client 2, Client 3...

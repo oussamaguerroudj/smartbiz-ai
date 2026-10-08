@@ -27,7 +27,7 @@ class GradientHero extends StatelessWidget {
   }
 }
 
-/// A soft, looping "breathing" scale+glow animation for a circular icon  - 
+/// A soft, looping "breathing" scale+glow animation for a circular icon —
 /// used on Splash (logo) and Onboarding (slide icon) so the brand feels
 /// alive on first launch. This is the one deliberate looping motion in
 /// the app; everything else answers a user action instead of looping.

@@ -7,7 +7,7 @@ function generateCode() {
 
 /**
  * One-way hash for storing a code server-side. Uses SHA-256 (not
- * bcrypt) deliberately  -  these codes are short-lived (minutes) and
+ * bcrypt) deliberately — these codes are short-lived (minutes) and
  * low-entropy by design (6 digits), so bcrypt's slow-hashing property
  * buys nothing here and just slows down every verify request; SHA-256
  * is fine given the short expiry + attempt-count limiting done by the

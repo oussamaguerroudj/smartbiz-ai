@@ -4,10 +4,10 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/gradient_hero.dart';
 
-/// Splash Screen  -  Spec Ch. 8.1
+/// Splash Screen — Spec Ch. 8.1
 /// Shows brand while the app checks auth state / loads cached data,
 /// then routes to Onboarding, Login, or Dashboard.
-/// Routing decision itself belongs to core/routing (not implemented here  - 
+/// Routing decision itself belongs to core/routing (not implemented here —
 /// this widget is presentation-only per Phase 2 scope).
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});

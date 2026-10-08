@@ -7,10 +7,10 @@ import '../../data/clinic_repository.dart';
 import '../../domain/clinic_models.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Ch. 8/9  -  read-only view of the computed invoice (GET
+/// Ch. 8/9 — read-only view of the computed invoice (GET
 /// /clinic/visits/:id/invoice) plus a Print action backed by the
 /// server-rendered PDF (GET /clinic/visits/:id/invoice/pdf), which is
-/// built from the exact same computed data  -  see
+/// built from the exact same computed data — see
 /// backend/src/modules/clinic/clinic.service.js's getVisitInvoice doc
 /// comment for why this is a view over the existing visit+payment
 /// ledger rather than a new stored invoice entity.

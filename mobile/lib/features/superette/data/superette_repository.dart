@@ -27,7 +27,7 @@ class SuperetteRepository {
       );
     }
 
-    // 1. Calculate from local SQLite first (instant & offline)  -  scoped to company
+    // 1. Calculate from local SQLite first (instant & offline) — scoped to company
     SuperetteDashboardStats? localStats;
     try {
       localStats = await LocalFinancialCalculator.calculateSuperetteDashboard(

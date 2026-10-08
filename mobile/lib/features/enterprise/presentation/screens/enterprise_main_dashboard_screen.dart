@@ -25,12 +25,12 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 /// documented pattern, sixth and last vertical).
 ///
 /// Same approach as Pharmacy/Supérette/Clothing: `main_shell.dart` only
-/// swaps THIS screen in for tab 0  -  the CORE tabs and More menu stay,
+/// swaps THIS screen in for tab 0 — the CORE tabs and More menu stay,
 /// and Clients/Employees/Invoices/Expenses/Reports ARE the CORE screens.
 ///
 /// Deliberately NOT a new design: same GradientHero header, overlapping
 /// KPI-card row, FadeSlideIn stagger and AnimatedCounter as every other
-/// vertical's main dashboard  -  only the CONTENT changes: month
+/// vertical's main dashboard — only the CONTENT changes: month
 /// revenue/expenses/profit (a company's invoices are lumpy, so "today"
 /// would often read as zero), unpaid invoices, and projects, with no
 /// stock, product-sale or retail concepts anywhere on the screen.
@@ -52,7 +52,7 @@ class EnterpriseMainDashboardScreen extends ConsumerWidget {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const EnterpriseProjectsScreen()),
     );
-    // Projects may have been added/changed  -  refresh the summary.
+    // Projects may have been added/changed — refresh the summary.
     ref.invalidate(enterpriseDashboardProvider);
   }
 
@@ -298,7 +298,7 @@ class _EnterpriseDashboardHeader extends StatelessWidget {
   }
 }
 
-/// Same visual contract as the other verticals' private `_KpiCard`  - 
+/// Same visual contract as the other verticals' private `_KpiCard` —
 /// duplicated (file-private in each) rather than exposing internals,
 /// keeping this file's diff fully additive.
 class _KpiCard extends StatelessWidget {
@@ -377,7 +377,7 @@ class _EnterpriseMiniStat extends StatelessWidget {
   }
 }
 
-/// Ch. 19's Revenue / Expenses / Profit (+ Salaries)  -  the "where does
+/// Ch. 19's Revenue / Expenses / Profit (+ Salaries) — the "where does
 /// the profit come from" card. Payroll is shown on its own line since
 /// Ch. 19 lists Salaries separately, but it is already INCLUDED in the
 /// expenses total (same as the CORE dashboard).
@@ -523,7 +523,7 @@ class _ProjectsCard extends StatelessWidget {
   }
 }
 
-/// Ch. 19's "Outstanding invoices"  -  oldest first, so the owner sees who
+/// Ch. 19's "Outstanding invoices" — oldest first, so the owner sees who
 /// to chase.
 class _UnpaidInvoicesCard extends StatelessWidget {
   const _UnpaidInvoicesCard({required this.stats});
@@ -602,7 +602,7 @@ class _UnpaidInvoicesCard extends StatelessWidget {
   }
 }
 
-/// Ch. 19  -  fast access to a company's most important areas.
+/// Ch. 19 — fast access to a company's most important areas.
 class _EnterpriseQuickActions extends StatelessWidget {
   const _EnterpriseQuickActions({required this.onOpenProjects});
 

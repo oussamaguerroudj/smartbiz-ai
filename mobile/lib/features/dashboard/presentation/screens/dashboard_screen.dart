@@ -23,11 +23,11 @@ import '../../data/dashboard_repository.dart';
 import '../widgets/dashboard_pages_section.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Dashboard  -  Spec Ch. 9. Real API-backed (Phase 5 wiring): every KPI
+/// Dashboard — Spec Ch. 9. Real API-backed (Phase 5 wiring): every KPI
 /// comes straight from GET /dashboard, verified end-to-end.
 ///
 /// This revision is a UI-matching pass against the approved reference
-/// design image  -  no new repositories, providers, packages, or screens
+/// design image — no new repositories, providers, packages, or screens
 /// were added; every value shown is either real data already available
 /// elsewhere in the app, or a neutral (never fabricated) label. See the
 /// per-section notes below for exactly which reference details were
@@ -35,7 +35,7 @@ import '../../../../l10n/app_localizations.dart';
 
 /// Page-level vertical rhythm for this screen only. The KPI row is drawn
 /// as a [Positioned] card that intentionally floats over the tail of the
-/// gradient header  -  that overlap is part of the approved visual design
+/// gradient header — that overlap is part of the approved visual design
 /// and is kept as-is. What was broken was the *arithmetic* around it: the
 /// header's old fixed bottom padding (56) was smaller than
 /// `_kKpiCardHeight - _kKpiOverlap` (96 - 32 = 64), so the cards actually
@@ -192,7 +192,7 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 /// Bottom sheet shown when the Dashboard's "Scan Invoice" button is
-/// tapped  -  lets the user say up front whether the invoice they're
+/// tapped — lets the user say up front whether the invoice they're
 /// about to photograph is a SALE (money coming in, decreases stock) or
 /// a STOCK/purchase invoice (goods coming in, increases stock), since
 /// those are opposite inventory effects that can't be inferred from the

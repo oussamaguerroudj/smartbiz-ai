@@ -190,7 +190,7 @@ class CustomersRepository extends StateNotifier<AsyncValue<List<Customer>>> {
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
-    // Scoped by company_id  -  cannot update another company's customer
+    // Scoped by company_id — cannot update another company's customer
     await db.update(
       'customers',
       {
@@ -225,7 +225,7 @@ class CustomersRepository extends StateNotifier<AsyncValue<List<Customer>>> {
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
-    // Scoped by company_id  -  cannot read or delete another company's customer
+    // Scoped by company_id — cannot read or delete another company's customer
     final row = await db.query(
       'customers',
       where: 'id = ? AND company_id = ?',

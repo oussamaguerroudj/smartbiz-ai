@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// App-wide UI preference state  -  theme + locale  -  consumed by
+/// App-wide UI preference state — theme + locale — consumed by
 /// ModiriApp (main.dart) and mutated from the Settings screen.
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
@@ -12,10 +12,10 @@ const supportedLocales = [
   Locale('fr'),
 ];
 
-/// Persists the chosen app language (SharedPreferences  -  plain text
+/// Persists the chosen app language (SharedPreferences — plain text
 /// preference, not a secret, so this doesn't need the secure storage
 /// used for session tokens). `state == null` specifically means "the
-/// user has never chosen a language yet"  -  main.dart uses exactly that
+/// user has never chosen a language yet" — main.dart uses exactly that
 /// to decide whether to show the first-launch language picker. Once a
 /// language is chosen, it is never null again for that install.
 class LocaleNotifier extends StateNotifier<Locale?> {

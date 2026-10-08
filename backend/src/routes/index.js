@@ -41,13 +41,13 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/ai', aiRoutes);
 router.use('/credit', creditRoutes);
 router.use('/sync', syncRoutes);
-// Ch. 17/18  -  shared image upload/serve, reused by products,
+// Ch. 17/18 — shared image upload/serve, reused by products,
 // restaurant menu items, and restaurant inventory (see
 // images.routes.js's header comment); not tied to any one
 // business_type, so it is mounted here alongside the other CORE routes
 // rather than under a single specialized prefix.
 router.use('/images', imagesRoutes);
-// Ch. 2 SPECIALIZED modules  -  each mounted under its own prefix, only
+// Ch. 2 SPECIALIZED modules — each mounted under its own prefix, only
 // ever relevant to companies whose business_type matches; CORE routes
 // above are completely unaffected by this or any future specialized
 // module (restaurant, gym, hotel, ...) being added the same way.
@@ -61,7 +61,7 @@ router.use('/enterprise', enterpriseRoutes);
 // Phase 6 ("OpenAI + OCR + AI Assistant + AI Insights + Invoice
 // Scanner") is now wired up above: POST /ai/invoices/scan,
 // POST /ai/invoices/scan/:id/confirm, POST /ai/chat, GET /ai/insights.
-// Requires OPENAI_API_KEY to be set in .env  -  without it, these
+// Requires OPENAI_API_KEY to be set in .env — without it, these
 // endpoints respond 503 AI_NOT_CONFIGURED rather than crashing the
 // rest of the API.
 

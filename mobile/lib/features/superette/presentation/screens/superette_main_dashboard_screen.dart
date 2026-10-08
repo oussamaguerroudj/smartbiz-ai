@@ -25,15 +25,15 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 /// Restaurant and Pharmacy).
 ///
 /// Like Pharmacy, a supérette does NOT get its own tabs or More-menu
-/// items  -  `main_shell.dart` only swaps THIS screen in for tab 0; tabs
+/// items — `main_shell.dart` only swaps THIS screen in for tab 0; tabs
 /// 1-2 (Sales/Inventory) and the full CORE More menu (Suppliers,
 /// Customers, Invoices, Credit, Reports, ...) already fit a supérette's
-/// needs exactly (Ch. 21: "reuse existing APIs")  -  a supérette's
+/// needs exactly (Ch. 21: "reuse existing APIs") — a supérette's
 /// "Products"/"Sales"/"Suppliers"/"Customers" ARE the CORE screens.
 ///
 /// Deliberately NOT a new design: same GradientHero header, overlapping
 /// KPI-card row, FadeSlideIn stagger and AnimatedCounter as every other
-/// vertical's main dashboard  -  only the CONTENT changes: today's
+/// vertical's main dashboard — only the CONTENT changes: today's
 /// sales/profit, stock alerts, and outstanding customer credit/debt
 /// (Ch. 16's own point of difference from Pharmacy) instead of a
 /// patient queue, an orders board, or expiry alerts.
@@ -281,7 +281,7 @@ class _SuperetteDashboardHeader extends StatelessWidget {
 }
 
 /// Same visual contract as PharmacyMainDashboardScreen's/
-/// ClinicMainDashboardScreen's private `_KpiCard`  -  duplicated
+/// ClinicMainDashboardScreen's private `_KpiCard` — duplicated
 /// (file-private in each) rather than exposing internals, keeping this
 /// file's diff fully additive.
 class _KpiCard extends StatelessWidget {
@@ -364,7 +364,7 @@ class _SuperetteMiniStat extends StatelessWidget {
 }
 
 /// Ch. 16's "Low-stock products" alert, surfaced directly on the main
-/// Dashboard  -  same "most important right now" role as Pharmacy's
+/// Dashboard — same "most important right now" role as Pharmacy's
 /// Stock Alerts card, minus the expiry emphasis (Ch. 16 doesn't ask
 /// for it the way Ch. 15 does for Pharmacy).
 class _StockAlertsCard extends StatelessWidget {
@@ -432,7 +432,7 @@ class _StockAlertsCard extends StatelessWidget {
   }
 }
 
-/// Ch. 16's "Credit/customer debt when applicable"  -  a supérette-only
+/// Ch. 16's "Credit/customer debt when applicable" — a supérette-only
 /// card (Pharmacy's dashboard has no equivalent), listing the biggest
 /// outstanding balances so the owner knows who to follow up with.
 class _CustomerDebtCard extends StatelessWidget {
@@ -507,7 +507,7 @@ class _CustomerDebtCard extends StatelessWidget {
   }
 }
 
-/// Ch. 16/14  -  fast access to a supérette's most important actions.
+/// Ch. 16/14 — fast access to a supérette's most important actions.
 class _SuperetteQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

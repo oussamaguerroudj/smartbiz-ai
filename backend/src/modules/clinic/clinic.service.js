@@ -76,7 +76,7 @@ async function getPatientProfile(companyId, patientId) {
     repo.findPrescriptionsByPatient(companyId, patientId),
   ]);
 
-  // Ch. 5's "Outstanding amount if applicable"  -  summed straight from
+  // Ch. 5's "Outstanding amount if applicable" — summed straight from
   // the same per-visit price/paid snapshot the dashboard uses, so this
   // number and the dashboard's outstandingPayments total can never
   // disagree about what one patient owes.
@@ -163,7 +163,7 @@ async function addToQueue(companyId, data) {
 
 async function getQueue(companyId) {
   const entries = await repo.getActiveQueue(companyId);
-  // "Next Patient: Sara" (Ch. 3.F example)  -  the first still-WAITING
+  // "Next Patient: Sara" (Ch. 3.F example) — the first still-WAITING
   // entry, surfaced explicitly rather than making the client re-derive
   // it from the list.
   const nextUp = entries.find((e) => e.status === 'waiting') || null;
@@ -179,16 +179,16 @@ async function callNextPatient(companyId) {
 }
 
 /**
- * Marks a queue entry completed and  -  per Ch. 3.G/H, "these details are
- * saved inside Visit Record"  -  creates the corresponding visit record
+ * Marks a queue entry completed and — per Ch. 3.G/H, "these details are
+ * saved inside Visit Record" — creates the corresponding visit record
  * in the same step, so a doctor finishing a consultation always leaves
  * exactly one visit behind, never zero (forgotten) or a second empty
  * one (duplicate).
  */
 /**
- * visitData may include `consultationPrice` (Ch. 7  -  required to know
+ * visitData may include `consultationPrice` (Ch. 7 — required to know
  * what's owed at all) and `amountPaid` (Ch. 7's "patient paid at time
- * of consultation" case)  -  amountPaid is recorded as a real
+ * of consultation" case) — amountPaid is recorded as a real
  * clinic_payments ledger entry via recordPayment, never written
  * directly onto the visit row, so it's indistinguishable from any
  * other payment recorded later.
@@ -280,7 +280,7 @@ async function cancelQueueEntry(companyId, queueId) {
 // Documents (Ch. 4)
 // ---------------------------------------------------------------------
 
-const MAX_DOCUMENT_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB decoded (~10.7MB base64  -  see app.js's 12mb JSON body limit)
+const MAX_DOCUMENT_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB decoded (~10.7MB base64 — see app.js's 12mb JSON body limit)
 const ALLOWED_DOCUMENT_TYPES = new Set([
   'application/pdf',
   'image/jpeg',
@@ -288,12 +288,12 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   'image/webp',
 ]);
 
-/** Ch. 4  -  real binary storage (local disk, base64-in-JSON, same
- * pattern this app already uses for AI invoice-scan photos  -  see
+/** Ch. 4 — real binary storage (local disk, base64-in-JSON, same
+ * pattern this app already uses for AI invoice-scan photos — see
  * fileStorage.js's header comment for why that pattern and not
  * multipart). Replaces the earlier "client supplies a fileUrl it hosts
  * itself" placeholder entirely; fileUrl is no longer accepted or
- * stored  -  file_size and file_type are now always computed
+ * stored — file_size and file_type are now always computed
  * server-side from the actual decoded bytes, never trusted from the
  * client. */
 async function addDocument(companyId, userId, data) {
@@ -353,7 +353,7 @@ async function deleteDocument(companyId, documentId) {
   return deleted;
 }
 
-/** Ch. 4 "preview when supported / download"  -  resolves a document's
+/** Ch. 4 "preview when supported / download" — resolves a document's
  * on-disk path ONLY after confirming it belongs to this company (the
  * same company_id-scoped lookup every other clinic query uses), so a
  * document can never be fetched by guessing an id across companies. */
@@ -370,7 +370,7 @@ async function getDocumentFile(companyId, documentId) {
 }
 
 // ---------------------------------------------------------------------
-// Patient invoices (Ch. 8/9)  -  computed view, not a stored document
+// Patient invoices (Ch. 8/9) — computed view, not a stored document
 // ---------------------------------------------------------------------
 
 async function getCompany(companyId) {
@@ -379,14 +379,14 @@ async function getCompany(companyId) {
 }
 
 /**
- * Ch. 8 "Patient Invoices"  -  clinic intentionally has no separate
+ * Ch. 8 "Patient Invoices" — clinic intentionally has no separate
  * invoices table (018_add_clinic_consultation_payments.sql tracks
  * money directly on clinic_visits/clinic_payments, the same ledger
  * /clinic/dashboard, /dashboard and /reports all already read from).
  * Building a second, parallel invoice-document system here would be
  * exactly the "do not create duplicate functionality" the audit spec
  * warns against. Instead this is a READ-ONLY, computed view over that
- * same visit+payment data  -  an invoice number is derived deterministically
+ * same visit+payment data — an invoice number is derived deterministically
  * (never stored, never able to drift from the visit it represents), and
  * every amount is copied verbatim from the visit row so it is
  * impossible for this view, the PDF built from it, and clinic_visits
@@ -465,10 +465,10 @@ async function getPrescription(companyId, prescriptionId) {
 /**
  * Adds the financial half of the Clinic dashboard (Ch. 9-11) on top of
  * the existing patient/appointment counts: revenue is summed straight
- * from the clinic_payments ledger (never from product sales  -  there is
+ * from the clinic_payments ledger (never from product sales — there is
  * no such thing here), expenses are the same generic `expenses` module
  * every other business type already uses (Ch. 10 lists rent,
- * electricity, salaries, supplies  -  all ordinary expense categories,
+ * electricity, salaries, supplies — all ordinary expense categories,
  * not a clinic-only concept), and profit is exactly
  * PATIENT PAYMENTS - CLINIC EXPENSES, per Ch. 11.
  */

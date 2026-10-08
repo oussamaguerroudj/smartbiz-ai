@@ -25,7 +25,7 @@ IconData _categoryIcon(String category) {
   return Icons.receipt_long_outlined;
 }
 
-/// Expenses  -  Spec Ch. 20. Real API-backed with full CRUD.
+/// Expenses — Spec Ch. 20. Real API-backed with full CRUD.
 class ExpensesScreen extends ConsumerWidget {
   const ExpensesScreen({super.key});
 

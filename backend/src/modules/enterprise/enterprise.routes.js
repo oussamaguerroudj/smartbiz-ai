@@ -8,7 +8,7 @@ const { requireBusinessType } = require('../../middlewares/businessType.middlewa
  * Enterprise / Company vertical (Ch. 19). Clients, Employees,
  * Suppliers, Invoices, Payments and Expenses all stay on their CORE
  * endpoints (`/customers`, `/employees`, `/suppliers`, `/invoices`,
- * `/credit`, `/expenses`)  -  this router only adds what doesn't exist
+ * `/credit`, `/expenses`) — this router only adds what doesn't exist
  * anywhere else: the dashboard aggregate and Projects.
  */
 const router = express.Router();

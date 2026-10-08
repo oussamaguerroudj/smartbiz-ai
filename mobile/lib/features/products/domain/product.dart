@@ -1,4 +1,4 @@
-/// Product model  -  mirrors the `products` table (Phase 3 migration 006)
+/// Product model — mirrors the `products` table (Phase 3 migration 006)
 /// and the exact JSON shape verified against the real backend in Phase 5
 /// testing (purchase_price/selling_price arrive as strings from
 /// PostgreSQL NUMERIC via node-postgres, so fromJson parses them safely).
@@ -14,7 +14,7 @@ class Product {
     this.barcode,
     this.expirationDate,
     this.imageUrl,
-    // Ch. 18 (Clothing) attributes  -  backend migration 020, nullable for
+    // Ch. 18 (Clothing) attributes — backend migration 020, nullable for
     // every business type that doesn't use them.
     this.size,
     this.color,

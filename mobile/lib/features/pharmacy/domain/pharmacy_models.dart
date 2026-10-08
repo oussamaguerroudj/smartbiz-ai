@@ -100,12 +100,12 @@ class PharmacyDashboardStats {
 
   final double todayRevenue;
 
-  /// Cost-of-goods-aware  -  from sale_items.line_profit, same as
+  /// Cost-of-goods-aware — from sale_items.line_profit, same as
   /// Reports' `grossProfit`.
   final double todayGrossProfit;
 
   /// revenue - operating expenses, same formula as the CORE dashboard
-  /// and Reports' `netProfit` (does NOT additionally subtract COGS  - 
+  /// and Reports' `netProfit` (does NOT additionally subtract COGS —
   /// see pharmacy.service.js's getDashboard doc comment).
   final double todayNetProfit;
   final double todayExpenses;

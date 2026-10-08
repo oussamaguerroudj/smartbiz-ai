@@ -666,7 +666,7 @@ void main() {
         whereArgs: [companyA],
       );
 
-      // Invoices are NOT carts  -  active carts list contains 0 carts
+      // Invoices are NOT carts — active carts list contains 0 carts
       expect(salesActiveCarts.isEmpty, isTrue);
 
       // Existing invoices remain intact

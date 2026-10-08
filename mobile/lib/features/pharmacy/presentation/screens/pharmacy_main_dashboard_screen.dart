@@ -24,7 +24,7 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 /// documented pattern, third vertical after Clinic and Restaurant).
 ///
 /// Unlike Clinic/Restaurant, Pharmacy does NOT get its own tabs or
-/// More-menu items  -  `main_shell.dart` only swaps THIS screen in for
+/// More-menu items — `main_shell.dart` only swaps THIS screen in for
 /// tab 0; tabs 1-2 (Sales/Inventory) and the full CORE More menu
 /// (Suppliers, Customers, Invoices, Reports, ...) already fit a
 /// pharmacy's needs exactly as Ch. 21 intends ("reuse existing APIs"):
@@ -33,7 +33,7 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 ///
 /// Deliberately NOT a new design: same GradientHero header, overlapping
 /// KPI-card row, FadeSlideIn stagger and AnimatedCounter as
-/// ClinicMainDashboardScreen / RestaurantMainDashboardScreen  -  only the
+/// ClinicMainDashboardScreen / RestaurantMainDashboardScreen — only the
 /// CONTENT changes: today's sales/profit, low-stock + expiry alerts,
 /// and inventory value instead of a patient queue or an orders board.
 final pharmacyDashboardProvider = FutureProvider.autoDispose((ref) {
@@ -276,7 +276,7 @@ class _PharmacyDashboardHeader extends StatelessWidget {
 }
 
 /// Same visual contract as ClinicMainDashboardScreen's/
-/// RestaurantMainDashboardScreen's private `_KpiCard`  -  duplicated
+/// RestaurantMainDashboardScreen's private `_KpiCard` — duplicated
 /// (file-private in both) rather than exposing internals, keeping this
 /// file's diff fully additive.
 class _KpiCard extends StatelessWidget {
@@ -359,7 +359,7 @@ class _PharmacyMiniStat extends StatelessWidget {
 }
 
 /// Ch. 15's "Low-stock medicines/products" + "Expiring products" alerts,
-/// surfaced directly on the main Dashboard  -  same "most important
+/// surfaced directly on the main Dashboard — same "most important
 /// right now" role as Clinic's patient queue card and Restaurant's
 /// active-orders card.
 class _AlertsCard extends StatelessWidget {
@@ -450,7 +450,7 @@ class _AlertsCard extends StatelessWidget {
   }
 }
 
-/// Ch. 15/14  -  fast access to a pharmacy's most important actions.
+/// Ch. 15/14 — fast access to a pharmacy's most important actions.
 class _PharmacyQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

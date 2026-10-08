@@ -1,4 +1,4 @@
-/// Employee models  -  mirror `employees` table + the composed
+/// Employee models — mirror `employees` table + the composed
 /// GET /employees/:id response shape (employee row + attendance summary
 /// + salary summary), verified against Phase 5 employees.service.js.
 class Employee {

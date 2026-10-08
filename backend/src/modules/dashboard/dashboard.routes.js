@@ -7,7 +7,7 @@ const restaurantRepo = require('../restaurant/restaurant.repository');
 const { calculateFinancials } = require('../financial/financial.service');
 
 /**
- * Dashboard  -  Spec Ch. 9.1.
+ * Dashboard — Spec Ch. 9.1.
  * Financial figures are powered directly by calculateFinancials (daily period),
  * guaranteeing a single source of truth between the Dashboard and Reports.
  */

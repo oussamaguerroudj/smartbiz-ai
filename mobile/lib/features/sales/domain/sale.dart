@@ -1,4 +1,4 @@
-/// Sale model  -  mirrors the `sales` list row shape returned by
+/// Sale model — mirrors the `sales` list row shape returned by
 /// GET /sales (sales.repository.js findAll, verified in Phase 5
 /// testing, including the item_count subquery added for this batch).
 enum PaymentStatus { paid, unpaid, partial }
@@ -57,7 +57,7 @@ class Sale {
       );
 }
 
-/// Input for creating a sale line item  -  only productId/quantity are
+/// Input for creating a sale line item — only productId/quantity are
 /// sent to the server; price/cost snapshots happen server-side (Phase 5
 /// sales.service.js), never trusted from the client.
 class SaleItemInput {

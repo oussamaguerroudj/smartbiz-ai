@@ -7,7 +7,7 @@ const ApiError = require('../utils/ApiError');
  * companyId, role }.
  *
  * CRITICAL (Phase 1, Multi-tenant Architecture §10): companyId is taken
- * ONLY from the verified JWT payload  -  never from req.body, req.query,
+ * ONLY from the verified JWT payload — never from req.body, req.query,
  * or any client-supplied field. Every downstream repository call uses
  * req.user.companyId as the tenant filter. This is enforcement layer #1
  * of 3 (the other two are the repository layer itself, and the security

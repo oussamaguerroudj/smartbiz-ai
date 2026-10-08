@@ -1,6 +1,6 @@
 import '../../sales/domain/sale.dart';
 
-/// Invoice model  -  two JSON shapes from the backend map here:
+/// Invoice model — two JSON shapes from the backend map here:
 ///  - list shape (GET /invoices): invoice + sale.total/sold_at + customer_name
 ///  - detail shape (GET /invoices/:id): same, plus subtotal/discount + items[]
 /// Both are handled by making `items` optional (empty on the list shape).

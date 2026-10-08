@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Modiri AI  -  Design System v2  -  Typography Scale
+/// Modiri AI — Design System v2 — Typography Scale
 ///
 /// Two families, each with a clear job (per the approved redesign):
-///   • Space Grotesk  -  screen titles / section titles / big numbers.
-///     Carries the brand's personality  -  confident, technical, a little
-///     distinctive  -  anywhere text is acting as a headline.
-///   • Plus Jakarta Sans  -  everything people actually read: body copy,
+///   • Space Grotesk — screen titles / section titles / big numbers.
+///     Carries the brand's personality — confident, technical, a little
+///     distinctive — anywhere text is acting as a headline.
+///   • Plus Jakarta Sans — everything people actually read: body copy,
 ///     labels, buttons, captions. Warm, legible, and quiet.
 ///
 /// Method names/signatures are unchanged from v1 so every screen that
 /// already calls AppTypography.screenTitle(...) / .body(...) / etc still
-/// compiles  -  only the fonts and a few weights moved.
+/// compiles — only the fonts and a few weights moved.
 class AppTypography {
   AppTypography._();
 
@@ -35,7 +35,7 @@ class AppTypography {
         letterSpacing: -0.1,
       );
 
-  /// A big, tabular-figure number  -  KPI values, totals, prices.
+  /// A big, tabular-figure number — KPI values, totals, prices.
   static TextStyle statValue(Color color) => GoogleFonts.spaceGrotesk(
         fontSize: 20,
         fontWeight: FontWeight.w700,

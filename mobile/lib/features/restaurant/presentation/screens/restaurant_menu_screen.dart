@@ -12,7 +12,7 @@ import 'restaurant_orders_screen.dart' show restaurantMenuItemsProvider;
 import 'restaurant_menu_item_recipe_screen.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Menu management (Ch. 17  -  "Menu items"). Grouped by category, with
+/// Menu management (Ch. 17 — "Menu items"). Grouped by category, with
 /// a switch to mark an item unavailable (e.g. sold out today) without
 /// deleting it, and delete for items no longer on the menu at all.
 class RestaurantMenuScreen extends ConsumerWidget {
@@ -82,7 +82,7 @@ class RestaurantMenuScreen extends ConsumerWidget {
     ref.invalidate(restaurantMenuItemsProvider);
   }
 
-  /// Ch. 17/18  -  same pattern as Restaurant Inventory's _changePhoto.
+  /// Ch. 17/18 — same pattern as Restaurant Inventory's _changePhoto.
   Future<void> _changePhoto(WidgetRef ref, BuildContext context, RestaurantMenuItem item) async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked == null) return;

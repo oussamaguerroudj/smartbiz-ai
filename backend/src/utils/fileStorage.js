@@ -5,11 +5,11 @@ const crypto = require('crypto');
 // This project has no cloud object storage (S3/GCS/etc.) wired up, and
 // the rest of the app's only precedent for sending binary content to
 // the backend is base64-in-JSON (ai.service.js's invoice-scan photo,
-// see app.js's body-limit comment)  -  not multipart/form-data. This
+// see app.js's body-limit comment) — not multipart/form-data. This
 // module follows that same precedent rather than introducing a second,
 // inconsistent upload mechanism: it decodes a base64 payload and writes
 // it to local disk, under a directory that is NEVER mounted as static
-// (see app.js  -  no express.static call anywhere), so every read goes
+// (see app.js — no express.static call anywhere), so every read goes
 // through the authenticated, company-scoped download route in
 // clinic.routes.js instead of a guessable public URL.
 const STORAGE_ROOT = process.env.FILE_STORAGE_ROOT
@@ -73,12 +73,12 @@ function hasValidMagicBytes(mimeType, buffer) {
 
 /**
  * Decodes and writes a base64 payload under STORAGE_ROOT/<namespace>/<companyId>/.
- * Returns the RELATIVE storage key (not a URL  -  never handed to a
+ * Returns the RELATIVE storage key (not a URL — never handed to a
  * client directly) and the real decoded byte size, which is what gets
  * persisted as file_size (never trust a client-supplied size).
  *
  * Throws a plain Error with a `.code` the caller can map to a friendly
- * ApiError  -  kept storage-concern-only here, no HTTP knowledge.
+ * ApiError — kept storage-concern-only here, no HTTP knowledge.
  */
 function saveBase64File({ namespace, companyId, originalName, mimeType, base64Data, maxBytes }) {
   if (!MIME_EXTENSIONS[mimeType]) {

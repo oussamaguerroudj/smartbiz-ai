@@ -2,7 +2,7 @@ const { query } = require('../../config/db');
 
 /**
  * Pharmacy vertical (business-specialization brief Ch. 15). Unlike
- * Clinic/Restaurant, Pharmacy needs NO new tables and NO migration  - 
+ * Clinic/Restaurant, Pharmacy needs NO new tables and NO migration —
  * per Ch. 21's "reuse existing backend/database/business logic
  * whenever possible", this module is a thin, read-mostly aggregation
  * layer over the CORE `products`/`sales`/`sale_items` tables that
@@ -42,7 +42,7 @@ async function expiringCount(companyId, days = 30) {
   return result.rows[0].count;
 }
 
-/** Already-expired stock  -  distinct from "expiring soon" (Ch. 15's
+/** Already-expired stock — distinct from "expiring soon" (Ch. 15's
  * "Expiring products" alert), since an already-expired item needs to
  * be pulled from sale, not just reordered. */
 async function expiredCount(companyId) {
@@ -78,11 +78,11 @@ async function lowStockCount(companyId) {
 }
 
 /** Inventory value at cost (what's tied up in stock) and at retail
- * (what it would sell for)  -  Ch. 15's "Inventory value". No purchases
+ * (what it would sell for) — Ch. 15's "Inventory value". No purchases
  * ledger exists anywhere in this codebase (see ai.tools.js's
  * `get_suppliers` comment for the same documented gap), so "Purchase
  * costs" as a distinct today/this-week figure is intentionally NOT
- * fabricated here  -  only this real, queryable snapshot is exposed. */
+ * fabricated here — only this real, queryable snapshot is exposed. */
 async function inventoryValue(companyId) {
   const result = await query(
     `SELECT
@@ -100,7 +100,7 @@ async function inventoryValue(companyId) {
   };
 }
 
-/** Today's sales, revenue and cost-of-goods-aware gross profit  - 
+/** Today's sales, revenue and cost-of-goods-aware gross profit —
  * same shape/formula as the CORE dashboard's own today-sales query
  * (dashboard.routes.js) and Reports' `grossProfit` (reports.routes.js),
  * reused rather than reinvented. */
@@ -138,7 +138,7 @@ async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
   };
 }
 
-/** Best-selling products this week  -  same query shape as Reports'
+/** Best-selling products this week — same query shape as Reports'
  * `topProducts` (reports.routes.js), scoped here for the Pharmacy
  * dashboard's own "Products sold" snapshot. */
 async function bestSellingProducts(companyId, rangeStart, rangeEnd, limit = 5) {
@@ -157,7 +157,7 @@ async function bestSellingProducts(companyId, rangeStart, rangeEnd, limit = 5) {
   return result.rows;
 }
 
-/** Supplier count  -  Ch. 15's "Supplier information". No dedicated
+/** Supplier count — Ch. 15's "Supplier information". No dedicated
  * suppliers repository module exists to import from (its queries live
  * inline in suppliers.routes.js), so this is queried directly here,
  * same lightweight-count pattern as lowStockCount/expiringCount above. */

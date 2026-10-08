@@ -9,17 +9,17 @@ import '../../../auth/data/companies_repository.dart';
 import '../../data/products_repository.dart';
 import '../../domain/product.dart';
 
-/// Edit Product  -  Phase 2 audit finding. Previously the app could only
+/// Edit Product — Phase 2 audit finding. Previously the app could only
 /// change a product's photo (see ProductDetailsScreen/_ProductPhoto);
 /// this screen lets every other editable column be changed too, and
 /// saves through ProductsRepository.updateProduct, which calls the
 /// backend's existing PUT /products/:id (already supported every one
-/// of these fields via COALESCE partial-update  -  it just was never
+/// of these fields via COALESCE partial-update — it just was never
 /// called with anything but imageUrl from the client before).
 ///
 /// Deliberately mirrors AddProductScreen's field set, order, labels and
 /// validators 1:1 so editing feels like the same form, just pre-filled
-///  -  per the audit brief's "don't change existing UI/UX unless the fix
+/// — per the audit brief's "don't change existing UI/UX unless the fix
 /// requires it" rule.
 class EditProductScreen extends ConsumerStatefulWidget {
   const EditProductScreen({super.key, required this.product});

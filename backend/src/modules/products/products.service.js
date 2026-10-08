@@ -89,7 +89,7 @@ async function getOne(companyId, id) {
 }
 
 /**
- * Deliberately does NOT throw notFound  -  a barcode scan that matches no
+ * Deliberately does NOT throw notFound — a barcode scan that matches no
  * product is an expected outcome the client needs to branch on (e.g.
  * "add as new product"), not an error condition.
  */

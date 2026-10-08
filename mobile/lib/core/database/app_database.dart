@@ -459,7 +459,7 @@ class AppDatabase {
 
   /// Deletes all rows from all local business tables in a single transaction.
   /// Use ONLY for explicit destructive actions (factory reset, dev tools).
-  /// Do NOT call from logout or login  -  use company_id-scoped queries instead.
+  /// Do NOT call from logout or login — use company_id-scoped queries instead.
   Future<void> clearAllData() async {
     final db = await database;
     await db.transaction((txn) async {

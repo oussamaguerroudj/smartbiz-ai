@@ -11,7 +11,7 @@ import '../../data/invoices_repository.dart';
 import '../../domain/invoice.dart';
 import '../../../sales/domain/sale.dart';
 
-/// Invoices  -  Spec Ch. 13/14. Real API-backed: reads from GET /invoices,
+/// Invoices — Spec Ch. 13/14. Real API-backed: reads from GET /invoices,
 /// GET /invoices/:id, and streams binary PDF via GET /invoices/:id/pdf.
 class InvoicesScreen extends ConsumerWidget {
   const InvoicesScreen({super.key});

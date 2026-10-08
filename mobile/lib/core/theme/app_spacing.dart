@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// Modiri AI  -  Design System v2  -  Spacing, Radius & Elevation Tokens
+/// Modiri AI — Design System v2 — Spacing, Radius & Elevation Tokens
 /// 8px base unit (unchanged). Radii are rounder and cards float on a soft
 /// shadow instead of sitting inside a hairline border, per the approved
 /// redesign.

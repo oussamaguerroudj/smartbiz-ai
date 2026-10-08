@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Reusable outlined text field with a visible label above the field
-/// (per Design System  -  Ch. 30: "not floating placeholder-only").
+/// (per Design System — Ch. 30: "not floating placeholder-only").
 /// Includes built-in password visibility toggle when [isPassword] is true.
 class AppTextField extends StatefulWidget {
   const AppTextField({

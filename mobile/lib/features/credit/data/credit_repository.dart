@@ -11,7 +11,7 @@ import '../../customers/presentation/screens/customers_screen.dart' show custome
 import '../../dashboard/data/dashboard_repository.dart';
 import '../../products/data/products_repository.dart';
 
-/// Credit Sale system  -  a customer buys now and pays part
+/// Credit Sale system — a customer buys now and pays part
 /// (or none) of the total immediately; the rest becomes debt tracked on
 /// their balance, repayable later.
 /// Completely offline-first with local SQLite persistence and sync queueing.
@@ -76,7 +76,7 @@ class CustomerTransaction {
 
   final String id;
   final String type; // 'credit_purchase' | 'payment'
-  final double amount; // signed  -  positive = new debt, negative = paid down
+  final double amount; // signed — positive = new debt, negative = paid down
   final double balanceAfter;
   final String? description;
   final DateTime createdAt;
@@ -128,7 +128,7 @@ class CreditRepository {
 
     final db = await AppDatabase.instance.database;
 
-    // 1. Get customer  -  scoped to this company
+    // 1. Get customer — scoped to this company
     final custRows = await db.query(
       'customers',
       where: 'id = ? AND company_id = ?',
@@ -151,7 +151,7 @@ class CreditRepository {
 
     // 3. Atomically perform local persistence
     await db.transaction((txn) async {
-      // Decrement stock for all items  -  scoped by company
+      // Decrement stock for all items — scoped by company
       for (final item in items) {
         await txn.rawUpdate(
           'UPDATE products SET quantity = quantity - ? WHERE id = ? AND company_id = ?',
@@ -159,7 +159,7 @@ class CreditRepository {
         );
       }
 
-      // Insert credit purchase  -  tagged with company_id
+      // Insert credit purchase — tagged with company_id
       await txn.insert('credit_purchases', {
         'id': purchaseId,
         'client_id': purchaseId,

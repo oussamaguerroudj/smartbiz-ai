@@ -5,7 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/gradient_hero.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Onboarding  -  Spec Ch. 8.2 (3 slides)
+/// Onboarding — Spec Ch. 8.2 (3 slides)
 /// Each slide: illustration placeholder, title, one-line description.
 /// Skip / Next controls; final slide replaces Next with Get Started.
 class OnboardingScreen extends StatefulWidget {
@@ -38,11 +38,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   int _index = 0;
 
-  // FIX (reported bug  -  Arabic only mirrored layout, text stayed
+  // FIX (reported bug — Arabic only mirrored layout, text stayed
   // English): these used to be a `static const` list of hardcoded
   // English strings. Now built per-build from AppLocalizations, which
   // is wired to the existing per-locale .arb files (already had full
-  // Arabic/French translations sitting unused  -  see main.dart).
+  // Arabic/French translations sitting unused — see main.dart).
   List<_OnboardingSlideData> _slides(AppLocalizations l10n) => [
         _OnboardingSlideData(
           icon: Icons.storefront_rounded,

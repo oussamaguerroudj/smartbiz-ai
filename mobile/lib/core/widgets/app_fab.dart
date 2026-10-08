@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import '../theme/app_spacing.dart';
 
 /// Wraps a standard [FloatingActionButton] with a one-shot scale+rotate
-/// "bounce" on tap  -  matches the reference's
+/// "bounce" on tap — matches the reference's
 /// `.phone-block:hover .fab{transform:scale(1.08) rotate(90deg);}`.
 /// Touch surfaces have no hover state, so the nearest faithful
 /// equivalent is playing that same transform as a press response
-/// instead of a persistent hover  -  same motion, triggered by the
+/// instead of a persistent hover — same motion, triggered by the
 /// closest thing a phone has to "the pointer is on me right now": a tap.
 ///
-/// Also applies the reference's exact FAB shadow  -  a brand-tinted glow
+/// Also applies the reference's exact FAB shadow — a brand-tinted glow
 /// (`box-shadow:0 10px 20px -6px rgba(61,85,245,.65)`, via
 /// [AppSpacing.brandGlow]) instead of Material's default grey elevation
 /// shadow.

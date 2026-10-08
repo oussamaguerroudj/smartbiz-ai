@@ -134,7 +134,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
     final nowIso = DateTime.now().toIso8601String();
     final dateStr = periodStart.toIso8601String().substring(0, 10);
 
-    // Save locally in SQLite immediately  -  tagged with current company
+    // Save locally in SQLite immediately — tagged with current company
     await db.insert('expenses', {
       'id': expenseId,
       'client_id': clientId,
@@ -213,7 +213,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
     if (description != null) updates['description'] = description;
 
     if (updates.isNotEmpty) {
-      // Scoped by company_id  -  cannot update another company's expense
+      // Scoped by company_id — cannot update another company's expense
       await db.update(
         'expenses',
         updates,
@@ -246,7 +246,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
-    // Scoped by company_id  -  cannot delete another company's expense
+    // Scoped by company_id — cannot delete another company's expense
     await db.delete(
       'expenses',
       where: 'id = ? AND company_id = ?',

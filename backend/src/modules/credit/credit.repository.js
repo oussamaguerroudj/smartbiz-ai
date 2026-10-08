@@ -1,7 +1,7 @@
 const { query } = require('../../config/db');
 
 // ---------------------------------------------------------------------
-// Customers (balance read/update  -  shared with customers.routes.js's
+// Customers (balance read/update — shared with customers.routes.js's
 // own `customers` table, kept in sync from here inside transactions)
 // ---------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ async function insertCreditPayment(
 /**
  * Total of every credit payment (both the "amount paid now" collected
  * at purchase time and later standalone repayments) received within
- * [rangeStart, rangeEnd]  -  folded into Dashboard/Reports revenue
+ * [rangeStart, rangeEnd] — folded into Dashboard/Reports revenue
  * (Ch. 15/20: "عند تسجيل Payment ... يتم تحديث Cash/Revenue"), since
  * this is real cash coming in that the plain `sales` table never sees.
  */
@@ -170,7 +170,7 @@ async function findCustomerTransactions(companyId, customerId) {
 }
 
 // ---------------------------------------------------------------------
-// Summary (Credit page cards  -  Ch. 16)
+// Summary (Credit page cards — Ch. 16)
 // ---------------------------------------------------------------------
 
 async function summary(companyId) {
