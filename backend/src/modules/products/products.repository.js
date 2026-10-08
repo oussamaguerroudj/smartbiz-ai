@@ -45,10 +45,11 @@ async function create(companyId, data) {
   await verifySupplierBelongsToCompany(companyId, data.supplierId);
   const result = await query(
     `INSERT INTO products
-       (company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id, size, color, brand)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       (id, company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id, size, color, brand)
+     VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING *`,
     [
+      data.id || null,
       companyId,
       data.name,
       data.category || null,

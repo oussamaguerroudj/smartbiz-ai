@@ -16,8 +16,12 @@ jest.mock('nodemailer', () => ({
 
 const { Pool } = require('pg');
 const app = require('../../src/app');
+const { resetRateLimiters } = require('../../src/middlewares/rateLimit.middleware');
 
 describe('Multi-Tenant Isolation Security Suite (Real PostgreSQL)', () => {
+  beforeEach(() => {
+    resetRateLimiters();
+  });
   let server;
   let baseUrl;
   let testPool;

@@ -36,9 +36,20 @@ function validateCreateReservation(req, res, next) {
 }
 
 function validateRecordPayment(req, res, next) {
-  const { amount } = req.body || {};
+  const { amount, method } = req.body || {};
   if (typeof amount !== 'number' || Number.isNaN(amount) || amount <= 0) {
     return next(ApiError.badRequest('amount must be a positive number', 'VALIDATION_ERROR'));
+  }
+  if (method !== undefined && method !== null) {
+    const normalized = String(method).toLowerCase().trim();
+    if (normalized === 'card' || (normalized !== 'cash' && normalized !== 'direct')) {
+      return next(
+        ApiError.badRequest(
+          'Invalid payment method for restaurant. Direct payment only (cash/direct).',
+          'INVALID_PAYMENT_METHOD',
+        ),
+      );
+    }
   }
   return next();
 }

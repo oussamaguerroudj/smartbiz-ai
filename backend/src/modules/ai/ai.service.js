@@ -263,19 +263,41 @@ async function pingOllama(requiredModels = []) {
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   let res;
+  let isOllama = true;
   try {
     res = await fetch(`${ollamaUrl}/api/tags`, { signal: controller.signal });
+    if (!res.ok) {
+      const v1Res = await fetch(`${baseUrl}/models`, { signal: controller.signal }).catch(() => null);
+      if (v1Res && v1Res.ok) {
+        res = v1Res;
+        isOllama = false;
+      }
+    }
   } catch (err) {
-    clearTimeout(timeoutId);
-    throw ApiError.serviceUnavailable(
-      `AI server is unreachable (${baseUrl}). Make sure Ollama is running with "ollama serve".`,
-      'AI_NOT_CONFIGURED',
-    );
+    try {
+      const v1Res = await fetch(`${baseUrl}/models`, { signal: controller.signal }).catch(() => null);
+      if (v1Res && v1Res.ok) {
+        res = v1Res;
+        isOllama = false;
+      } else {
+        clearTimeout(timeoutId);
+        throw ApiError.serviceUnavailable(
+          `AI server is unreachable (${baseUrl}). Make sure Ollama is running with "ollama serve".`,
+          'AI_NOT_CONFIGURED',
+        );
+      }
+    } catch (_) {
+      clearTimeout(timeoutId);
+      throw ApiError.serviceUnavailable(
+        `AI server is unreachable (${baseUrl}). Make sure Ollama is running with "ollama serve".`,
+        'AI_NOT_CONFIGURED',
+      );
+    }
   } finally {
     clearTimeout(timeoutId);
   }
 
-  if (!res.ok) {
+  if (!res || !res.ok) {
     throw ApiError.serviceUnavailable(
       `AI server is unreachable (${baseUrl}). Make sure Ollama is running with "ollama serve".`,
       'AI_NOT_CONFIGURED',
@@ -292,7 +314,12 @@ async function pingOllama(requiredModels = []) {
     );
   }
 
-  const availableModels = (data.models || []).map((m) => m.name);
+  const availableModels = isOllama && Array.isArray(data.models)
+    ? (data.models || []).map((m) => m.name)
+    : Array.isArray(data.data)
+      ? data.data.map((m) => m.id || m.name)
+      : (data.models || []).map((m) => m.name);
+
   const missingModels = requiredModels
     .filter(Boolean)
     .filter((modelName) => !isModelAvailable(modelName, availableModels));

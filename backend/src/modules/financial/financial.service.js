@@ -192,7 +192,11 @@ async function calculateFinancials(companyId, params = {}) {
     Number(globalRestaurantRes || 0);
 
   const allExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
-  const globalNetProfit = allRevenue - allExpenses;
+  let globalNetProfit = allRevenue - allExpenses;
+  if (businessType === 'restaurant') {
+    const globalRestCogs = await restaurantRepo.costOfGoodsSoldForRange(companyId, '2000-01-01', '2100-12-31').catch(() => 0);
+    globalNetProfit = allRevenue - Number(globalRestCogs || 0) - allExpenses;
+  }
   const inventoryValue = Number(globalInventoryRes.rows[0]?.inventory_value || 0);
 
   // 2. Period Calculations (Aggregating actual transactions within rangeStart..rangeEnd)
@@ -326,8 +330,12 @@ async function calculateFinancials(companyId, params = {}) {
   const totalExpenses = operatingExpenses + employeeSalaries;
 
   const grossProfit = Math.max(revenue - cogsTotal, 0);
-  // Strict formula: NET PROFIT = TOTAL REVENUE - TOTAL EXPENSES
-  const netProfit = revenue - totalExpenses;
+  // Strict formula:
+  // For RESTAURANT ONLY: Net Profit = Total Restaurant Sales - Inventory/Product Cost - Expenses
+  // For ALL OTHER BUSINESS TYPES: Net Profit = Total Revenue - Total Expenses (100% UNCHANGED)
+  const netProfit = businessType === 'restaurant'
+    ? revenue - cogsTotal - totalExpenses
+    : revenue - totalExpenses;
   const profitMargin = revenue > 0 ? Number(((netProfit / revenue) * 100).toFixed(2)) : 0;
 
   // Operating Expenses Breakdown by Category (excluding salary categories)
@@ -492,6 +500,21 @@ async function calculateFinancials(companyId, params = {}) {
         ),
       ]);
 
+    const restCogsByMonthRes = businessType === 'restaurant'
+      ? await query(
+          `SELECT EXTRACT(MONTH FROM m.created_at)::int AS month,
+                  COALESCE(SUM(-m.quantity_change * ii.purchase_price), 0) AS cogs
+           FROM restaurant_inventory_movements m
+           JOIN restaurant_inventory_items ii ON ii.id = m.item_id AND ii.company_id = m.company_id
+           WHERE m.company_id = $1
+             AND m.movement_type = 'consumption'
+             AND m.reference LIKE 'order:%'
+             AND EXTRACT(YEAR FROM m.created_at) = $2
+           GROUP BY month`,
+          [companyId, targetYear],
+        ).catch(() => ({ rows: [] }))
+      : { rows: [] };
+
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
@@ -509,6 +532,7 @@ async function calculateFinancials(companyId, params = {}) {
       const mExpenses = Number(expRow?.total_expenses || 0);
       const mSalary = Number(expRow?.salary_expenses || 0);
       const mOperating = Number(expRow?.operating_expenses || 0);
+      const mCogs = Number(restCogsByMonthRes.rows.find((r) => r.month === m)?.cogs || 0);
 
       return {
         month: m,
@@ -517,7 +541,8 @@ async function calculateFinancials(companyId, params = {}) {
         expenses: mExpenses,
         salaryExpenses: mSalary,
         operatingExpenses: mOperating,
-        netProfit: mRevenue - mExpenses,
+        costOfGoodsSold: businessType === 'restaurant' ? mCogs : 0,
+        netProfit: businessType === 'restaurant' ? mRevenue - mCogs - mExpenses : mRevenue - mExpenses,
       };
     });
   }
@@ -544,8 +569,8 @@ async function calculateFinancials(companyId, params = {}) {
     expenses: totalExpenses,
     operatingExpenses,
     employeeSalaries,
-    costOfGoodsSold: 0,
-    grossProfit: revenue,
+    costOfGoodsSold: businessType === 'restaurant' ? cogsTotal : 0,
+    grossProfit: businessType === 'restaurant' ? Math.max(revenue - cogsTotal, 0) : revenue,
     netProfit,
     profitMargin,
     salesCount,
@@ -562,7 +587,7 @@ async function calculateFinancials(companyId, params = {}) {
     expensesBreakdown: {
       operatingExpenses,
       employeeSalaries,
-      costOfGoodsSold: 0,
+      costOfGoodsSold: businessType === 'restaurant' ? cogsTotal : 0,
       totalExpenses,
       byCategory: expensesByCategory,
       byEmployee: employeeSalariesBreakdown,

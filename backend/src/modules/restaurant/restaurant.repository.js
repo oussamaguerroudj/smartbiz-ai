@@ -334,6 +334,11 @@ async function updateOrderStatus(companyId, id, status) {
     if (!existing) return null;
 
     if (status === 'completed') {
+      if (existing.status === 'completed') {
+        // Idempotent: already completed, ensure invoice exists and return
+        await ensureInvoiceForRestaurantOrder(client, companyId, existing);
+        return existing;
+      }
       // 1. Preparation check: order must be ready or served
       if (existing.status !== 'ready' && existing.status !== 'served') {
         const err = new Error('Order is not ready yet');
@@ -378,6 +383,7 @@ async function updateOrderStatus(companyId, id, status) {
 
     if (status === 'completed') {
       await deductIngredientsForOrder(client, companyId, order.id);
+      await ensureInvoiceForRestaurantOrder(client, companyId, order);
     }
 
     return order;
@@ -428,6 +434,29 @@ async function deductIngredientsForOrder(client, companyId, orderId) {
         [companyId, inventoryItem.id, -totalDeduction, reference],
       );
     }
+  }
+}
+
+async function ensureInvoiceForRestaurantOrder(client, companyId, order) {
+  const existing = await client.query(
+    `SELECT id FROM invoices WHERE company_id = $1 AND order_id = $2 LIMIT 1`,
+    [companyId, order.id],
+  );
+  if (existing.rows.length === 0) {
+    const { nextInvoiceNumber } = require('../sales/sales.repository');
+    const invoiceNumber = await nextInvoiceNumber(client, companyId);
+    const invStatus = order.payment_status === 'paid' ? 'paid' : 'unpaid';
+    await client.query(
+      `INSERT INTO invoices (company_id, order_id, invoice_number, status)
+       VALUES ($1, $2, $3, $4)`,
+      [companyId, order.id, invoiceNumber, invStatus],
+    );
+  } else if (order.payment_status === 'paid') {
+    await client.query(
+      `UPDATE invoices SET status = 'paid', updated_at = now()
+       WHERE company_id = $1 AND order_id = $2`,
+      [companyId, order.id],
+    );
   }
 }
 
@@ -554,7 +583,18 @@ async function recordPayment(companyId, orderId, { amount, method, note, paidAt 
       [companyId, orderId, newAmountPaid, newStatus],
     );
 
-    return { order: updatedOrder.rows[0], payment: payment.rows[0] };
+    const savedOrder = updatedOrder.rows[0];
+    if (savedOrder && savedOrder.status === 'completed') {
+      await ensureInvoiceForRestaurantOrder(client, companyId, savedOrder);
+    } else if (newStatus === 'paid') {
+      await client.query(
+        `UPDATE invoices SET status = 'paid', updated_at = now()
+         WHERE company_id = $1 AND order_id = $2`,
+        [companyId, orderId],
+      );
+    }
+
+    return { order: savedOrder, payment: payment.rows[0] };
   });
 }
 
