@@ -108,13 +108,16 @@ async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
   const result = await query(
     `SELECT
        COALESCE((
-         SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
-         FROM sale_items si
-         JOIN sales s2 ON s2.id = si.sale_id
+         SELECT SUM(s2.total)
+         FROM sales s2
          WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
        ), 0) AS revenue,
        COALESCE((
-         SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
+         SELECT SUM(s2.total)
+         FROM sales s2
+         WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
+       ), 0) - COALESCE((
+         SELECT SUM(si.unit_cost * si.quantity)
          FROM sale_items si
          JOIN sales s2 ON s2.id = si.sale_id
          WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
@@ -129,12 +132,12 @@ async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
      WHERE s.company_id = $1 AND s.sold_at::date BETWEEN $2::date AND $3::date`,
     [companyId, rangeStart, rangeEnd],
   );
-  const row = result.rows[0];
+  const row = result.rows[0] || { revenue: 0, gross_profit: 0, transaction_count: 0, units_sold: 0 };
   return {
     revenue: Number(row.revenue),
     grossProfit: Number(row.gross_profit),
-    transactionCount: row.transaction_count,
-    unitsSold: row.units_sold,
+    transactionCount: Number(row.transaction_count || 0),
+    unitsSold: Number(row.units_sold || 0),
   };
 }
 

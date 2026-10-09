@@ -58,7 +58,7 @@ async function getDashboard(companyId) {
   return {
     todayRevenue: today.revenue,
     todayGrossProfit: today.grossProfit,
-    todayNetProfit: today.revenue - todayExpenses,
+    todayNetProfit: today.grossProfit - todayExpenses,
     todayExpenses,
     transactionsToday: today.transactionCount,
     productsSoldToday: today.unitsSold,

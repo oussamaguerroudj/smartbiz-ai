@@ -8,6 +8,15 @@ import '../../features/pharmacy/domain/pharmacy_models.dart';
 import 'app_database.dart';
 
 class LocalFinancialCalculator {
+  static const String _safeSoldAtDate =
+      "(CASE WHEN sold_at LIKE '%Z' OR sold_at LIKE '%+%' THEN date(sold_at, 'localtime') ELSE date(sold_at) END)";
+  static const String _safeSSoldAtDate =
+      "(CASE WHEN s.sold_at LIKE '%Z' OR s.sold_at LIKE '%+%' THEN date(s.sold_at, 'localtime') ELSE date(s.sold_at) END)";
+  static const String _safeExpenseDate =
+      "(CASE WHEN expense_date LIKE '%Z' OR expense_date LIKE '%+%' THEN date(expense_date, 'localtime') ELSE date(expense_date) END)";
+  static const String _safeScheduledAtDate =
+      "(CASE WHEN scheduled_at LIKE '%Z' OR scheduled_at LIKE '%+%' THEN date(scheduled_at, 'localtime') ELSE date(scheduled_at) END)";
+
   static Future<ReportData> calculateReport({
     required String period, // 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
     required String companyId, // TENANT ISOLATION: all queries filter by this
@@ -56,9 +65,9 @@ class LocalFinancialCalculator {
     final periodSalesRes = await activeDb.rawQuery(
       '''
       SELECT
-        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND date(sold_at) BETWEEN date(?) AND date(?)), 0) AS revenue,
-        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)), 0) AS cogs,
-        (SELECT COUNT(*) FROM sales WHERE company_id = ? AND date(sold_at) BETWEEN date(?) AND date(?)) AS sales_count
+        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS revenue,
+        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs,
+        (SELECT COUNT(*) FROM sales WHERE company_id = ? AND $_safeSoldAtDate BETWEEN date(?) AND date(?)) AS sales_count
       ''',
       [companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd],
     );
@@ -73,7 +82,7 @@ class LocalFinancialCalculator {
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM expenses
       WHERE company_id = ?
-        AND date(expense_date) BETWEEN date(?) AND date(?)
+        AND $_safeExpenseDate BETWEEN date(?) AND date(?)
         AND NOT (category LIKE '%salary%' OR category LIKE '%salair%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
       ''',
       [companyId, rangeStart, rangeEnd],
@@ -86,7 +95,7 @@ class LocalFinancialCalculator {
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM expenses
       WHERE company_id = ?
-        AND date(expense_date) BETWEEN date(?) AND date(?)
+        AND $_safeExpenseDate BETWEEN date(?) AND date(?)
         AND (category LIKE '%salary%' OR category LIKE '%salair%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
       ''',
       [companyId, rangeStart, rangeEnd],
@@ -109,7 +118,7 @@ class LocalFinancialCalculator {
         SUM(si.line_total) AS total
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
-      WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)
+      WHERE s.company_id = ? AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)
       GROUP BY si.product_id, si.product_name
       ORDER BY units_sold DESC
       LIMIT 5
@@ -131,7 +140,7 @@ class LocalFinancialCalculator {
       SELECT category, COALESCE(SUM(amount), 0) AS total
       FROM expenses
       WHERE company_id = ?
-        AND date(expense_date) BETWEEN date(?) AND date(?)
+        AND $_safeExpenseDate BETWEEN date(?) AND date(?)
         AND NOT (category LIKE '%salary%' OR category LIKE '%salair%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
       GROUP BY category
       ORDER BY total DESC
@@ -150,7 +159,7 @@ class LocalFinancialCalculator {
 
     // 7. Activity Counts — scoped to this company
     final expCountRes = await activeDb.rawQuery(
-      'SELECT COUNT(*) AS count FROM expenses WHERE company_id = ? AND date(expense_date) BETWEEN date(?) AND date(?)',
+      'SELECT COUNT(*) AS count FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?)',
       [companyId, rangeStart, rangeEnd],
     );
     final invCountRes = await activeDb.rawQuery(
@@ -158,7 +167,7 @@ class LocalFinancialCalculator {
       SELECT COUNT(*) AS count
       FROM sales s
       JOIN invoices inv ON inv.sale_id = s.id
-      WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)
+      WHERE s.company_id = ? AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)
       ''',
       [companyId, rangeStart, rangeEnd],
     );
@@ -175,7 +184,7 @@ class LocalFinancialCalculator {
       '''
       SELECT id, total AS amount, sold_at AS date, customer_name, 'sale' AS type
       FROM sales
-      WHERE company_id = ? AND date(sold_at) BETWEEN date(?) AND date(?)
+      WHERE company_id = ? AND $_safeSoldAtDate BETWEEN date(?) AND date(?)
       ORDER BY sold_at DESC
       LIMIT 5
       ''',
@@ -186,7 +195,7 @@ class LocalFinancialCalculator {
       '''
       SELECT id, amount, expense_date AS date, category, description, employee_id, 'expense' AS type
       FROM expenses
-      WHERE company_id = ? AND date(expense_date) BETWEEN date(?) AND date(?)
+      WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?)
       ORDER BY expense_date DESC
       LIMIT 5
       ''',
@@ -236,17 +245,17 @@ class LocalFinancialCalculator {
         final mSales = await activeDb.rawQuery(
           '''
           SELECT
-            COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND date(sold_at) BETWEEN date(?) AND date(?)), 0) AS rev,
-            COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)), 0) AS cogs
+            COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS rev,
+            COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs
           ''',
           [companyId, mStart, mEnd, companyId, mStart, mEnd],
         );
         final mOpExp = await activeDb.rawQuery(
-          '''SELECT COALESCE(SUM(amount), 0) AS exp FROM expenses WHERE company_id = ? AND date(expense_date) BETWEEN date(?) AND date(?) AND NOT (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
+          '''SELECT COALESCE(SUM(amount), 0) AS exp FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND NOT (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
           [companyId, mStart, mEnd],
         );
         final mSalExp = await activeDb.rawQuery(
-          '''SELECT COALESCE(SUM(amount), 0) AS sal FROM expenses WHERE company_id = ? AND date(expense_date) BETWEEN date(?) AND date(?) AND (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
+          '''SELECT COALESCE(SUM(amount), 0) AS sal FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
           [companyId, mStart, mEnd],
         );
 
@@ -332,6 +341,14 @@ class LocalFinancialCalculator {
       case 'daily':
         final d = (date != null && date.isNotEmpty) ? date : todayStr;
         return {'rangeStart': d, 'rangeEnd': d};
+      case 'weekly':
+        final diffToMonday = (now.weekday - 1);
+        final monday = now.subtract(Duration(days: diffToMonday));
+        final sunday = monday.add(const Duration(days: 6));
+        return {
+          'rangeStart': _toIsoDate(monday),
+          'rangeEnd': _toIsoDate(sunday),
+        };
       case 'yearly':
         final y = year ?? now.year;
         return {'rangeStart': '$y-01-01', 'rangeEnd': '$y-12-31'};
@@ -404,7 +421,7 @@ class LocalFinancialCalculator {
     );
 
     final apptRes = await activeDb.rawQuery(
-      "SELECT COUNT(*) AS count FROM appointments WHERE company_id = ? AND status = 'scheduled' AND date(scheduled_at) >= date(?)",
+      "SELECT COUNT(*) AS count FROM appointments WHERE company_id = ? AND status = 'scheduled' AND $_safeScheduledAtDate >= date(?)",
       [companyId, todayStr],
     );
 
@@ -454,7 +471,7 @@ class LocalFinancialCalculator {
       '''SELECT COALESCE(SUM(si.quantity), 0) AS qty
          FROM sale_items si
          JOIN sales s ON s.id = si.sale_id
-         WHERE s.company_id = ? AND date(s.sold_at) = date(?)''',
+         WHERE s.company_id = ? AND $_safeSSoldAtDate = date(?)''',
       [companyId, todayStr],
     );
     final productsSoldToday = (productsSoldRes.first['qty'] as num?)?.toInt() ?? 0;
@@ -584,7 +601,7 @@ class LocalFinancialCalculator {
       '''SELECT COALESCE(SUM(si.quantity), 0) AS qty
          FROM sale_items si
          JOIN sales s ON s.id = si.sale_id
-         WHERE s.company_id = ? AND date(s.sold_at) = date(?)''',
+         WHERE s.company_id = ? AND $_safeSSoldAtDate = date(?)''',
       [companyId, todayStr],
     );
     final itemsSoldToday = (productsSoldRes.first['qty'] as num?)?.toInt() ?? 0;
@@ -737,7 +754,7 @@ class LocalFinancialCalculator {
       '''SELECT COALESCE(SUM(si.quantity), 0) AS qty
          FROM sale_items si
          JOIN sales s ON s.id = si.sale_id
-         WHERE s.company_id = ? AND date(s.sold_at) = date(?)''',
+         WHERE s.company_id = ? AND $_safeSSoldAtDate = date(?)''',
       [companyId, todayStr],
     );
     final productsSoldToday = (productsSoldRes.first['qty'] as num?)?.toInt() ?? 0;

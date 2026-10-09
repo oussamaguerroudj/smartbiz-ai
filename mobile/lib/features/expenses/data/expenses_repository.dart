@@ -9,6 +9,11 @@ import '../../../core/network/session.dart';
 import '../../../core/sync/sync_service.dart';
 import '../domain/expense.dart';
 import '../../dashboard/data/dashboard_repository.dart';
+import '../../superette/presentation/screens/superette_main_dashboard_screen.dart' show superetteDashboardProvider;
+import '../../clothing/presentation/screens/clothing_main_dashboard_screen.dart' show clothingDashboardProvider;
+import '../../pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart' show pharmacyDashboardProvider;
+import '../../restaurant/data/restaurant_repository.dart' show restaurantDashboardProvider;
+import '../../clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
 
 class ExpensesState {
   ExpensesState({required this.expenses, required this.thisMonthTotal});
@@ -23,7 +28,8 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
 
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId =>
+      _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load() async {
     // 1. Read from local SQLite first
@@ -185,7 +191,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
     final fresh = await _fetchFromLocal();
     if (!mounted) return;
     state = AsyncValue.data(fresh);
-    await _ref.read(dashboardRepositoryProvider.notifier).load();
+    _invalidateAllDashboards();
     await _ref.read(syncServiceProvider.notifier).refreshQueueCounts();
 
     // Trigger sync in background if online
@@ -223,7 +229,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
       final fresh = await _fetchFromLocal();
       if (!mounted) return;
       state = AsyncValue.data(fresh);
-      await _ref.read(dashboardRepositoryProvider.notifier).load();
+      _invalidateAllDashboards();
     }
 
     try {
@@ -255,12 +261,21 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
     final fresh = await _fetchFromLocal();
     if (!mounted) return;
     state = AsyncValue.data(fresh);
-    await _ref.read(dashboardRepositoryProvider.notifier).load();
+    _invalidateAllDashboards();
 
     try {
       final client = _ref.read(apiClientProvider);
       await client.delete('/expenses/$id');
     } catch (_) {}
+  }
+
+  void _invalidateAllDashboards() {
+    _ref.read(dashboardRepositoryProvider.notifier).load();
+    _ref.invalidate(superetteDashboardProvider);
+    _ref.invalidate(clothingDashboardProvider);
+    _ref.invalidate(pharmacyDashboardProvider);
+    _ref.invalidate(restaurantDashboardProvider);
+    _ref.invalidate(clinicDashboardProvider);
   }
 }
 

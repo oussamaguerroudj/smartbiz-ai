@@ -48,10 +48,15 @@ function safeFilename(raw, fallback = 'document') {
   return cleaned.length > 0 ? cleaned.slice(0, 120) : fallback;
 }
 
+function formatPdfText(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text;
+}
+
 function drawHeader(doc, company, fontRegular = 'Helvetica', fontBold = 'Helvetica-Bold') {
-  doc.fontSize(18).font(fontBold).text(company.name || '', { align: 'left' });
+  doc.fontSize(18).font(fontBold).text(formatPdfText(company.name) || '', { align: 'left' });
   doc.fontSize(9).font(fontRegular).fillColor('#555');
-  if (company.address) doc.text(company.address);
+  if (company.address) doc.text(formatPdfText(company.address));
   if (company.phone) doc.text(company.phone);
   doc.fillColor('#000');
   doc.moveDown(1);
@@ -81,18 +86,18 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
   doc.fontSize(14).font(fontBold).text('Ordonnance / Prescription');
   doc.fontSize(10).font(fontRegular);
   doc.text(`${prescription.prescription_number}    ${formatDate(prescription.issued_at)}`);
-  if (prescription.doctor_name) doc.text(`Dr. ${prescription.doctor_name}`);
+  if (prescription.doctor_name) doc.text(`Dr. ${formatPdfText(prescription.doctor_name)}`);
   doc.moveDown(0.5);
-  doc.text(`Patient: ${patient.full_name}`);
+  doc.text(`Patient: ${formatPdfText(patient.full_name)}`);
   if (patient.phone) doc.text(patient.phone);
   doc.moveDown(1);
 
   for (const item of prescription.items) {
-    doc.font(fontBold).fontSize(11).text(`•  ${item.medication_name}`);
-    const details = [item.dosage, item.frequency, item.duration].filter(Boolean).join('  ·  ');
+    doc.font(fontBold).fontSize(11).text(`•  ${formatPdfText(item.medication_name)}`);
+    const details = [item.dosage, item.frequency, item.duration].filter(Boolean).map(formatPdfText).join('  ·  ');
     doc.font(fontRegular).fontSize(9).fillColor('#555');
     if (details) doc.text(`   ${details}`);
-    if (item.instructions) doc.text(`   ${item.instructions}`);
+    if (item.instructions) doc.text(`   ${formatPdfText(item.instructions)}`);
     doc.fillColor('#000');
     doc.moveDown(0.5);
   }
@@ -100,7 +105,7 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
   if (prescription.notes) {
     doc.moveDown(0.5);
     doc.font(fontBold).fontSize(10).text('Notes');
-    doc.font(fontRegular).fontSize(9).text(prescription.notes);
+    doc.font(fontRegular).fontSize(9).text(formatPdfText(prescription.notes));
   }
 
   doc.moveDown(3);
@@ -136,7 +141,7 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
   doc.fontSize(10).font(fontRegular);
   doc.text(`${invoice.invoiceNumber}    ${formatDate(invoice.date)}`);
   doc.moveDown(0.5);
-  doc.text(`Patient: ${invoice.patient.fullName}`);
+  doc.text(`Patient: ${formatPdfText(invoice.patient.fullName)}`);
   if (invoice.patient.phone) doc.text(invoice.patient.phone);
   doc.moveDown(1);
 
@@ -149,7 +154,7 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
   doc.moveDown(0.3);
 
   doc.font(fontRegular).fontSize(10);
-  doc.text(invoice.serviceLabel, 50, doc.y);
+  doc.text(formatPdfText(invoice.serviceLabel), 50, doc.y);
   doc.text(money(invoice.consultationPrice), 400, doc.y - doc.currentLineHeight(), {
     width: 145,
     align: 'right',
@@ -191,9 +196,9 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
   doc.text(`${invoice.invoiceNumber}    ${formatDate(invoice.date)}`);
   if (invoice.orderType) doc.text(`Type: ${invoice.orderType === 'delivery' ? 'Livraison / Delivery' : 'Sur Place / Dine-in'}`);
   if (invoice.tableName) doc.text(`Table: ${invoice.tableName}`);
-  if (invoice.customerName) doc.text(`Client: ${invoice.customerName}`);
+  if (invoice.customerName) doc.text(`Client: ${formatPdfText(invoice.customerName)}`);
   if (invoice.customerPhone) doc.text(`Tél / Phone: ${invoice.customerPhone}`);
-  if (invoice.deliveryAddress) doc.text(`Adresse / Address: ${invoice.deliveryAddress}`);
+  if (invoice.deliveryAddress) doc.text(`Adresse / Address: ${formatPdfText(invoice.deliveryAddress)}`);
   doc.moveDown(1);
 
   const tableTop = doc.y;
@@ -209,7 +214,7 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
   doc.font(fontRegular).fontSize(10);
   for (const item of invoice.items) {
     const rowY = doc.y;
-    doc.text(item.itemName, 50, rowY, { width: 240 });
+    doc.text(formatPdfText(item.itemName), 50, rowY, { width: 240 });
     doc.text(String(item.quantity), 300, rowY, { width: 60, align: 'right' });
     doc.text(money(item.unitPrice), 360, rowY, { width: 80, align: 'right' });
     doc.text(money(item.subtotal), 445, rowY, { width: 100, align: 'right' });
@@ -246,7 +251,7 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
   doc.text(`${invoice.invoice_number || ''}    ${formatDate(invoice.created_at || invoice.sold_at || new Date())}`);
   if (invoice.customer_name) {
     doc.moveDown(0.5);
-    doc.text(`Client / Customer: ${invoice.customer_name}`);
+    doc.text(`Client / Customer: ${formatPdfText(invoice.customer_name)}`);
     if (invoice.customer_phone) doc.text(invoice.customer_phone);
   }
   doc.moveDown(1);
@@ -265,7 +270,7 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
   const items = invoice.items || [];
   for (const item of items) {
     const rowY = doc.y;
-    doc.text(item.product_name || item.name || 'Item', 50, rowY, { width: 240 });
+    doc.text(formatPdfText(item.product_name || item.name || 'Item'), 50, rowY, { width: 240 });
     doc.text(String(item.quantity || 1), 300, rowY, { width: 60, align: 'right' });
     doc.text(money(item.unit_price || 0), 360, rowY, { width: 80, align: 'right' });
     doc.text(money(item.line_total || 0), 445, rowY, { width: 100, align: 'right' });
@@ -297,4 +302,5 @@ module.exports = {
   streamClinicInvoicePdf,
   streamRestaurantInvoicePdf,
   streamStandardInvoicePdf,
+  formatPdfText,
 };

@@ -11,6 +11,11 @@ import '../../../core/sync/sync_service.dart';
 import '../../products/data/products_repository.dart';
 import '../../invoices/data/invoices_repository.dart';
 import '../../dashboard/data/dashboard_repository.dart';
+import '../../superette/presentation/screens/superette_main_dashboard_screen.dart' show superetteDashboardProvider;
+import '../../clothing/presentation/screens/clothing_main_dashboard_screen.dart' show clothingDashboardProvider;
+import '../../pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart' show pharmacyDashboardProvider;
+import '../../restaurant/data/restaurant_repository.dart' show restaurantDashboardProvider;
+import '../../clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
 import '../domain/sale.dart';
 
 class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
@@ -20,7 +25,8 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
 
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId =>
+      _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load() async {
     // 1. Immediately read from local SQLite
@@ -80,8 +86,14 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
+    final existingItemSaleIds = (await db.rawQuery(
+      'SELECT DISTINCT sale_id FROM sale_items WHERE company_id = ?',
+      [companyId],
+    )).map((r) => r['sale_id'] as String).toSet();
+
     final batch = db.batch();
     for (final s in sales) {
+      final soldAtLocalIso = s.soldAt.toLocal().toIso8601String();
       batch.insert(
         'sales',
         {
@@ -92,12 +104,35 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
           'discount': s.discount,
           'total': s.total,
           'payment_status': paymentStatusToApi(s.paymentStatus),
-          'sold_at': s.soldAt.toIso8601String(),
-          'created_at': s.soldAt.toIso8601String(),
+          'sold_at': soldAtLocalIso,
+          'created_at': soldAtLocalIso,
           'synced': 1,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+
+      // If sale_items has no rows for this synced sale, insert a summary item
+      // to preserve unit_cost (COGS) and line_profit (margin) in offline mode
+      if (!existingItemSaleIds.contains(s.id) && s.margin != null) {
+        final cogs = (s.total - s.margin!).clamp(0.0, double.infinity);
+        final lineProfit = s.margin!;
+        batch.insert(
+          'sale_items',
+          {
+            'id': 'summary-${s.id}',
+            'sale_id': s.id,
+            'company_id': companyId,
+            'product_id': 'synced-summary',
+            'product_name': 'Sale Items',
+            'quantity': 1,
+            'unit_price': s.total,
+            'unit_cost': cogs,
+            'line_total': s.total,
+            'line_profit': lineProfit,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
 
       if (s.invoiceId != null && s.invoiceNumber != null) {
         batch.insert(
@@ -110,8 +145,8 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
             'status': paymentStatusToApi(s.paymentStatus),
             'customer_name': s.customerName,
             'total': s.total,
-            'sold_at': s.soldAt.toIso8601String(),
-            'created_at': s.soldAt.toIso8601String(),
+            'sold_at': soldAtLocalIso,
+            'created_at': soldAtLocalIso,
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
@@ -312,12 +347,21 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
     await _ref.read(productsRepositoryProvider.notifier).load();
     await _ref.read(invoicesRepositoryProvider.notifier).load();
     await _ref.read(dashboardRepositoryProvider.notifier).load();
+    _invalidateAllDashboards();
     await _ref.read(syncServiceProvider.notifier).refreshQueueCounts();
 
     // Trigger sync in background if online
     unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
 
     return result;
+  }
+
+  void _invalidateAllDashboards() {
+    _ref.invalidate(superetteDashboardProvider);
+    _ref.invalidate(clothingDashboardProvider);
+    _ref.invalidate(pharmacyDashboardProvider);
+    _ref.invalidate(restaurantDashboardProvider);
+    _ref.invalidate(clinicDashboardProvider);
   }
 }
 

@@ -39,7 +39,8 @@ class ReportsRepository {
   ReportsRepository(this._ref);
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId =>
+      _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<ReportData> getReport({
     required String period,

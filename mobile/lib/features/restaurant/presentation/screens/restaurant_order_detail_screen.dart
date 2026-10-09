@@ -109,6 +109,19 @@ class _RestaurantOrderDetailScreenState extends ConsumerState<RestaurantOrderDet
       // Fall back to default PDF fonts if assets are unavailable
     }
 
+    bool hasArabic(String text) =>
+        RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]').hasMatch(text);
+
+    pw.Widget pdfText(String text, {pw.TextStyle? style, pw.TextAlign textAlign = pw.TextAlign.left}) {
+      final isRtl = hasArabic(text);
+      return pw.Text(
+        text,
+        style: style,
+        textAlign: isRtl ? (textAlign == pw.TextAlign.left ? pw.TextAlign.right : textAlign) : textAlign,
+        textDirection: isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+      );
+    }
+
     pdf.addPage(
       pw.Page(
         theme: theme,
@@ -160,11 +173,11 @@ class _RestaurantOrderDetailScreenState extends ConsumerState<RestaurantOrderDet
                         style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
                       ),
                       if (order.customerName != null && order.customerName!.trim().isNotEmpty)
-                        pw.Text('Client: ${order.customerName}', style: const pw.TextStyle(fontSize: 10)),
+                        pdfText('Client: ${order.customerName}', style: const pw.TextStyle(fontSize: 10)),
                       if (order.customerPhone != null && order.customerPhone!.trim().isNotEmpty)
                         pw.Text('Tél: ${order.customerPhone}', style: const pw.TextStyle(fontSize: 10)),
                       if (order.deliveryAddress != null && order.deliveryAddress!.trim().isNotEmpty)
-                        pw.Text('Adresse: ${order.deliveryAddress}', style: const pw.TextStyle(fontSize: 10)),
+                        pdfText('Adresse: ${order.deliveryAddress}', style: const pw.TextStyle(fontSize: 10)),
                     ],
                   ),
                   pw.Column(
@@ -183,23 +196,51 @@ class _RestaurantOrderDetailScreenState extends ConsumerState<RestaurantOrderDet
               pw.SizedBox(height: 16),
 
               // Items table
-              pw.TableHelper.fromTextArray(
-                headers: ['Article / Item', 'Prix Unitaire', 'Qté', 'Total (DZD)'],
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.blue800),
-                cellHeight: 28,
-                cellAlignments: {
-                  0: pw.Alignment.centerLeft,
-                  1: pw.Alignment.centerRight,
-                  2: pw.Alignment.center,
-                  3: pw.Alignment.centerRight,
-                },
-                data: order.items.map((i) => [
-                  i.itemName,
-                  '${i.unitPrice.toStringAsFixed(0)} DZD',
-                  'x${i.quantity}',
-                  '${i.subtotal.toStringAsFixed(0)} DZD',
-                ]).toList(),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.blue800),
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('Article / Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('Prix Unitaire', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('Qté', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('Total (DZD)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                      ),
+                    ],
+                  ),
+                  ...order.items.map((i) => pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pdfText(i.itemName),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('${i.unitPrice.toStringAsFixed(0)} DZD', textAlign: pw.TextAlign.right),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('x${i.quantity}', textAlign: pw.TextAlign.center),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('${i.subtotal.toStringAsFixed(0)} DZD', textAlign: pw.TextAlign.right),
+                      ),
+                    ],
+                  )),
+                ],
               ),
               pw.SizedBox(height: 16),
               pw.Divider(color: PdfColors.grey300),

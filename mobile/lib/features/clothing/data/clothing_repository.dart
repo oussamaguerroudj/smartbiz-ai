@@ -3,13 +3,15 @@ import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/local_financial_calculator.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/session.dart';
+import '../../../core/sync/sync_service.dart';
 import '../domain/clothing_models.dart';
 
 class ClothingRepository {
   ClothingRepository(this._ref);
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId =>
+      _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<ClothingDashboardStats> dashboard() async {
     final companyId = _companyId;
@@ -24,7 +26,8 @@ class ClothingRepository {
     }
 
     final isOnline = _ref.read(connectionStatusProvider) == ConnectionStatus.online;
-    if (isOnline) {
+    final syncState = _ref.read(syncServiceProvider);
+    if (isOnline && syncState.pendingCount == 0) {
       try {
         final client = _ref.read(apiClientProvider);
         final response = await client.get('/clothing/dashboard');

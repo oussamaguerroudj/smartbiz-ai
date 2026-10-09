@@ -87,7 +87,7 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
         'invoices',
         {
           'id': inv.id,
-          'sale_id': inv.id, // fallback sale_id if not present
+          'sale_id': inv.saleId ?? inv.id,
           'company_id': companyId,
           'invoice_number': inv.invoiceNumber,
           'status': paymentStatusToApi(inv.status),
@@ -113,20 +113,24 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
 
         if (invRows.isNotEmpty) {
           final inv = invRows.first;
-          final saleId = inv['sale_id'] as String;
-          final itemRows = await db.query(
-            'sale_items',
-            where: 'sale_id = ? AND company_id = ?',
-            whereArgs: [saleId, companyId],
-          );
-        final items = itemRows.map((ir) => InvoiceLineItem(
-          productName: (ir['product_name'] ?? 'Product') as String,
-          quantity: (ir['quantity'] as num).toInt(),
-          lineTotal: (ir['line_total'] as num).toDouble(),
-        )).toList();
+          final saleId = (inv['sale_id'] as String?) ?? id;
+          final itemRows = await db.rawQuery('''
+            SELECT si.*,
+                   COALESCE(NULLIF(si.product_name, ''), p.name, 'Product') AS resolved_product_name
+            FROM sale_items si
+            LEFT JOIN products p ON p.id = si.product_id AND p.company_id = si.company_id
+            WHERE (si.sale_id = ? OR si.sale_id = ?) AND si.company_id = ?
+          ''', [saleId, id, companyId]);
+
+          final items = itemRows.map((ir) => InvoiceLineItem(
+            productName: (ir['resolved_product_name'] ?? 'Product') as String,
+            quantity: (ir['quantity'] as num).toInt(),
+            lineTotal: (ir['line_total'] as num).toDouble(),
+          )).toList();
 
           return Invoice(
             id: inv['id'] as String,
+            saleId: saleId,
             invoiceNumber: inv['invoice_number'] as String,
             status: paymentStatusFromApi(inv['status'] as String),
             total: (inv['total'] as num).toDouble(),
@@ -171,6 +175,19 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
       // Fall back to default PDF fonts if assets are unavailable
     }
 
+    bool hasArabic(String text) =>
+        RegExp(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]').hasMatch(text);
+
+    pw.Widget pdfText(String text, {pw.TextStyle? style, pw.TextAlign textAlign = pw.TextAlign.left}) {
+      final isRtl = hasArabic(text);
+      return pw.Text(
+        text,
+        style: style,
+        textAlign: isRtl ? (textAlign == pw.TextAlign.left ? pw.TextAlign.right : textAlign) : textAlign,
+        textDirection: isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+      );
+    }
+
     pdf.addPage(
       pw.Page(
         theme: theme,
@@ -183,16 +200,46 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
               pw.SizedBox(height: 10),
               pw.Text('Invoice #: ${invoice.invoiceNumber}'),
               pw.Text('Date: ${invoice.soldAt.toIso8601String().substring(0, 10)}'),
-              if (invoice.customerName != null) pw.Text('Customer: ${invoice.customerName}'),
+              if (invoice.customerName != null) pdfText('Customer: ${invoice.customerName}'),
               pw.SizedBox(height: 16),
               pw.Divider(),
-              pw.TableHelper.fromTextArray(
-                headers: ['Item', 'Qty', 'Total (DZD)'],
-                data: invoice.items.map((i) => [
-                  i.productName,
-                  i.quantity.toString(),
-                  i.lineTotal.toStringAsFixed(2),
-                ]).toList(),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('Item / Article', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('Qty', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('Total (DZD)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  ...invoice.items.map((i) => pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pdfText(i.productName),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text(i.quantity.toString(), textAlign: pw.TextAlign.right),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text(i.lineTotal.toStringAsFixed(2), textAlign: pw.TextAlign.right),
+                      ),
+                    ],
+                  )),
+                ],
               ),
               pw.Divider(),
               pw.SizedBox(height: 10),

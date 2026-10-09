@@ -32,7 +32,7 @@ async function findById(companyId, id) {
             COALESCE(s.discount, 0) AS discount,
             COALESCE(s.sold_at, ro.completed_at, ro.created_at) AS sold_at,
             COALESCE(c.name, ro.customer_name) AS customer_name,
-            COALESCE(c.phone, ro.customer_phone) AS customer_phone
+            c.phone AS customer_phone
      FROM invoices i
      LEFT JOIN sales s
        ON s.id = i.sale_id

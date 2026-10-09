@@ -4,13 +4,15 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/local_financial_calculator.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/session.dart';
+import '../../../core/sync/sync_service.dart';
 import '../domain/pharmacy_models.dart';
 
 class PharmacyRepository {
   PharmacyRepository(this._ref);
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId =>
+      _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<PharmacyDashboardStats> dashboard() async {
     final companyId = _companyId;
@@ -25,7 +27,8 @@ class PharmacyRepository {
     }
 
     final isOnline = _ref.read(connectionStatusProvider) == ConnectionStatus.online;
-    if (isOnline) {
+    final syncState = _ref.read(syncServiceProvider);
+    if (isOnline && syncState.pendingCount == 0) {
       try {
         final client = _ref.read(apiClientProvider);
         final response = await client.get('/pharmacy/dashboard');

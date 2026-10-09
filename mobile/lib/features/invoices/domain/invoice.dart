@@ -21,6 +21,7 @@ class InvoiceLineItem {
 class Invoice {
   Invoice({
     required this.id,
+    this.saleId,
     required this.invoiceNumber,
     required this.status,
     required this.total,
@@ -30,6 +31,7 @@ class Invoice {
   });
 
   final String id;
+  final String? saleId;
   final String invoiceNumber;
   final PaymentStatus status;
   final double total;
@@ -39,6 +41,7 @@ class Invoice {
 
   factory Invoice.fromJson(Map<String, dynamic> json) => Invoice(
         id: json['id'] as String,
+        saleId: (json['sale_id'] ?? json['order_id']) as String?,
         invoiceNumber: json['invoice_number'] as String,
         status: paymentStatusFromApi(json['status'] as String),
         total: double.parse(json['total'].toString()),

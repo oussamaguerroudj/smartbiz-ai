@@ -92,7 +92,7 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
           ), 0) AS cogs,
           COUNT(*) AS sales_count
         FROM sales s
-        WHERE s.company_id = ? AND s.synced = 0 AND date(s.sold_at) = date(?)
+        WHERE s.company_id = ? AND s.synced = 0 AND (CASE WHEN s.sold_at LIKE '%Z' OR s.sold_at LIKE '%+%' THEN date(s.sold_at, 'localtime') ELSE date(s.sold_at) END) = date(?)
         ''',
         [companyId, todayStr],
       );
@@ -100,7 +100,7 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
         '''
         SELECT COALESCE(SUM(amount), 0) AS expenses
         FROM expenses
-        WHERE company_id = ? AND synced = 0 AND date(expense_date) = date(?)
+        WHERE company_id = ? AND synced = 0 AND (CASE WHEN expense_date LIKE '%Z' OR expense_date LIKE '%+%' THEN date(expense_date, 'localtime') ELSE date(expense_date) END) = date(?)
         ''',
         [companyId, todayStr],
       );
