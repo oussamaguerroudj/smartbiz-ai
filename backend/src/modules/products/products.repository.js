@@ -43,6 +43,19 @@ async function verifySupplierBelongsToCompany(companyId, supplierId) {
 
 async function create(companyId, data) {
   await verifySupplierBelongsToCompany(companyId, data.supplierId);
+  if (data.id) {
+    const existingGlobal = await query(
+      'SELECT id, company_id FROM products WHERE id = $1',
+      [data.id],
+    );
+    if (existingGlobal.rows.length > 0) {
+      const row = existingGlobal.rows[0];
+      if (row.company_id !== companyId) {
+        throw ApiError.conflict('Product with this ID already exists', 'CONFLICT');
+      }
+      return findById(companyId, data.id);
+    }
+  }
   const result = await query(
     `INSERT INTO products
        (id, company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id, size, color, brand)

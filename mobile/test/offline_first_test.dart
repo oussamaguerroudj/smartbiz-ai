@@ -427,13 +427,15 @@ void main() {
         db: db,
       );
 
-      // Revenue = gross profit from sales = 80 + 20 = 100
-      expect(report.revenue, 100.0);
+      // Revenue = sales total = 200 + 50 = 250
+      expect(report.revenue, 250.0);
+      expect(report.expensesBreakdown.costOfGoodsSold, 150.0);
+      expect(report.grossProfit, 100.0);
 
       // expenses = operating (45) + salary (0) = 45
       expect(report.expenses, 45.0);
 
-      // netProfit = totalRevenue - totalExpenses = 100 - 45 = 55
+      // netProfit = grossProfit - totalExpenses = 100 - 45 = 55
       expect(report.netProfit, 55.0);
 
       // inventoryValue = SUM(quantity * (selling_price - purchase_price)) = 10*(100-60) + 5*(50-30) = 400 + 100 = 500
@@ -483,6 +485,53 @@ void main() {
       expect(report.revenue, 0.0);
       expect(report.expenses, 5000.0);
       expect(report.netProfit, -5000.0); // Clean negative net loss
+    });
+
+    test('Negative Gross Profit scenario when goods sold below cost (Rev 400, COGS 500, Exp 0 -> GP -100, NP -100)', () async {
+      final now = DateTime.now();
+      final todayStr = now.toIso8601String();
+      final dateOnly = todayStr.substring(0, 10);
+      const compId = 'neg-gp-comp';
+
+      // Insert sale with revenue 400
+      const saleId = 'neg-sale-1';
+      await db.insert('sales', {
+        'id': saleId,
+        'company_id': compId,
+        'client_transaction_id': 'tx-neg-1',
+        'subtotal': 400.0,
+        'discount': 0.0,
+        'total': 400.0,
+        'sold_at': todayStr,
+        'created_at': todayStr,
+      });
+
+      // Insert sale item with cost 500
+      await db.insert('sale_items', {
+        'id': 'neg-si-1',
+        'sale_id': saleId,
+        'company_id': compId,
+        'product_id': 'prod-loss',
+        'product_name': 'Loss Leader Item',
+        'quantity': 1,
+        'unit_price': 400.0,
+        'unit_cost': 500.0,
+        'line_total': 400.0,
+        'line_profit': -100.0,
+      });
+
+      final report = await LocalFinancialCalculator.calculateReport(
+        period: 'daily',
+        companyId: compId,
+        date: dateOnly,
+        db: db,
+      );
+
+      expect(report.revenue, 400.0);
+      expect(report.expensesBreakdown.costOfGoodsSold, 500.0);
+      expect(report.grossProfit, -100.0);
+      expect(report.expenses, 0.0);
+      expect(report.netProfit, -100.0);
     });
   });
 

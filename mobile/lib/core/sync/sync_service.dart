@@ -192,10 +192,59 @@ class SyncService extends StateNotifier<SyncState> {
         final clientTxId = op['client_transaction_id'] as String;
         final entityType = op['entity_type'] as String;
         final opType = op['operation_type'] as String;
-        final payload = jsonDecode(op['payload'] as String) as Map<String, dynamic>;
         final currentRetry = (op['retry_count'] as num?)?.toInt() ?? 0;
 
         try {
+          Map<String, dynamic> payload;
+          final rawPayload = op['payload'] as String? ?? '';
+          try {
+            payload = jsonDecode(rawPayload) as Map<String, dynamic>;
+          } catch (decodeErr) {
+            // Self-healing legacy payload recovery (e.g. unquoted Dart format from previous APK)
+            if (entityType == 'sale' && opType == 'CREATE') {
+              final saleRows = await db.query(
+                'sales',
+                where: 'id = ? AND company_id = ?',
+                whereArgs: [op['entity_id'], companyId],
+              );
+              final itemRows = await db.query(
+                'sale_items',
+                where: 'sale_id = ? AND company_id = ?',
+                whereArgs: [op['entity_id'], companyId],
+              );
+
+              if (saleRows.isNotEmpty && itemRows.isNotEmpty) {
+                final saleRow = saleRows.first;
+                final reconstructedItems = itemRows.map((ir) => {
+                  'productId': ir['product_id'],
+                  'quantity': (ir['quantity'] as num).toInt(),
+                }).toList();
+
+                payload = {
+                  'items': reconstructedItems,
+                  'discount': (saleRow['discount'] as num?)?.toDouble() ?? 0.0,
+                  'paymentStatus': saleRow['payment_status']?.toString() ?? 'paid',
+                  if (saleRow['customer_id'] != null) 'customerId': saleRow['customer_id'].toString(),
+                  if (saleRow['employee_id'] != null) 'employeeId': saleRow['employee_id'].toString(),
+                };
+
+                // Heal stored queue row with valid JSON once reconstruction succeeds
+                await db.update(
+                  'sync_queue',
+                  {
+                    'payload': jsonEncode(payload),
+                    'updated_at': DateTime.now().toIso8601String(),
+                  },
+                  where: 'id = ?',
+                  whereArgs: [opId],
+                );
+              } else {
+                throw FormatException('Malformed payload and local sale data missing for op $opId: $decodeErr');
+              }
+            } else {
+              throw FormatException('Invalid JSON payload for op $opId ($entityType.$opType): $decodeErr');
+            }
+          }
           if (entityType == 'customer' && opType == 'CREATE') {
             await client.post('/customers', body: {
               ...payload,
@@ -293,7 +342,7 @@ class SyncService extends StateNotifier<SyncState> {
             if (res is Map && res['data'] is Map && res['data']['id'] != null) {
               final serverId = res['data']['id'].toString();
               if (serverId != op['entity_id']) {
-                await db.delete('products', where: 'id = ?', whereArgs: [op['entity_id']]);
+                await db.update('products', {'id': serverId}, where: 'id = ?', whereArgs: [op['entity_id']]);
               }
             }
             await db.update('products', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);

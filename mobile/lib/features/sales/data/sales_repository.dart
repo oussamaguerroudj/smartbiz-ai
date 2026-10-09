@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -273,7 +274,15 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
         'entity_type': 'sale',
         'entity_id': saleId,
         'operation_type': 'CREATE',
-        'payload': '''{"items": ${verifiedItems.map((vi) => '{"productId":"${vi['productId']}","quantity":${vi['quantity']}}').toList()},"discount": $discount,"paymentStatus": "${paymentStatusToApi(paymentStatus)}"${customerId != null ? ',"customerId":"$customerId"' : ''}}''',
+        'payload': jsonEncode({
+          'items': verifiedItems.map((vi) => {
+            'productId': vi['productId'],
+            'quantity': vi['quantity'],
+          }).toList(),
+          'discount': discount,
+          'paymentStatus': paymentStatusToApi(paymentStatus),
+          if (customerId != null) 'customerId': customerId,
+        }),
         'status': 'pending',
         'retry_count': 0,
         'last_error': null,

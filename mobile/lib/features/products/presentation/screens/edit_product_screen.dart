@@ -102,6 +102,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   bool _isLoading = false;
 
   void _save() async {
+    if (_isLoading) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {

@@ -176,7 +176,7 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
       if (res is Map && res['data'] is Map && res['data']['id'] != null) {
         final serverId = res['data']['id'].toString();
         if (serverId != newId) {
-          await db.delete('products', where: 'id = ?', whereArgs: [newId]);
+          await db.update('products', {'id': serverId}, where: 'id = ?', whereArgs: [newId]);
         }
       }
       await load();

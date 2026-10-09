@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:sqflite/sqflite.dart';
 import '../../features/reports/domain/report.dart';
 import '../../features/dashboard/domain/dashboard_data.dart';
@@ -30,12 +31,11 @@ class LocalFinancialCalculator {
     // 1. Global all-time numbers — scoped to this company
     final globalSalesRes = await activeDb.rawQuery(
       '''
-      SELECT COALESCE(SUM(si.line_profit), 0) AS revenue
-      FROM sales s
-      JOIN sale_items si ON si.sale_id = s.id
-      WHERE s.company_id = ?
+      SELECT
+        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ?), 0) AS revenue,
+        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ?), 0) AS cogs
       ''',
-      [companyId],
+      [companyId, companyId],
     );
     final globalExpensesRes = await activeDb.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE company_id = ?',
@@ -47,24 +47,24 @@ class LocalFinancialCalculator {
     );
 
     final allRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
+    final globalCogs = (globalSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0;
     final allExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
-    final globalNetProfit = allRevenue - allExpenses;
+    final globalNetProfit = allRevenue - globalCogs - allExpenses;
     final inventoryValue = (globalInventoryRes.first['inventory_value'] as num?)?.toDouble() ?? 0.0;
 
-    // 2. Period Revenue (Sales profit in period) — scoped to this company
+    // 2. Period Revenue (Sales revenue in period) — scoped to this company
     final periodSalesRes = await activeDb.rawQuery(
       '''
       SELECT
-        COALESCE(SUM(si.line_profit), 0) AS revenue,
-        COUNT(DISTINCT s.id) AS sales_count
-      FROM sales s
-      LEFT JOIN sale_items si ON si.sale_id = s.id
-      WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)
+        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND date(sold_at) BETWEEN date(?) AND date(?)), 0) AS revenue,
+        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)), 0) AS cogs,
+        (SELECT COUNT(*) FROM sales WHERE company_id = ? AND date(sold_at) BETWEEN date(?) AND date(?)) AS sales_count
       ''',
-      [companyId, rangeStart, rangeEnd],
+      [companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd],
     );
 
     final coreRevenue = (periodSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
+    final periodCogs = (periodSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0;
     final salesCount = (periodSalesRes.first['sales_count'] as num?)?.toInt() ?? 0;
 
     // 3. Operating expenses in period (excluding salary categories) — scoped to this company
@@ -95,8 +95,9 @@ class LocalFinancialCalculator {
 
     final totalExpenses = operatingExpenses + employeeSalaries;
     final revenue = coreRevenue;
-    final grossProfit = revenue;
-    final netProfit = revenue - totalExpenses;
+    final costOfGoodsSold = periodCogs;
+    final grossProfit = revenue - costOfGoodsSold;
+    final netProfit = grossProfit - totalExpenses;
     final profitMargin = revenue > 0 ? ((netProfit / revenue) * 100) : 0.0;
 
     // 5. Top Products — scoped to this company
@@ -105,7 +106,7 @@ class LocalFinancialCalculator {
       SELECT
         COALESCE(si.product_name, 'Product') AS name,
         SUM(si.quantity) AS units_sold,
-        SUM(si.line_profit) AS total
+        SUM(si.line_total) AS total
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
       WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)
@@ -233,8 +234,12 @@ class LocalFinancialCalculator {
         final mEnd = '$yr-$mStr-${lastDay.toString().padLeft(2, '0')}';
 
         final mSales = await activeDb.rawQuery(
-          '''SELECT COALESCE(SUM(si.line_profit), 0) AS rev FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)''',
-          [companyId, mStart, mEnd],
+          '''
+          SELECT
+            COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND date(sold_at) BETWEEN date(?) AND date(?)), 0) AS rev,
+            COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND date(s.sold_at) BETWEEN date(?) AND date(?)), 0) AS cogs
+          ''',
+          [companyId, mStart, mEnd, companyId, mStart, mEnd],
         );
         final mOpExp = await activeDb.rawQuery(
           '''SELECT COALESCE(SUM(amount), 0) AS exp FROM expenses WHERE company_id = ? AND date(expense_date) BETWEEN date(?) AND date(?) AND NOT (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
@@ -246,6 +251,8 @@ class LocalFinancialCalculator {
         );
 
         final mRev = (mSales.first['rev'] as num?)?.toDouble() ?? 0.0;
+        final mCogs = (mSales.first['cogs'] as num?)?.toDouble() ?? 0.0;
+        final mGross = mRev - mCogs;
         final mOp = (mOpExp.first['exp'] as num?)?.toDouble() ?? 0.0;
         final mSal = (mSalExp.first['sal'] as num?)?.toDouble() ?? 0.0;
         final mTotExp = mOp + mSal;
@@ -258,7 +265,7 @@ class LocalFinancialCalculator {
             expenses: mTotExp,
             salaryExpenses: mSal,
             operatingExpenses: mOp,
-            netProfit: mRev - mTotExp,
+            netProfit: mGross - mTotExp,
           ),
         );
       }
@@ -296,7 +303,7 @@ class LocalFinancialCalculator {
       expensesBreakdown: ExpensesBreakdown(
         operatingExpenses: operatingExpenses,
         employeeSalaries: employeeSalaries,
-        costOfGoodsSold: 0.0,
+        costOfGoodsSold: costOfGoodsSold,
         totalExpenses: totalExpenses,
         byCategory: expensesByCategory,
         byEmployee: const [],

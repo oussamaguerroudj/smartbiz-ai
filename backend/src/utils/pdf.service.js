@@ -1,4 +1,27 @@
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+
+const FONT_REGULAR_PATH = path.join(__dirname, '../assets/fonts/Cairo-Regular.ttf');
+const FONT_BOLD_PATH = path.join(__dirname, '../assets/fonts/Cairo-Bold.ttf');
+
+function createPdfDoc() {
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  let fontRegular = 'Helvetica';
+  let fontBold = 'Helvetica-Bold';
+  if (fs.existsSync(FONT_REGULAR_PATH) && fs.existsSync(FONT_BOLD_PATH)) {
+    try {
+      doc.registerFont('Cairo', FONT_REGULAR_PATH);
+      doc.registerFont('Cairo-Bold', FONT_BOLD_PATH);
+      fontRegular = 'Cairo';
+      fontBold = 'Cairo-Bold';
+    } catch (_) {
+      fontRegular = 'Helvetica';
+      fontBold = 'Helvetica-Bold';
+    }
+  }
+  return { doc, fontRegular, fontBold };
+}
 
 // This app's invoices module had a deliberate placeholder
 // (invoices.controller.pdfPlaceholder: "PDF generation ... deliberately
@@ -25,9 +48,9 @@ function safeFilename(raw, fallback = 'document') {
   return cleaned.length > 0 ? cleaned.slice(0, 120) : fallback;
 }
 
-function drawHeader(doc, company) {
-  doc.fontSize(18).font('Helvetica-Bold').text(company.name || '', { align: 'left' });
-  doc.fontSize(9).font('Helvetica').fillColor('#555');
+function drawHeader(doc, company, fontRegular = 'Helvetica', fontBold = 'Helvetica-Bold') {
+  doc.fontSize(18).font(fontBold).text(company.name || '', { align: 'left' });
+  doc.fontSize(9).font(fontRegular).fillColor('#555');
   if (company.address) doc.text(company.address);
   if (company.phone) doc.text(company.phone);
   doc.fillColor('#000');
@@ -44,7 +67,7 @@ function drawHeader(doc, company) {
  * stream (no temp file on disk).
  */
 function streamPrescriptionPdf(res, { company, patient, prescription }) {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const { doc, fontRegular, fontBold } = createPdfDoc();
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader(
@@ -53,10 +76,10 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
   );
   doc.pipe(res);
 
-  drawHeader(doc, company);
+  drawHeader(doc, company, fontRegular, fontBold);
 
-  doc.fontSize(14).font('Helvetica-Bold').text('Ordonnance / Prescription');
-  doc.fontSize(10).font('Helvetica');
+  doc.fontSize(14).font(fontBold).text('Ordonnance / Prescription');
+  doc.fontSize(10).font(fontRegular);
   doc.text(`${prescription.prescription_number}    ${formatDate(prescription.issued_at)}`);
   if (prescription.doctor_name) doc.text(`Dr. ${prescription.doctor_name}`);
   doc.moveDown(0.5);
@@ -65,9 +88,9 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
   doc.moveDown(1);
 
   for (const item of prescription.items) {
-    doc.font('Helvetica-Bold').fontSize(11).text(`•  ${item.medication_name}`);
+    doc.font(fontBold).fontSize(11).text(`•  ${item.medication_name}`);
     const details = [item.dosage, item.frequency, item.duration].filter(Boolean).join('  ·  ');
-    doc.font('Helvetica').fontSize(9).fillColor('#555');
+    doc.font(fontRegular).fontSize(9).fillColor('#555');
     if (details) doc.text(`   ${details}`);
     if (item.instructions) doc.text(`   ${item.instructions}`);
     doc.fillColor('#000');
@@ -76,13 +99,13 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
 
   if (prescription.notes) {
     doc.moveDown(0.5);
-    doc.font('Helvetica-Bold').fontSize(10).text('Notes');
-    doc.font('Helvetica').fontSize(9).text(prescription.notes);
+    doc.font(fontBold).fontSize(10).text('Notes');
+    doc.font(fontRegular).fontSize(9).text(prescription.notes);
   }
 
   doc.moveDown(3);
   const signatureY = doc.y;
-  doc.fontSize(9).text('Signature', doc.page.width - doc.page.margins.right - 150, signatureY);
+  doc.font(fontRegular).fontSize(9).text('Signature', doc.page.width - doc.page.margins.right - 150, signatureY);
   doc.moveTo(doc.page.width - doc.page.margins.right - 150, signatureY + 30)
     .lineTo(doc.page.width - doc.page.margins.right, signatureY + 30)
     .strokeColor('#aaa')
@@ -101,16 +124,16 @@ function streamPrescriptionPdf(res, { company, patient, prescription }) {
  * mean "differently in the JSON view and the PDF view" too).
  */
 function streamClinicInvoicePdf(res, { company, invoice }) {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const { doc, fontRegular, fontBold } = createPdfDoc();
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoiceNumber, 'clinic-invoice')}.pdf"`);
   doc.pipe(res);
 
-  drawHeader(doc, company);
+  drawHeader(doc, company, fontRegular, fontBold);
 
-  doc.fontSize(14).font('Helvetica-Bold').text('Facture / Invoice');
-  doc.fontSize(10).font('Helvetica');
+  doc.fontSize(14).font(fontBold).text('Facture / Invoice');
+  doc.fontSize(10).font(fontRegular);
   doc.text(`${invoice.invoiceNumber}    ${formatDate(invoice.date)}`);
   doc.moveDown(0.5);
   doc.text(`Patient: ${invoice.patient.fullName}`);
@@ -118,14 +141,14 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
   doc.moveDown(1);
 
   const tableTop = doc.y;
-  doc.font('Helvetica-Bold').fontSize(10);
+  doc.font(fontBold).fontSize(10);
   doc.text('Service', 50, tableTop);
   doc.text('Amount', 400, tableTop, { width: 145, align: 'right' });
   doc.moveDown(0.3);
   doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ddd').stroke();
   doc.moveDown(0.3);
 
-  doc.font('Helvetica').fontSize(10);
+  doc.font(fontRegular).fontSize(10);
   doc.text(invoice.serviceLabel, 50, doc.y);
   doc.text(money(invoice.consultationPrice), 400, doc.y - doc.currentLineHeight(), {
     width: 145,
@@ -135,7 +158,7 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
 
   const summaryX = 350;
   const line = (label, value, bold = false) => {
-    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10);
+    doc.font(bold ? fontBold : fontRegular).fontSize(10);
     doc.text(label, summaryX, doc.y, { width: 100 });
     doc.text(value, summaryX + 100, doc.y - doc.currentLineHeight(), { width: 95, align: 'right' });
   };
@@ -143,7 +166,7 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
   line('Paid', money(invoice.amountPaid));
   line('Remaining', money(invoice.remaining), true);
   doc.moveDown(0.5);
-  doc.font('Helvetica-Bold').text(`Status: ${invoice.paymentStatus}`, summaryX, doc.y);
+  doc.font(fontBold).text(`Status: ${invoice.paymentStatus}`, summaryX, doc.y);
 
   doc.end();
 }
@@ -155,16 +178,16 @@ function streamClinicInvoicePdf(res, { company, invoice }) {
  * copies verbatim from restaurant_order_items — no recalculation here.
  */
 function streamRestaurantInvoicePdf(res, { company, invoice }) {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const { doc, fontRegular, fontBold } = createPdfDoc();
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoiceNumber, 'restaurant-invoice')}.pdf"`);
   doc.pipe(res);
 
-  drawHeader(doc, company);
+  drawHeader(doc, company, fontRegular, fontBold);
 
-  doc.fontSize(14).font('Helvetica-Bold').text('Facture / Invoice');
-  doc.fontSize(10).font('Helvetica');
+  doc.fontSize(14).font(fontBold).text('Facture / Invoice');
+  doc.fontSize(10).font(fontRegular);
   doc.text(`${invoice.invoiceNumber}    ${formatDate(invoice.date)}`);
   if (invoice.orderType) doc.text(`Type: ${invoice.orderType === 'delivery' ? 'Livraison / Delivery' : 'Sur Place / Dine-in'}`);
   if (invoice.tableName) doc.text(`Table: ${invoice.tableName}`);
@@ -174,7 +197,7 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
   doc.moveDown(1);
 
   const tableTop = doc.y;
-  doc.font('Helvetica-Bold').fontSize(10);
+  doc.font(fontBold).fontSize(10);
   doc.text('Item', 50, tableTop);
   doc.text('Qty', 300, tableTop, { width: 60, align: 'right' });
   doc.text('Unit', 360, tableTop, { width: 80, align: 'right' });
@@ -183,7 +206,7 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
   doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ddd').stroke();
   doc.moveDown(0.3);
 
-  doc.font('Helvetica').fontSize(10);
+  doc.font(fontRegular).fontSize(10);
   for (const item of invoice.items) {
     const rowY = doc.y;
     doc.text(item.itemName, 50, rowY, { width: 240 });
@@ -196,7 +219,7 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
 
   const summaryX = 350;
   const line = (label, value, bold = false) => {
-    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10);
+    doc.font(bold ? fontBold : fontRegular).fontSize(10);
     doc.text(label, summaryX, doc.y, { width: 100 });
     doc.text(value, summaryX + 100, doc.y - doc.currentLineHeight(), { width: 95, align: 'right' });
   };
@@ -204,22 +227,22 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
   line('Paid', money(invoice.amountPaid));
   line('Remaining', money(invoice.remaining), true);
   doc.moveDown(0.5);
-  doc.font('Helvetica-Bold').text(`Status: ${invoice.paymentStatus}`, summaryX, doc.y);
+  doc.font(fontBold).text(`Status: ${invoice.paymentStatus}`, summaryX, doc.y);
 
   doc.end();
 }
 
 function streamStandardInvoicePdf(res, { company, invoice }) {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const { doc, fontRegular, fontBold } = createPdfDoc();
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoice_number, 'invoice')}.pdf"`);
   doc.pipe(res);
 
-  drawHeader(doc, company);
+  drawHeader(doc, company, fontRegular, fontBold);
 
-  doc.fontSize(14).font('Helvetica-Bold').text('Facture / Invoice');
-  doc.fontSize(10).font('Helvetica');
+  doc.fontSize(14).font(fontBold).text('Facture / Invoice');
+  doc.fontSize(10).font(fontRegular);
   doc.text(`${invoice.invoice_number || ''}    ${formatDate(invoice.created_at || invoice.sold_at || new Date())}`);
   if (invoice.customer_name) {
     doc.moveDown(0.5);
@@ -229,7 +252,7 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
   doc.moveDown(1);
 
   const tableTop = doc.y;
-  doc.font('Helvetica-Bold').fontSize(10);
+  doc.font(fontBold).fontSize(10);
   doc.text('Article / Item', 50, tableTop);
   doc.text('Qty', 300, tableTop, { width: 60, align: 'right' });
   doc.text('Unit', 360, tableTop, { width: 80, align: 'right' });
@@ -238,7 +261,7 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
   doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ddd').stroke();
   doc.moveDown(0.3);
 
-  doc.font('Helvetica').fontSize(10);
+  doc.font(fontRegular).fontSize(10);
   const items = invoice.items || [];
   for (const item of items) {
     const rowY = doc.y;
@@ -252,7 +275,7 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
 
   const summaryX = 350;
   const line = (label, value, bold = false) => {
-    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10);
+    doc.font(bold ? fontBold : fontRegular).fontSize(10);
     doc.text(label, summaryX, doc.y, { width: 100 });
     doc.text(value, summaryX + 100, doc.y - doc.currentLineHeight(), { width: 95, align: 'right' });
   };
@@ -264,7 +287,7 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
   }
   line('Total', money(invoice.total), true);
   doc.moveDown(0.5);
-  doc.font('Helvetica-Bold').text(`Status: ${invoice.status || 'paid'}`, summaryX, doc.y);
+  doc.font(fontBold).text(`Status: ${invoice.status || 'paid'}`, summaryX, doc.y);
 
   doc.end();
 }

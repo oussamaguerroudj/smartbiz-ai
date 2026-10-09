@@ -62,6 +62,8 @@ flutter:
     - assets/video/splash.mp4
     - assets/images/logo_splash.png
     - assets/images/app_icon.png
+    - assets/fonts/Cairo-Regular.ttf
+    - assets/fonts/Cairo-Bold.ttf
 
 # New app icon (see assets/images/app_icon.png). This regenerates the real,
 # per-platform icon files — including Android's mipmap-*/ic_launcher set,

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -155,8 +156,24 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
   Future<Uint8List> _generateOfflinePdf(String id) async {
     final invoice = await fetchDetails(id);
     final pdf = pw.Document();
+
+    pw.ThemeData? theme;
+    try {
+      final fontDataRegular = await rootBundle.load('assets/fonts/Cairo-Regular.ttf');
+      final fontDataBold = await rootBundle.load('assets/fonts/Cairo-Bold.ttf');
+      final cairoRegular = pw.Font.ttf(fontDataRegular);
+      final cairoBold = pw.Font.ttf(fontDataBold);
+      theme = pw.ThemeData.withFont(
+        base: cairoRegular,
+        bold: cairoBold,
+      );
+    } catch (_) {
+      // Fall back to default PDF fonts if assets are unavailable
+    }
+
     pdf.addPage(
       pw.Page(
+        theme: theme,
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return pw.Column(

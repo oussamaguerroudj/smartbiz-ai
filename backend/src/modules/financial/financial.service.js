@@ -154,15 +154,19 @@ async function calculateFinancials(companyId, params = {}) {
     globalInventoryRes,
   ] = await Promise.all([
     query(
-      `SELECT COALESCE(
-         (
-           SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
-           FROM sale_items si
-           JOIN sales s ON s.id = si.sale_id
-           WHERE s.company_id = $1
-         ),
-         0
-       ) AS revenue`,
+      `SELECT
+         COALESCE(SUM(total), 0) AS revenue,
+         COALESCE(
+           (
+             SELECT SUM(si.unit_cost * si.quantity)
+             FROM sale_items si
+             JOIN sales s ON s.id = si.sale_id
+             WHERE s.company_id = $1
+           ),
+           0
+         ) AS cogs
+       FROM sales
+       WHERE company_id = $1`,
       [companyId],
     ),
     creditRepo.totalPaymentsForRange(companyId, '2000-01-01', '2100-12-31').catch(() => 0),
@@ -191,8 +195,9 @@ async function calculateFinancials(companyId, params = {}) {
     Number(globalClinicRes || 0) +
     Number(globalRestaurantRes || 0);
 
+  const globalCogs = Number(globalSalesRes.rows[0]?.cogs || 0);
   const allExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
-  let globalNetProfit = allRevenue - allExpenses;
+  let globalNetProfit = allRevenue - globalCogs - allExpenses;
   if (businessType === 'restaurant') {
     const globalRestCogs = await restaurantRepo.costOfGoodsSoldForRange(companyId, '2000-01-01', '2100-12-31').catch(() => 0);
     globalNetProfit = allRevenue - Number(globalRestCogs || 0) - allExpenses;
@@ -215,17 +220,17 @@ async function calculateFinancials(companyId, params = {}) {
   ] = await Promise.all([
     query(
       `SELECT
+         COALESCE(SUM(s.total), 0) AS revenue,
          COALESCE(
            (
-             SELECT SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity))
+             SELECT SUM(si.unit_cost * si.quantity)
              FROM sale_items si
              JOIN sales s2 ON s2.id = si.sale_id
              WHERE s2.company_id = $1
                AND s2.sold_at::date BETWEEN $2::date AND $3::date
            ),
            0
-         ) AS revenue,
-         0 AS cogs,
+         ) AS cogs,
          COUNT(*)::int AS sales_count
        FROM sales s
        WHERE s.company_id = $1
@@ -236,7 +241,7 @@ async function calculateFinancials(companyId, params = {}) {
       `SELECT
          p.name,
          SUM(si.quantity)::int AS units_sold,
-         COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0) AS total
+         COALESCE(SUM(si.line_total), 0) AS total
        FROM sale_items si
        JOIN sales s ON s.id = si.sale_id AND s.company_id = $1
        JOIN products p ON p.id = si.product_id AND p.company_id = s.company_id
@@ -329,13 +334,8 @@ async function calculateFinancials(companyId, params = {}) {
   // Strict formula: TOTAL EXPENSES = ALL BUSINESS EXPENSES + ACTUAL SALARY TRANSACTIONS
   const totalExpenses = operatingExpenses + employeeSalaries;
 
-  const grossProfit = Math.max(revenue - cogsTotal, 0);
-  // Strict formula:
-  // For RESTAURANT ONLY: Net Profit = Total Restaurant Sales - Inventory/Product Cost - Expenses
-  // For ALL OTHER BUSINESS TYPES: Net Profit = Total Revenue - Total Expenses (100% UNCHANGED)
-  const netProfit = businessType === 'restaurant'
-    ? revenue - cogsTotal - totalExpenses
-    : revenue - totalExpenses;
+  const grossProfit = revenue - cogsTotal;
+  const netProfit = grossProfit - totalExpenses;
   const profitMargin = revenue > 0 ? Number(((netProfit / revenue) * 100).toFixed(2)) : 0;
 
   // Operating Expenses Breakdown by Category (excluding salary categories)
@@ -455,9 +455,8 @@ async function calculateFinancials(companyId, params = {}) {
       await Promise.all([
         query(
           `SELECT EXTRACT(MONTH FROM s.sold_at)::int AS month,
-                  COALESCE(SUM(COALESCE(si.line_profit, (si.unit_price - si.unit_cost) * si.quantity)), 0) AS revenue
+                  COALESCE(SUM(s.total), 0) AS revenue
            FROM sales s
-           LEFT JOIN sale_items si ON si.sale_id = s.id
            WHERE s.company_id = $1 AND EXTRACT(YEAR FROM s.sold_at) = $2
            GROUP BY month`,
           [companyId, targetYear],
@@ -569,8 +568,8 @@ async function calculateFinancials(companyId, params = {}) {
     expenses: totalExpenses,
     operatingExpenses,
     employeeSalaries,
-    costOfGoodsSold: businessType === 'restaurant' ? cogsTotal : 0,
-    grossProfit: businessType === 'restaurant' ? Math.max(revenue - cogsTotal, 0) : revenue,
+    costOfGoodsSold: cogsTotal,
+    grossProfit,
     netProfit,
     profitMargin,
     salesCount,

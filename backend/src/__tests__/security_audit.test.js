@@ -18,6 +18,7 @@ const authService = require('../modules/auth/auth.service');
 const expensesRepo = require('../modules/expenses/expenses.repository');
 const appointmentsRepo = require('../modules/appointments/appointments.repository');
 const clinicRepo = require('../modules/clinic/clinic.repository');
+const productsRepo = require('../modules/products/products.repository');
 
 describe('Modiri AI — Red-Team Security Engineering Regression Suite', () => {
   const companyA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -448,6 +449,81 @@ describe('Modiri AI — Red-Team Security Engineering Regression Suite', () => {
         code: 'VALIDATION_ERROR',
         message: 'Invalid parameter format or numeric value out of range',
       });
+    });
+  });
+
+  describe('SEC-TENANT-PROD: Tenant-Safe Product Idempotency & Collision Protection', () => {
+    const prodId = 'prod-1111-2222-3333-444444444444';
+    const companyB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+    it('returns existing product idempotently on same-company retry without creating duplicates', async () => {
+      // 1. SELECT id, company_id FROM products WHERE id = $1 -> found under companyA
+      db.query.mockResolvedValueOnce({
+        rows: [{ id: prodId, company_id: companyA }],
+      });
+      // 2. findById(companyA, prodId) -> returns existing product
+      db.query.mockResolvedValueOnce({
+        rows: [{ id: prodId, company_id: companyA, name: 'Espresso Beans', selling_price: '500.00' }],
+      });
+
+      const result = await productsRepo.create(companyA, {
+        id: prodId,
+        name: 'Espresso Beans',
+        purchasePrice: 300,
+        sellingPrice: 500,
+      });
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: prodId,
+          company_id: companyA,
+          name: 'Espresso Beans',
+        })
+      );
+    });
+
+    it('rejects cross-company ID collision with 409 CONFLICT without modifying or returning other tenant data', async () => {
+      // SELECT id, company_id FROM products WHERE id = $1 -> found under companyB (different tenant)
+      db.query.mockResolvedValueOnce({
+        rows: [{ id: prodId, company_id: companyB }],
+      });
+
+      await expect(
+        productsRepo.create(companyA, {
+          id: prodId,
+          name: 'Malicious Clone',
+          purchasePrice: 100,
+          sellingPrice: 200,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 409,
+        code: 'CONFLICT',
+        message: 'Product with this ID already exists',
+      });
+    });
+
+    it('inserts fresh product with client-supplied ID when ID does not exist anywhere', async () => {
+      // 1. SELECT id, company_id FROM products WHERE id = $1 -> not found
+      db.query.mockResolvedValueOnce({ rows: [] });
+      // 2. INSERT INTO products ... RETURNING *
+      db.query.mockResolvedValueOnce({
+        rows: [{ id: prodId, company_id: companyA, name: 'Fresh Milk', selling_price: '120.00' }],
+      });
+
+      const result = await productsRepo.create(companyA, {
+        id: prodId,
+        name: 'Fresh Milk',
+        purchasePrice: 80,
+        sellingPrice: 120,
+      });
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: prodId,
+          company_id: companyA,
+          name: 'Fresh Milk',
+        })
+      );
     });
   });
 });

@@ -94,8 +94,24 @@ class _RestaurantOrderDetailScreenState extends ConsumerState<RestaurantOrderDet
 
   Future<Uint8List> _generateOrderInvoicePdf(RestaurantOrder order) async {
     final pdf = pw.Document();
+
+    pw.ThemeData? theme;
+    try {
+      final fontDataRegular = await rootBundle.load('assets/fonts/Cairo-Regular.ttf');
+      final fontDataBold = await rootBundle.load('assets/fonts/Cairo-Bold.ttf');
+      final cairoRegular = pw.Font.ttf(fontDataRegular);
+      final cairoBold = pw.Font.ttf(fontDataBold);
+      theme = pw.ThemeData.withFont(
+        base: cairoRegular,
+        bold: cairoBold,
+      );
+    } catch (_) {
+      // Fall back to default PDF fonts if assets are unavailable
+    }
+
     pdf.addPage(
       pw.Page(
+        theme: theme,
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {

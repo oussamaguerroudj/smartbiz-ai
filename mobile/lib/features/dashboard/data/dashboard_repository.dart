@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/connectivity/connectivity_service.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/database/local_financial_calculator.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
@@ -43,11 +44,10 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
       state = AsyncValue.data(local);
     }
 
-    // 2. Fetch authoritative dashboard from API in the background ONLY if online and no pending sync ops
+    // 2. Fetch authoritative dashboard from API in the background if online, and reconcile with unsynced local transactions
     final status = _ref.read(connectionStatusProvider);
-    final syncState = _ref.read(syncServiceProvider);
-    if (status != ConnectionStatus.online || syncState.pendingCount > 0) {
-      // While offline or having un-synced local mutations, SQLite is the ground truth
+    if (status != ConnectionStatus.online) {
+      // While offline, SQLite is the ground truth
       return;
     }
 
@@ -77,7 +77,57 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
       final data = rawData is Map<String, dynamic>
           ? rawData
           : (rawData is Map ? Map<String, dynamic>.from(rawData) : <String, dynamic>{});
-      state = AsyncValue.data(DashboardData.fromJson(data));
+      final serverData = DashboardData.fromJson(data);
+
+      // Reconcile with local unsynchronized transactions (synced = 0) so pending/failed local mutations are preserved without double-counting
+      final db = await AppDatabase.instance.database;
+      final now = DateTime.now();
+      final todayStr = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final unsyncedSalesRes = await db.rawQuery(
+        '''
+        SELECT
+          COALESCE(SUM(total), 0) AS revenue,
+          COALESCE(SUM(
+            (SELECT COALESCE(SUM(si.unit_cost * si.quantity), 0) FROM sale_items si WHERE si.sale_id = s.id)
+          ), 0) AS cogs,
+          COUNT(*) AS sales_count
+        FROM sales s
+        WHERE s.company_id = ? AND s.synced = 0 AND date(s.sold_at) = date(?)
+        ''',
+        [companyId, todayStr],
+      );
+      final unsyncedExpRes = await db.rawQuery(
+        '''
+        SELECT COALESCE(SUM(amount), 0) AS expenses
+        FROM expenses
+        WHERE company_id = ? AND synced = 0 AND date(expense_date) = date(?)
+        ''',
+        [companyId, todayStr],
+      );
+
+      final unsyncedRevenue = (unsyncedSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
+      final unsyncedCogs = (unsyncedSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0;
+      final unsyncedSalesCount = (unsyncedSalesRes.first['sales_count'] as num?)?.toInt() ?? 0;
+      final unsyncedExpenses = (unsyncedExpRes.first['expenses'] as num?)?.toDouble() ?? 0.0;
+      final unsyncedGrossProfit = unsyncedRevenue - unsyncedCogs;
+      final unsyncedNetProfit = unsyncedGrossProfit - unsyncedExpenses;
+
+      final reconciled = DashboardData(
+        todayRevenue: serverData.todayRevenue + unsyncedRevenue,
+        todayExpenses: serverData.todayExpenses + unsyncedExpenses,
+        todayProfit: serverData.todayProfit + unsyncedNetProfit,
+        todayGrossProfit: serverData.todayGrossProfit != null
+            ? (serverData.todayGrossProfit! + unsyncedGrossProfit)
+            : null,
+        salesCount: serverData.salesCount + unsyncedSalesCount,
+        lowStockCount: local.lowStockCount,
+        unpaidInvoicesCount: local.unpaidInvoicesCount,
+        upcomingAppointmentsCount: serverData.upcomingAppointmentsCount,
+        totalOutstandingCredit: serverData.totalOutstandingCredit,
+        inventoryValue: local.inventoryValue,
+      );
+
+      state = AsyncValue.data(reconciled);
     } catch (_) {
       if (!mounted) return;
       final current = state.valueOrNull;

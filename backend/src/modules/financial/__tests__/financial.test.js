@@ -393,37 +393,41 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(yearly.rangeEnd).toBe('2026-12-31');
     });
 
-    it('Scenario 24: Profit Margin Formula Verification (Purchase 100, Sale 150, Qty 10 => Revenue 500, Stock 20 => Inventory Value 1000, Expenses 200 => Net Profit 300)', async () => {
+    it('Scenario 24: Standard Accounting Formula Verification (Purchase 100, Sale 150, Qty 10 => Revenue 1500, COGS 1000, Gross Profit 500, Expenses 200 => Net Profit 300)', async () => {
       const purchasePrice = 100;
       const salePrice = 150;
       const quantitySold = 10;
       const currentStock = 20;
       const expenses = 200;
 
-      // MARGIN PER UNIT = 150 - 100 = 50
-      const marginPerUnit = salePrice - purchasePrice;
-      expect(marginPerUnit).toBe(50);
+      // REVENUE = SALE PRICE * QUANTITY SOLD = 150 * 10 = 1500
+      const expectedRevenue = salePrice * quantitySold;
+      expect(expectedRevenue).toBe(1500);
 
-      // REVENUE = MARGIN PER UNIT * QUANTITY SOLD = 50 * 10 = 500
-      const expectedRevenue = marginPerUnit * quantitySold;
-      expect(expectedRevenue).toBe(500);
+      // COGS = PURCHASE PRICE * QUANTITY SOLD = 100 * 10 = 1000
+      const expectedCogs = purchasePrice * quantitySold;
+      expect(expectedCogs).toBe(1000);
 
-      // INVENTORY VALUE = MARGIN PER UNIT * CURRENT STOCK = 50 * 20 = 1000
-      const expectedInventoryValue = marginPerUnit * currentStock;
+      // GROSS PROFIT = REVENUE - COGS = 1500 - 1000 = 500
+      const expectedGrossProfit = expectedRevenue - expectedCogs;
+      expect(expectedGrossProfit).toBe(500);
+
+      // INVENTORY VALUE = (SELLING - PURCHASE) * STOCK = 50 * 20 = 1000
+      const expectedInventoryValue = (salePrice - purchasePrice) * currentStock;
       expect(expectedInventoryValue).toBe(1000);
 
-      // NET PROFIT = REVENUE - EXPENSES = 500 - 200 = 300
-      const expectedNetProfit = expectedRevenue - expenses;
+      // NET PROFIT = GROSS PROFIT - EXPENSES = 500 - 200 = 300
+      const expectedNetProfit = expectedGrossProfit - expenses;
       expect(expectedNetProfit).toBe(300);
 
-      // Verify calculateFinancials handles inventoryValue and profit margin correctly
+      // Verify calculateFinancials handles inventoryValue, revenue, cogs, gross profit, and net profit correctly
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies')) {
           return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
         }
         if (sql.includes('SELECT') && sql.includes('AS revenue')) {
           return Promise.resolve({
-            rows: [{ revenue: expectedRevenue, cogs: 0, sales_count: 1 }],
+            rows: [{ revenue: expectedRevenue, cogs: expectedCogs, sales_count: 1 }],
           });
         }
         if (sql.includes('inventory_value')) {
@@ -457,12 +461,55 @@ describe('Financial Calculation Service - Unit Tests', () => {
 
       const result = await calculateFinancials(mockCompanyId, { period: 'daily' });
 
-      expect(result.revenue).toBe(500);
-      expect(result.inventoryValue).toBe(1000);
+      expect(result.revenue).toBe(1500);
+      expect(result.costOfGoodsSold).toBe(1000);
+      expect(result.grossProfit).toBe(500);
       expect(result.expenses).toBe(200);
       expect(result.netProfit).toBe(300);
-      expect(result.grossProfit).toBe(500);
-      expect(result.costOfGoodsSold).toBe(0);
+      expect(result.inventoryValue).toBe(1000);
+    });
+
+    it('Scenario 25: Negative Gross Profit correctly calculates when goods sold below cost (Rev 400, COGS 500, Exp 0 -> GP -100, NP -100)', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail' }] });
+        }
+        if (sql.includes('FROM sales s') && sql.includes('COUNT(*)')) {
+          return Promise.resolve({
+            rows: [
+              {
+                revenue: '400.00',
+                cogs: '500.00',
+                sales_count: 1,
+              },
+            ],
+          });
+        }
+        if (sql.includes('FROM sales') && sql.includes('COALESCE(SUM(total), 0) AS revenue')) {
+          return Promise.resolve({ rows: [{ revenue: '400.00', cogs: '500.00' }] });
+        }
+        if (sql.includes('FROM expenses') && sql.includes('COALESCE(SUM(amount), 0) AS total')) {
+          return Promise.resolve({ rows: [{ total: '0.00' }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: '0.00' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(0);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'daily' });
+
+      expect(result.revenue).toBe(400);
+      expect(result.costOfGoodsSold).toBe(500);
+      expect(result.grossProfit).toBe(-100);
+      expect(result.expenses).toBe(0);
+      expect(result.netProfit).toBe(-100);
     });
 
     it('throws 403 ONBOARDING_INCOMPLETE when company business_type is NULL', async () => {

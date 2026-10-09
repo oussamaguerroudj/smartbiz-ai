@@ -60,9 +60,9 @@ async function findById(companyId, id) {
       `SELECT si.quantity,
               si.unit_price,
               si.line_total,
-              p.name AS product_name
+              COALESCE(p.name, 'Article') AS product_name
        FROM sale_items si
-       JOIN products p
+       LEFT JOIN products p
          ON p.id = si.product_id
         AND p.company_id = $1
        WHERE si.sale_id = $2`,

@@ -425,7 +425,8 @@ void main() {
         date: dateStr,
         db: db,
       );
-      expect(report.revenue, 40000.0);
+      expect(report.revenue, 100000.0);
+      expect(report.grossProfit, 40000.0);
       expect(report.expenses, 25000.0);
       expect(report.netProfit, 15000.0);
     });
