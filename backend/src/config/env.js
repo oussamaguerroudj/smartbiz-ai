@@ -88,21 +88,27 @@ module.exports = {
   // override every value in production via .env.
   // ---------------------------------------------------------------
   ai: {
-    baseUrl: process.env.AI_BASE_URL || 'http://localhost:11434/v1',
-    // Most self-hosted servers ignore the API key entirely  -  kept only
-    // because the `openai` SDK requires a non-empty string.
-    apiKey: process.env.AI_API_KEY || 'not-needed',
-    // Qwen2.5-VL-7B-Instruct / qwen2.5vl:7b: open-source vision-language model
-    // for document and receipt structured extraction fallback.
-    visionModel: process.env.AI_VISION_MODEL || 'qwen2.5vl:7b',
-    // Qwen2.5-7B-Instruct / qwen2.5:7b: text-only sibling for chat/insights.
-    chatModel: process.env.AI_CHAT_MODEL || 'qwen2.5:7b',
-    // Specialized OCR model (glm-ocr:latest in Ollama): dedicated, fast
-    // document/receipt text recognition that avoids running heavy 7B vision models.
-    ocrModel: process.env.AI_OCR_MODEL || 'glm-ocr:latest',
-    // Optional companion OCR microservice (PaddleOCR)  -  see
-    // backend/ocr-service/. If unreachable, invoice scanning still
-    // works via GLM-OCR or vision model (see ai.service.js runOcr()).
+    baseUrl:
+      process.env.OLLAMA_BASE_URL ||
+      process.env.AI_BASE_URL ||
+      (nodeEnv === 'production' ? 'https://ollama.com/v1' : 'http://localhost:11434/v1'),
+    apiKey:
+      process.env.OLLAMA_API_KEY ||
+      process.env.AI_API_KEY ||
+      (nodeEnv === 'production' ? null : 'not-needed'),
+    visionModel:
+      process.env.OLLAMA_VISION_MODEL ||
+      process.env.AI_VISION_MODEL ||
+      (nodeEnv === 'production' ? 'gemma4:31b' : 'qwen2.5vl:7b'),
+    chatModel:
+      process.env.OLLAMA_MODEL ||
+      process.env.OLLAMA_CHAT_MODEL ||
+      process.env.AI_CHAT_MODEL ||
+      (nodeEnv === 'production' ? 'gemma4:31b' : 'qwen2.5:7b'),
+    ocrModel:
+      process.env.OLLAMA_OCR_MODEL ||
+      process.env.AI_OCR_MODEL ||
+      (nodeEnv === 'production' ? 'gemma4:31b' : 'glm-ocr:latest'),
     ocrServiceUrl: process.env.OCR_SERVICE_URL || null,
   },
 

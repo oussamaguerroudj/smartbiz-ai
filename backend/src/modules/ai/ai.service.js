@@ -54,6 +54,61 @@ function getAiConfig() {
   return { ...runtimeAiConfig };
 }
 
+function getEffectiveApiKey() {
+  const key = runtimeAiConfig.apiKey !== undefined ? runtimeAiConfig.apiKey : env.ai.apiKey;
+  return key && key !== 'not-needed' ? key : null;
+}
+
+function getAiBaseUrl() {
+  return runtimeAiConfig.baseUrl || env.ai.baseUrl;
+}
+
+function getAuthHeaders() {
+  const key = getEffectiveApiKey();
+  return key ? { Authorization: `Bearer ${key}` } : {};
+}
+
+function validateProductionAiConfig() {
+  if (env.nodeEnv === 'production') {
+    const url = getAiBaseUrl();
+    const isLocal = url.includes('localhost') || url.includes('127.0.0.1');
+    const key = getEffectiveApiKey();
+    if (isLocal || !key) {
+      throw ApiError.serviceUnavailable(
+        'AI Cloud service is not configured in production. Please set OLLAMA_BASE_URL (e.g. https://ollama.com/v1) and OLLAMA_API_KEY in Render environment variables. Localhost fallback is disabled in production.',
+        'AI_NOT_CONFIGURED',
+      );
+    }
+  }
+}
+
+function getCloudEndpoints(rawBaseUrl) {
+  try {
+    const parsed = new URL(rawBaseUrl);
+    const origin = parsed.origin;
+    return {
+      origin,
+      v1BaseUrl: `${origin}/v1`,
+      nativeBaseUrl: `${origin}/api`,
+      generateUrl: `${origin}/api/generate`,
+      tagsUrl: `${origin}/api/tags`,
+      modelsUrl: `${origin}/v1/models`,
+      chatCompletionsUrl: `${origin}/v1/chat/completions`,
+    };
+  } catch (_) {
+    const cleaned = String(rawBaseUrl || '').replace(/\/v1\/?$/, '');
+    return {
+      origin: cleaned,
+      v1BaseUrl: `${cleaned}/v1`,
+      nativeBaseUrl: `${cleaned}/api`,
+      generateUrl: `${cleaned}/api/generate`,
+      tagsUrl: `${cleaned}/api/tags`,
+      modelsUrl: `${cleaned}/v1/models`,
+      chatCompletionsUrl: `${cleaned}/v1/chat/completions`,
+    };
+  }
+}
+
 function isAllowedAiBaseUrl(rawUrl) {
   let parsed;
   try {
@@ -91,11 +146,15 @@ function isAllowedAiBaseUrl(rawUrl) {
     configuredHost = envUrl.hostname.toLowerCase();
     if (envUrl.port) {
       configuredPort = envUrl.port;
+    } else {
+      configuredPort = envUrl.protocol === 'https:' ? '443' : '80';
     }
   } catch (_) {}
 
   const allowedHosts = new Set([
     configuredHost,
+    'ollama.com',
+    'api.ollama.com',
     'localhost',
     '127.0.0.1',
     '::1',
@@ -109,7 +168,7 @@ function isAllowedAiBaseUrl(rawUrl) {
     return false;
   }
 
-  const allowedPorts = new Set([configuredPort, '11434', '8000']);
+  const allowedPorts = new Set([configuredPort, '11434', '8000', '443', '80']);
   const effectivePort = parsed.port || (parsed.protocol === 'https:' ? '443' : '80');
   if (!allowedPorts.has(effectivePort)) {
     return false;
@@ -146,8 +205,10 @@ function updateRuntimeAiConfig(updates = {}) {
 }
 
 function getClient() {
+  validateProductionAiConfig();
   if (!cachedClient) {
-    cachedClient = new OpenAI({ baseURL: runtimeAiConfig.baseUrl || env.ai.baseUrl, apiKey: env.ai.apiKey });
+    const apiKey = getEffectiveApiKey() || 'not-needed';
+    cachedClient = new OpenAI({ baseURL: getAiBaseUrl(), apiKey });
   }
   return cachedClient;
 }
@@ -249,7 +310,12 @@ function normalizeOllamaModelName(name) {
 function isModelAvailable(configuredModel, availableModels) {
   if (!configuredModel) return true;
   const norm = normalizeOllamaModelName(configuredModel);
-  return (availableModels || []).some((m) => normalizeOllamaModelName(m) === norm);
+  const normBase = norm.replace(/:cloud$/, '');
+  return (availableModels || []).some((m) => {
+    const mNorm = normalizeOllamaModelName(m);
+    const mBase = mNorm.replace(/:cloud$/, '');
+    return mNorm === norm || mBase === normBase;
+  });
 }
 
 /**
@@ -257,17 +323,19 @@ function isModelAvailable(configuredModel, availableModels) {
  * within 5 seconds and that the required models are present.
  */
 async function pingOllama(requiredModels = []) {
-  const baseUrl = runtimeAiConfig.baseUrl || env.ai.baseUrl;
-  const ollamaUrl = baseUrl.replace(/\/v1\/?$/, '');
+  validateProductionAiConfig();
+  const baseUrl = getAiBaseUrl();
+  const endpoints = getCloudEndpoints(baseUrl);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   let res;
   let isOllama = true;
+  const headers = getAuthHeaders();
   try {
-    res = await fetch(`${ollamaUrl}/api/tags`, { signal: controller.signal });
+    res = await fetch(endpoints.tagsUrl, { headers, signal: controller.signal });
     if (!res.ok) {
-      const v1Res = await fetch(`${baseUrl}/models`, { signal: controller.signal }).catch(() => null);
+      const v1Res = await fetch(endpoints.modelsUrl, { headers, signal: controller.signal }).catch(() => null);
       if (v1Res && v1Res.ok) {
         res = v1Res;
         isOllama = false;
@@ -275,21 +343,27 @@ async function pingOllama(requiredModels = []) {
     }
   } catch (err) {
     try {
-      const v1Res = await fetch(`${baseUrl}/models`, { signal: controller.signal }).catch(() => null);
+      const v1Res = await fetch(endpoints.modelsUrl, { headers, signal: controller.signal }).catch(() => null);
       if (v1Res && v1Res.ok) {
         res = v1Res;
         isOllama = false;
       } else {
         clearTimeout(timeoutId);
+        const hint = env.nodeEnv === 'production'
+          ? 'Make sure OLLAMA_BASE_URL and OLLAMA_API_KEY are configured correctly in Render.'
+          : 'Make sure Ollama is running with "ollama serve".';
         throw ApiError.serviceUnavailable(
-          `AI server is unreachable (${baseUrl}). Make sure Ollama is running with "ollama serve".`,
+          `AI server is unreachable (${baseUrl}). ${hint}`,
           'AI_NOT_CONFIGURED',
         );
       }
     } catch (_) {
       clearTimeout(timeoutId);
+      const hint = env.nodeEnv === 'production'
+        ? 'Make sure OLLAMA_BASE_URL and OLLAMA_API_KEY are configured correctly in Render.'
+        : 'Make sure Ollama is running with "ollama serve".';
       throw ApiError.serviceUnavailable(
-        `AI server is unreachable (${baseUrl}). Make sure Ollama is running with "ollama serve".`,
+        `AI server is unreachable (${baseUrl}). ${hint}`,
         'AI_NOT_CONFIGURED',
       );
     }
@@ -298,8 +372,11 @@ async function pingOllama(requiredModels = []) {
   }
 
   if (!res || !res.ok) {
+    const hint = env.nodeEnv === 'production'
+      ? 'Make sure OLLAMA_BASE_URL and OLLAMA_API_KEY are configured correctly in Render.'
+      : 'Make sure Ollama is running with "ollama serve".';
     throw ApiError.serviceUnavailable(
-      `AI server is unreachable (${baseUrl}). Make sure Ollama is running with "ollama serve".`,
+      `AI server is unreachable (${baseUrl}). ${hint}`,
       'AI_NOT_CONFIGURED',
     );
   }
@@ -320,15 +397,18 @@ async function pingOllama(requiredModels = []) {
       ? data.data.map((m) => m.id || m.name)
       : (data.models || []).map((m) => m.name);
 
-  const missingModels = requiredModels
-    .filter(Boolean)
-    .filter((modelName) => !isModelAvailable(modelName, availableModels));
+  const isCloudHost = baseUrl.includes('ollama.com');
+  if (!isCloudHost) {
+    const missingModels = requiredModels
+      .filter(Boolean)
+      .filter((modelName) => !isModelAvailable(modelName, availableModels));
 
-  if (missingModels.length > 0) {
-    throw ApiError.serviceUnavailable(
-      `Required AI model(s) not found on the Ollama server: ${missingModels.join(', ')}. Run the required "ollama pull ..." command.`,
-      'AI_NOT_CONFIGURED',
-    );
+    if (missingModels.length > 0) {
+      throw ApiError.serviceUnavailable(
+        `Required AI model(s) not found on the Ollama server: ${missingModels.join(', ')}. Run the required "ollama pull ..." command.`,
+        'AI_NOT_CONFIGURED',
+      );
+    }
   }
 
   return { availableModels, modelNames: availableModels };
@@ -379,15 +459,18 @@ async function runOcr(imageBase64, mimeType = 'image/jpeg') {
   if (ocrModel) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
-    const ollamaUrl = baseUrl.replace(/\/v1\/?$/, '');
+    const endpoints = getCloudEndpoints(baseUrl);
 
     try {
       // eslint-disable-next-line no-console
-      console.log(`[INVOICE_SCAN] Invoking GLM-OCR: ${ocrModel}`);
+      console.log(`[INVOICE_SCAN] Invoking OCR model: ${ocrModel}`);
       const ocrStart = Date.now();
-      const response = await fetch(`${ollamaUrl}/api/generate`, {
+      const response = await fetch(endpoints.generateUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({
           model: ocrModel,
           prompt: 'Text Recognition:',
@@ -574,7 +657,7 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType, scanId: c
 
   // Step 3: Direct Vision fallback ONLY IF OCR returned completely empty/unusable items
   if (rawItems.length === 0) {
-    const ollamaUrl = baseUrl.replace(/\/v1\/?$/, '');
+    const endpoints = getCloudEndpoints(baseUrl);
     const visionStart = Date.now();
     // eslint-disable-next-line no-console
     console.log(`[${scanId}] VISION_FALLBACK_START model=${visionModel}`);
@@ -583,9 +666,12 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType, scanId: c
     const timeoutId = setTimeout(() => controller.abort(), 40000);
 
     try {
-      const response = await fetch(`${ollamaUrl}/api/generate`, {
+      const response = await fetch(endpoints.generateUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({
           model: visionModel,
           prompt: 'Extract all products, quantities and prices from this invoice or receipt image into JSON. Format: {"items": [{"name": "item name", "quantity": 1, "unitPrice": 100}], "supplier": "Store Name", "date": "YYYY-MM-DD", "total": 100}. Return JSON only.',
@@ -626,8 +712,8 @@ async function scanInvoice({ companyId, userId, imageBase64, mimeType, scanId: c
     .slice(0, 100)
     .map((item) => ({
       name: item.name.trim().slice(0, 150),
-      quantity: Math.max(1, Math.min(100000, Math.round(Number(item.quantity) || 1))),
-      unitPrice: Math.max(0, Number(item.unitPrice) || 0),
+      quantity: Math.max(1, Math.min(100000, Math.round(Number(item.quantity ?? item.qty) || 1))),
+      unitPrice: Math.max(0, Number(item.unitPrice ?? item.unit_price ?? item.price) || 0),
     }));
 
   // eslint-disable-next-line no-console
@@ -948,12 +1034,34 @@ async function insights({ companyId, userId }) {
 }
 
 async function checkHealth() {
-  const baseUrl = runtimeAiConfig.baseUrl || env.ai.baseUrl;
-  const ollamaUrl = baseUrl.replace(/\/v1\/?$/, '');
+  const baseUrl = getAiBaseUrl();
+  const endpoints = getCloudEndpoints(baseUrl);
+
+  if (env.nodeEnv === 'production') {
+    const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
+    const key = getEffectiveApiKey();
+    if (isLocal || !key) {
+      return {
+        status: 'misconfigured',
+        error: 'AI Cloud service is not configured in production. Please set OLLAMA_BASE_URL and OLLAMA_API_KEY in Render dashboard.',
+        configured: {
+          enabled: runtimeAiConfig.enabled,
+          baseUrl,
+          chatModel: runtimeAiConfig.chatModel || env.ai.chatModel,
+          visionModel: runtimeAiConfig.visionModel || env.ai.visionModel,
+          ocrModel: runtimeAiConfig.ocrModel || env.ai.ocrModel,
+        },
+      };
+    }
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(`${ollamaUrl}/api/tags`, { signal: controller.signal });
+    const res = await fetch(endpoints.tagsUrl, {
+      headers: getAuthHeaders(),
+      signal: controller.signal,
+    });
     clearTimeout(timeoutId);
     if (!res.ok) {
       return {

@@ -30,16 +30,26 @@ services:
         value: oussama.guerroudj@ensia.edu.dz
       - key: BREVO_FROM_NAME
         value: Modiri AI
+      - key: OLLAMA_BASE_URL
+        value: https://ollama.com/v1
       - key: AI_BASE_URL
-        value: http://localhost:11434/v1
+        value: https://ollama.com/v1
+      - key: OLLAMA_API_KEY
+        sync: false
       - key: AI_API_KEY
-        value: not-needed
-      - key: AI_VISION_MODEL
-        value: qwen2.5vl:7b
+        sync: false
+      - key: OLLAMA_MODEL
+        value: gemma4:31b
       - key: AI_CHAT_MODEL
-        value: qwen2.5:7b
+        value: gemma4:31b
+      - key: OLLAMA_VISION_MODEL
+        value: gemma4:31b
+      - key: AI_VISION_MODEL
+        value: gemma4:31b
+      - key: OLLAMA_OCR_MODEL
+        value: gemma4:31b
       - key: AI_OCR_MODEL
-        value: glm-ocr:latest
+        value: gemma4:31b
 
 databases:
   - name: smartbiz-db
