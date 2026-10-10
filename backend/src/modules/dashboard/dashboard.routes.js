@@ -69,5 +69,6 @@ const getDashboard = asyncHandler(async (req, res) => {
 const router = express.Router();
 router.use(authMiddleware);
 router.get('/', getDashboard);
+router.get('/summary', getDashboard);
 
 module.exports = router;

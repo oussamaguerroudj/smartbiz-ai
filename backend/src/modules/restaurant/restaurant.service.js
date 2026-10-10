@@ -547,14 +547,13 @@ async function getDashboard(companyId) {
     repo.bestSellingDishes(companyId, weekStart, todayStr, 5),
   ]);
 
-  // Ch. 16: Rigorous accounting:
+  // Rigorous restaurant accounting (Section 5):
   //   revenue           = total order income received
-  //   cogs              = cost of ingredients consumed for completed dishes
-  //   grossProfit       = revenue - cogs
-  //   totalExpenses     = operating expenses + employee salaries
+  //   grossProfit       = revenue (restaurant dishes do not carry retail-style purchase costs)
+  //   totalExpenses     = operating expenses (including inventory purchases) + employee salaries
   //   todayProfit (net) = grossProfit - totalExpenses
   const totalTodayExpenses = todayExpenses + todaySalaryCost;
-  const grossProfit = Math.max(todayRevenue - todayCogs, 0);
+  const grossProfit = todayRevenue;
   const netProfit = grossProfit - totalTodayExpenses;
 
   return {
@@ -565,7 +564,7 @@ async function getDashboard(companyId) {
     todayExpenses: totalTodayExpenses,
     todayOperatingExpenses: todayExpenses,
     todaySalaryCost,
-    todayCostOfGoodsSold: todayCogs,
+    todayCostOfGoodsSold: 0,
     todayGrossProfit: grossProfit,
     todayProfit: netProfit,
     outstandingPayments: outstanding,

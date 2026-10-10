@@ -75,14 +75,14 @@ describe('Restaurant & Multi-Tenant Bug Fixes', () => {
   describe('Restaurant Financial Calculation vs Non-Restaurant Isolation', () => {
     const companyId = '11111111-1111-1111-1111-111111111111';
 
-    test('Restaurant: Net Profit = Revenue (1000) - Inventory Cost (400) - Expenses (100) = 500', async () => {
+    test('Restaurant (Section 5): Gross Profit = Revenue (10000), Net Profit = Revenue (10000) - Expenses (4000) = 6000', async () => {
       // 1. Company query: business_type = 'restaurant'
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies WHERE id = $1')) {
           return Promise.resolve({ rows: [{ business_type: 'restaurant' }] });
         }
         if (sql.includes('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses')) {
-          return Promise.resolve({ rows: [{ total: 100 }] });
+          return Promise.resolve({ rows: [{ total: 4000 }] });
         }
         if (sql.includes('FROM sale_items si')) {
           return Promise.resolve({ rows: [{ revenue: 0 }] });
@@ -107,20 +107,19 @@ describe('Restaurant & Multi-Tenant Bug Fixes', () => {
 
       creditRepo.totalPaymentsForRange.mockResolvedValue(0);
       clinicRepo.revenueForRange.mockResolvedValue(0);
-      restaurantRepo.revenueForRange.mockResolvedValue(1000); // 1000 DA sales
-      restaurantRepo.costOfGoodsSoldForRange.mockResolvedValue(400); // 400 DA ingredient cost
+      restaurantRepo.revenueForRange.mockResolvedValue(10000); // 10,000 DZD sales
       restaurantRepo.bestSellingDishes.mockResolvedValue([]);
       employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
-      expensesRepo.totalForRange.mockResolvedValue(100); // 100 DA expenses
+      // 3,000 DZD inventory purchase payments + 1,000 DZD other expenses = 4,000 DZD qualifying expenses
+      expensesRepo.totalForRange.mockResolvedValue(4000);
 
       const result = await financialService.calculateFinancials(companyId, { period: 'monthly' });
 
-      expect(result.revenue).toBe(1000);
-      expect(result.costOfGoodsSold).toBe(400);
-      expect(result.expenses).toBe(100);
-      // Net Profit = 1000 - 400 - 100 = 500
-      expect(result.netProfit).toBe(500);
-      expect(result.grossProfit).toBe(600); // 1000 - 400 = 600
+      expect(result.revenue).toBe(10000);
+      expect(result.costOfGoodsSold).toBe(0);
+      expect(result.expenses).toBe(4000);
+      expect(result.grossProfit).toBe(10000); // Gross Profit = Revenue
+      expect(result.netProfit).toBe(6000); // Net Profit = 10000 - 4000 = 6000
     });
 
     test('Supermarket: Net Profit = Revenue (1000) - Expenses (100) = 900 (COGS not deducted from net profit)', async () => {

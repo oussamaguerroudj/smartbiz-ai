@@ -18,5 +18,6 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get('/', getReport);
+router.get('/summary', getReport);
 
 module.exports = router;

@@ -155,18 +155,18 @@ async function calculateFinancials(companyId, params = {}) {
   ] = await Promise.all([
     query(
       `SELECT
-         COALESCE(SUM(total), 0) AS revenue,
+         COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid'), 0) AS revenue,
          COALESCE(
            (
              SELECT SUM(si.unit_cost * si.quantity)
              FROM sale_items si
              JOIN sales s ON s.id = si.sale_id
-             WHERE s.company_id = $1
+             WHERE s.company_id = $1 AND s.payment_status != 'cancelled'
            ),
            0
          ) AS cogs
        FROM sales
-       WHERE company_id = $1`,
+       WHERE company_id = $1 AND payment_status != 'cancelled'`,
       [companyId],
     ),
     creditRepo.totalPaymentsForRange(companyId, '2000-01-01', '2100-12-31').catch(() => 0),
@@ -198,9 +198,10 @@ async function calculateFinancials(companyId, params = {}) {
   const globalCogs = Number(globalSalesRes.rows[0]?.cogs || 0);
   const allExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
   let globalNetProfit = allRevenue - globalCogs - allExpenses;
-  if (businessType === 'restaurant') {
-    const globalRestCogs = await restaurantRepo.costOfGoodsSoldForRange(companyId, '2000-01-01', '2100-12-31').catch(() => 0);
-    globalNetProfit = allRevenue - Number(globalRestCogs || 0) - allExpenses;
+  if (businessType === 'restaurant' || businessType === 'cafe') {
+    // In restaurant model, dishes do not carry retail purchase costs (COGS = 0).
+    // Inventory purchases affect Net Profit as expenses in this model.
+    globalNetProfit = allRevenue - allExpenses;
   }
   const inventoryValue = Number(globalInventoryRes.rows[0]?.inventory_value || 0);
 
@@ -220,7 +221,7 @@ async function calculateFinancials(companyId, params = {}) {
   ] = await Promise.all([
     query(
       `SELECT
-         COALESCE(SUM(s.total), 0) AS revenue,
+         COALESCE(SUM(s.total) FILTER (WHERE s.payment_status = 'paid'), 0) AS revenue,
          COALESCE(
            (
              SELECT SUM(si.unit_cost * si.quantity)
@@ -228,10 +229,11 @@ async function calculateFinancials(companyId, params = {}) {
              JOIN sales s2 ON s2.id = si.sale_id
              WHERE s2.company_id = $1
                AND s2.sold_at::date BETWEEN $2::date AND $3::date
+               AND s2.payment_status != 'cancelled'
            ),
            0
          ) AS cogs,
-         COUNT(*)::int AS sales_count
+         COUNT(*) FILTER (WHERE s.payment_status != 'cancelled')::int AS sales_count
        FROM sales s
        WHERE s.company_id = $1
          AND s.sold_at::date BETWEEN $2::date AND $3::date`,
@@ -247,6 +249,7 @@ async function calculateFinancials(companyId, params = {}) {
        JOIN products p ON p.id = si.product_id AND p.company_id = s.company_id
        WHERE s.company_id = $1
          AND s.sold_at::date BETWEEN $2::date AND $3::date
+         AND s.payment_status != 'cancelled'
        GROUP BY p.id, p.name
        ORDER BY units_sold DESC
        LIMIT 5`,
@@ -295,14 +298,13 @@ async function calculateFinancials(companyId, params = {}) {
   let cogsTotal = 0;
 
   if (businessType === 'restaurant' || businessType === 'cafe') {
-    const [roCountRes, roDishes, roCogs] = await Promise.all([
+    const [roCountRes, roDishes] = await Promise.all([
       query(
         `SELECT COUNT(*)::int AS count FROM restaurant_orders
          WHERE company_id = $1 AND created_at::date BETWEEN $2::date AND $3::date AND status != 'cancelled'`,
         [companyId, rangeStart, rangeEnd],
       ),
       restaurantRepo.bestSellingDishes(companyId, rangeStart, rangeEnd, 5),
-      restaurantRepo.costOfGoodsSoldForRange(companyId, rangeStart, rangeEnd),
     ]);
     salesCount = Number(roCountRes.rows[0]?.count || 0);
     topProducts = (roDishes || []).map((d) => ({
@@ -310,7 +312,9 @@ async function calculateFinancials(companyId, params = {}) {
       units_sold: Number(d.units_sold || 0),
       total: Number(d.revenue || 0),
     }));
-    cogsTotal = Number(roCogs) || 0;
+    // In the agreed restaurant model, dishes do not carry retail-style purchase costs (COGS = 0).
+    // Gross Profit equals recorded revenue. Inventory purchases affect Net Profit as expenses.
+    cogsTotal = 0;
   } else if (businessType === 'clinic') {
     const visitsCountRes = await query(
       `SELECT COUNT(*)::int AS count FROM clinic_visits
@@ -392,6 +396,7 @@ async function calculateFinancials(companyId, params = {}) {
               'Vente' AS description
        FROM sales s
        WHERE s.company_id = $1 AND s.sold_at::date BETWEEN $2::date AND $3::date
+         AND s.payment_status != 'cancelled'
        ORDER BY s.sold_at DESC
        LIMIT 25`,
       [companyId, rangeStart, rangeEnd],
@@ -455,9 +460,10 @@ async function calculateFinancials(companyId, params = {}) {
       await Promise.all([
         query(
           `SELECT EXTRACT(MONTH FROM s.sold_at)::int AS month,
-                  COALESCE(SUM(s.total), 0) AS revenue
+                  COALESCE(SUM(s.total) FILTER (WHERE s.payment_status = 'paid'), 0) AS revenue
            FROM sales s
            WHERE s.company_id = $1 AND EXTRACT(YEAR FROM s.sold_at) = $2
+             AND s.payment_status != 'cancelled'
            GROUP BY month`,
           [companyId, targetYear],
         ),
@@ -476,9 +482,9 @@ async function calculateFinancials(companyId, params = {}) {
           [companyId, targetYear],
         ).catch(() => ({ rows: [] })),
         query(
-          `SELECT EXTRACT(MONTH FROM created_at)::int AS month, COALESCE(SUM(total), 0) AS revenue
-           FROM restaurant_orders
-           WHERE company_id = $1 AND status != 'cancelled' AND EXTRACT(YEAR FROM created_at) = $2
+          `SELECT EXTRACT(MONTH FROM paid_at)::int AS month, COALESCE(SUM(amount), 0) AS revenue
+           FROM restaurant_payments
+           WHERE company_id = $1 AND EXTRACT(YEAR FROM paid_at) = $2
            GROUP BY month`,
           [companyId, targetYear],
         ).catch(() => ({ rows: [] })),
@@ -499,19 +505,8 @@ async function calculateFinancials(companyId, params = {}) {
         ),
       ]);
 
-    const restCogsByMonthRes = businessType === 'restaurant'
-      ? await query(
-          `SELECT EXTRACT(MONTH FROM m.created_at)::int AS month,
-                  COALESCE(SUM(-m.quantity_change * ii.purchase_price), 0) AS cogs
-           FROM restaurant_inventory_movements m
-           JOIN restaurant_inventory_items ii ON ii.id = m.item_id AND ii.company_id = m.company_id
-           WHERE m.company_id = $1
-             AND m.movement_type = 'consumption'
-             AND m.reference LIKE 'order:%'
-             AND EXTRACT(YEAR FROM m.created_at) = $2
-           GROUP BY month`,
-          [companyId, targetYear],
-        ).catch(() => ({ rows: [] }))
+    const restCogsByMonthRes = businessType === 'restaurant' || businessType === 'cafe'
+      ? { rows: [] }
       : { rows: [] };
 
     const monthNames = [
@@ -531,7 +526,6 @@ async function calculateFinancials(companyId, params = {}) {
       const mExpenses = Number(expRow?.total_expenses || 0);
       const mSalary = Number(expRow?.salary_expenses || 0);
       const mOperating = Number(expRow?.operating_expenses || 0);
-      const mCogs = Number(restCogsByMonthRes.rows.find((r) => r.month === m)?.cogs || 0);
 
       return {
         month: m,
@@ -540,8 +534,8 @@ async function calculateFinancials(companyId, params = {}) {
         expenses: mExpenses,
         salaryExpenses: mSalary,
         operatingExpenses: mOperating,
-        costOfGoodsSold: businessType === 'restaurant' ? mCogs : 0,
-        netProfit: businessType === 'restaurant' ? mRevenue - mCogs - mExpenses : mRevenue - mExpenses,
+        costOfGoodsSold: 0,
+        netProfit: mRevenue - mExpenses,
       };
     });
   }

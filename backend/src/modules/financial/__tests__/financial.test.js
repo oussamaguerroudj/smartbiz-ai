@@ -525,6 +525,85 @@ describe('Financial Calculation Service - Unit Tests', () => {
         code: 'ONBOARDING_INCOMPLETE',
       });
     });
+
+    it('Scenario 26: Restaurant Business Rules (Section 5) - Revenue 10,000 DA, Purchases 3,000 DA, Other Expenses 1,000 DA => GP 10,000 DA, NP 6,000 DA', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'restaurant' }] });
+        }
+        if (sql.includes('FROM restaurant_orders')) {
+          return Promise.resolve({ rows: [{ count: 12 }] });
+        }
+        if (sql.includes('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses')) {
+          return Promise.resolve({ rows: [{ total: 4000 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(4000); // 3000 purchases + 1000 other expenses
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(10000);
+      restaurantRepo.bestSellingDishes = jest.fn().mockResolvedValue([]);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+
+      expect(result.revenue).toBe(10000);
+      expect(result.costOfGoodsSold).toBe(0);
+      expect(result.grossProfit).toBe(10000); // Equal to revenue
+      expect(result.expenses).toBe(4000);
+      expect(result.netProfit).toBe(6000); // 10,000 - 4,000 = 6,000
+    });
+
+    it('Scenario 27: Unpaid sales excluded from received revenue (Section 4.1)', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          // Query properly filters paid sales; unpaid sales return 0
+          return Promise.resolve({ rows: [{ revenue: 0, cogs: 0, sales_count: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(0);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'daily' });
+
+      expect(result.revenue).toBe(0);
+      expect(result.grossProfit).toBe(0);
+      expect(result.netProfit).toBe(0);
+    });
+
+    it('Scenario 28: Cancelled sales excluded from revenue and sales count (Section 6.1)', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 0, cogs: 0, sales_count: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(0);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'daily' });
+
+      expect(result.revenue).toBe(0);
+      expect(result.salesCount).toBe(0);
+      expect(result.costOfGoodsSold).toBe(0);
+    });
   });
 });
 
