@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../platform/app_platform.dart';
 import 'api_exception.dart';
 import 'session.dart';
 
@@ -22,6 +22,9 @@ class ApiClient {
   final Ref _ref;
 
   static const String definedApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
+  static const String productionApiUrl = 'https://smartbiz-ai-backend-1cij.onrender.com/api';
+
+  static String normalizeBaseUrl(String raw) => normalizeUrl(raw);
 
   static String normalizeUrl(String raw) {
     var clean = raw.trim().replaceAll(RegExp(r'/+$'), '');
@@ -39,11 +42,20 @@ class ApiClient {
     if (definedApiUrl.isNotEmpty) {
       return normalizeUrl(definedApiUrl);
     }
-    // In debug mode only, provide local emulator URL if none defined
+    if (kIsWeb) {
+      if (kReleaseMode) {
+        return productionApiUrl;
+      }
+      return 'http://127.0.0.1:4000/api';
+    }
+    // In debug mode only, provide local server URL if none defined
     if (!kReleaseMode) {
+      if (AppPlatform.isDesktop) {
+        return 'http://127.0.0.1:4000/api';
+      }
       return 'http://10.0.2.2:4000/api';
     }
-    return '';
+    return productionApiUrl;
   }
 
   static String baseUrl = defaultBaseUrl;
@@ -70,14 +82,14 @@ class ApiClient {
 
   /// In debug mode only, test if adb reverse 127.0.0.1:4000 is reachable.
   static Future<void> detectBestBaseUrl() async {
-    if (kReleaseMode) return;
+    if (kReleaseMode || kIsWeb) return;
     if (baseUrl.contains('127.0.0.1') || baseUrl.contains('localhost')) {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+      final client = http.Client();
       try {
-        final req = await client.getUrl(Uri.parse('http://127.0.0.1:4000/health'));
-        final res = await req.close();
+        final res = await client
+            .get(Uri.parse('http://127.0.0.1:4000/health'))
+            .timeout(const Duration(seconds: 2));
         if (res.statusCode == 200) {
-          client.close();
           return;
         }
       } catch (_) {
@@ -177,20 +189,14 @@ class ApiClient {
       response = await request().timeout(
         timeout ?? const Duration(seconds: 45),
       );
-    } on SocketException catch (e) {
-      final isPermission = e.osError?.errorCode == 13 || e.message.toLowerCase().contains('permission denied');
+    } on http.ClientException catch (e) {
+      final isPermission = e.message.toLowerCase().contains('permission denied');
       throw ApiException(
         statusCode: 0,
         message: isPermission
             ? 'Network permission denied by device (Permission denied).'
             : 'Cannot reach server at $baseUrl. Please check internet connection or server availability.',
         code: isPermission ? 'PERMISSION_DENIED' : 'CONNECTION_ERROR',
-      );
-    } on HttpException catch (e) {
-      throw ApiException(
-        statusCode: 0,
-        message: 'Network error connecting to $baseUrl: ${e.message}',
-        code: 'NETWORK_ERROR',
       );
     } on TimeoutException {
       throw ApiException(
@@ -203,12 +209,6 @@ class ApiClient {
         statusCode: 0,
         message: 'Invalid server response.',
         code: 'INVALID_RESPONSE',
-      );
-    } on http.ClientException catch (e) {
-      throw ApiException(
-        statusCode: 0,
-        message: e.message.isNotEmpty ? e.message : 'Connection closed.',
-        code: 'CLIENT_ERROR',
       );
     }
 
@@ -271,10 +271,6 @@ class ApiClient {
 
       await _ref.read(sessionProvider.notifier).apply(data);
       return RefreshResult.refreshed;
-    } on SocketException {
-      return RefreshResult.networkUnavailable;
-    } on HttpException {
-      return RefreshResult.networkUnavailable;
     } on TimeoutException {
       return RefreshResult.networkUnavailable;
     } on http.ClientException {

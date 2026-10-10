@@ -7,6 +7,7 @@ import '../database/app_database.dart';
 import '../network/api_client.dart';
 import '../network/api_exception.dart';
 import '../network/session.dart';
+import '../../features/reports/data/reports_repository.dart' show invalidateAllReports;
 
 class SyncState {
   final int pendingCount;
@@ -428,6 +429,7 @@ class SyncService extends StateNotifier<SyncState> {
       if (mounted) {
         state = state.copyWith(isSyncing: false, lastSyncedAt: DateTime.now());
       }
+      invalidateAllReports(_ref);
     } finally {
       if (mounted) {
         _ref.read(connectionStatusProvider.notifier).setSyncing(false);
@@ -598,6 +600,115 @@ class SyncService extends StateNotifier<SyncState> {
           await batch.commit(noResult: true);
         }
       } catch (_) {}
+
+      // 7. Sales & Sale items (critical for offline revenue accuracy)
+      try {
+        final res = await client.get('/sales');
+        if (res is Map && res['data'] is List) {
+          final batch = db.batch();
+          final existingItemSaleIds = (await db.rawQuery(
+            'SELECT DISTINCT sale_id FROM sale_items WHERE company_id = ?',
+            [companyId],
+          )).map((r) => r['sale_id'] as String).toSet();
+
+          final unsyncedSaleIds = (await db.rawQuery(
+            'SELECT id FROM sales WHERE company_id = ? AND synced = 0',
+            [companyId],
+          )).map((r) => r['id'] as String).toSet();
+
+          for (final s in res['data']) {
+            final saleId = s['id']?.toString() ?? '';
+            if (saleId.isEmpty || unsyncedSaleIds.contains(saleId)) continue;
+            final soldAtStr = (s['sold_at'] ?? s['soldAt'] ?? s['created_at'] ?? s['createdAt'] ?? DateTime.now().toIso8601String()).toString();
+            final total = (s['total'] as num?)?.toDouble() ?? 0.0;
+            final subtotal = (s['subtotal'] as num?)?.toDouble() ?? total;
+            final discount = (s['discount'] as num?)?.toDouble() ?? 0.0;
+            final paymentStatus = s['payment_status'] ?? s['paymentStatus'] ?? 'paid';
+            final customerName = s['customer_name'] ?? s['customerName'];
+            final margin = (s['margin'] as num?)?.toDouble();
+
+            batch.insert(
+              'sales',
+              {
+                'id': saleId,
+                'company_id': companyId,
+                'customer_name': customerName,
+                'subtotal': subtotal,
+                'discount': discount,
+                'total': total,
+                'payment_status': paymentStatus,
+                'sold_at': soldAtStr,
+                'created_at': soldAtStr,
+                'synced': 1,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+
+            if (!existingItemSaleIds.contains(saleId)) {
+              final lineProfit = margin ?? 0.0;
+              final cogs = (total - lineProfit).clamp(0.0, double.infinity);
+              batch.insert(
+                'sale_items',
+                {
+                  'id': 'summary-$saleId',
+                  'sale_id': saleId,
+                  'company_id': companyId,
+                  'product_id': 'synced-summary',
+                  'product_name': 'Sale Items',
+                  'quantity': 1,
+                  'unit_price': total,
+                  'unit_cost': cogs,
+                  'line_total': total,
+                  'line_profit': lineProfit,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
+      // 8. Expenses (critical for offline net profit accuracy)
+      try {
+        final res = await client.get('/expenses');
+        if (res is Map && res['data'] is List) {
+          final batch = db.batch();
+          final unsyncedExpenseIds = (await db.rawQuery(
+            'SELECT id FROM expenses WHERE company_id = ? AND synced = 0',
+            [companyId],
+          )).map((r) => r['id'] as String).toSet();
+
+          for (final exp in res['data']) {
+            final expId = exp['id']?.toString() ?? '';
+            if (expId.isEmpty || unsyncedExpenseIds.contains(expId)) continue;
+            final dateStr = (exp['expense_date'] ?? exp['expenseDate'] ?? exp['created_at'] ?? exp['createdAt'] ?? DateTime.now().toIso8601String()).toString().substring(0, 10);
+            final amount = (exp['amount'] as num?)?.toDouble() ?? 0.0;
+            batch.insert(
+              'expenses',
+              {
+                'id': expId,
+                'company_id': companyId,
+                'category': exp['category'] ?? 'other',
+                'description': exp['description'],
+                'amount': amount,
+                'expense_date': dateStr,
+                'period_type': exp['period_type'] ?? exp['periodType'] ?? 'daily',
+                'employee_id': exp['employee_id'] ?? exp['employeeId'],
+                'salary_period': exp['salary_period'] ?? exp['salaryPeriod'],
+                'duration': exp['duration'],
+                'created_at': exp['created_at'] ?? exp['createdAt'] ?? DateTime.now().toIso8601String(),
+                'synced': 1,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
+      // Invalidate reports once data is populated locally
+      invalidateAllReports(_ref);
     } catch (_) {}
   }
 

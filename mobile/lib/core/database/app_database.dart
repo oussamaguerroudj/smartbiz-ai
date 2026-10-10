@@ -1,7 +1,5 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart';
+import 'database_initializer.dart';
 
 class AppDatabase {
   AppDatabase._();
@@ -16,13 +14,7 @@ class AppDatabase {
   }
 
   Future<Database> _initDatabase() async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
-
-    final dbPath = await getDatabasesPath();
-    final path = p.join(dbPath, 'modiri_offline_v1.db');
+    final path = await DatabaseInitializer.prepareDatabasePath('modiri_offline_v1.db');
 
     return openDatabase(
       path,

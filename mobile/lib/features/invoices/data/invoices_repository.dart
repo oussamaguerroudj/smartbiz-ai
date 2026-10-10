@@ -102,6 +102,9 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
     await batch.commit(noResult: true);
   }
 
+  static pw.Font? _cairoRegular;
+  static pw.Font? _cairoBold;
+
   Future<Invoice> fetchDetails(String id) async {
     final companyId = _companyId;
 
@@ -118,9 +121,9 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
             SELECT si.*,
                    COALESCE(NULLIF(si.product_name, ''), p.name, 'Product') AS resolved_product_name
             FROM sale_items si
-            LEFT JOIN products p ON p.id = si.product_id AND p.company_id = si.company_id
-            WHERE (si.sale_id = ? OR si.sale_id = ?) AND si.company_id = ?
-          ''', [saleId, id, companyId]);
+            LEFT JOIN products p ON p.id = si.product_id AND (p.company_id = si.company_id OR p.company_id = ?)
+            WHERE (si.sale_id = ? OR si.sale_id = ?) AND (si.company_id = ? OR si.company_id IS NULL)
+          ''', [companyId, saleId, id, companyId]);
 
           final items = itemRows.map((ir) => InvoiceLineItem(
             productName: (ir['resolved_product_name'] ?? 'Product') as String,
@@ -128,32 +131,63 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
             lineTotal: (ir['line_total'] as num).toDouble(),
           )).toList();
 
+          if (items.isNotEmpty) {
+            return Invoice(
+              id: inv['id'] as String,
+              saleId: saleId,
+              invoiceNumber: inv['invoice_number'] as String,
+              status: paymentStatusFromApi(inv['status'] as String),
+              total: (inv['total'] as num).toDouble(),
+              soldAt: DateTime.parse(inv['sold_at'] as String),
+              customerName: inv['customer_name'] as String?,
+              items: items,
+            );
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch from API if items were empty locally or local read failed
+    try {
+      final client = _ref.read(apiClientProvider);
+      final response = await client.get('/invoices/$id');
+      return Invoice.fromJson(response['data'] as Map<String, dynamic>);
+    } catch (_) {
+      // If offline and we had an invoice header, return it with whatever items exist
+      if (companyId != null) {
+        final db = await AppDatabase.instance.database;
+        final invRows = await db.query('invoices', where: 'id = ? AND company_id = ?', whereArgs: [id, companyId]);
+        if (invRows.isNotEmpty) {
+          final inv = invRows.first;
           return Invoice(
             id: inv['id'] as String,
-            saleId: saleId,
+            saleId: (inv['sale_id'] as String?) ?? id,
             invoiceNumber: inv['invoice_number'] as String,
             status: paymentStatusFromApi(inv['status'] as String),
             total: (inv['total'] as num).toDouble(),
             soldAt: DateTime.parse(inv['sold_at'] as String),
             customerName: inv['customer_name'] as String?,
-            items: items,
+            items: const [],
           );
         }
       }
-    } catch (_) {}
-
-    // 2. Fetch from API
-    final client = _ref.read(apiClientProvider);
-    final response = await client.get('/invoices/$id');
-    return Invoice.fromJson(response['data'] as Map<String, dynamic>);
+      rethrow;
+    }
   }
 
   Future<Uint8List> fetchInvoicePdf(String id) async {
+    // Generate locally with bundled Cairo font to guarantee that Arabic product
+    // and customer names are shaped and rendered with native TrueType fonts,
+    // avoiding WinAnsi / Latin-1 masking corruption ('hdgjgj')
     try {
-      final client = _ref.read(apiClientProvider);
-      return await client.getBytes('/invoices/$id/pdf');
+      return await _generateOfflinePdf(id);
     } catch (_) {
-      return _generateOfflinePdf(id);
+      try {
+        final client = _ref.read(apiClientProvider);
+        return await client.getBytes('/invoices/$id/pdf');
+      } catch (e) {
+        rethrow;
+      }
     }
   }
 
@@ -163,14 +197,18 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
 
     pw.ThemeData? theme;
     try {
-      final fontDataRegular = await rootBundle.load('assets/fonts/Cairo-Regular.ttf');
-      final fontDataBold = await rootBundle.load('assets/fonts/Cairo-Bold.ttf');
-      final cairoRegular = pw.Font.ttf(fontDataRegular);
-      final cairoBold = pw.Font.ttf(fontDataBold);
-      theme = pw.ThemeData.withFont(
-        base: cairoRegular,
-        bold: cairoBold,
-      );
+      if (_cairoRegular == null || _cairoBold == null) {
+        final fontDataRegular = await rootBundle.load('assets/fonts/Cairo-Regular.ttf');
+        final fontDataBold = await rootBundle.load('assets/fonts/Cairo-Bold.ttf');
+        _cairoRegular = pw.Font.ttf(fontDataRegular);
+        _cairoBold = pw.Font.ttf(fontDataBold);
+      }
+      if (_cairoRegular != null && _cairoBold != null) {
+        theme = pw.ThemeData.withFont(
+          base: _cairoRegular!,
+          bold: _cairoBold!,
+        );
+      }
     } catch (_) {
       // Fall back to default PDF fonts if assets are unavailable
     }
@@ -180,9 +218,13 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
 
     pw.Widget pdfText(String text, {pw.TextStyle? style, pw.TextAlign textAlign = pw.TextAlign.left}) {
       final isRtl = hasArabic(text);
+      final textStyle = (style ?? const pw.TextStyle()).copyWith(
+        font: isRtl && _cairoRegular != null ? _cairoRegular : style?.font,
+        fontBold: isRtl && _cairoBold != null ? _cairoBold : style?.fontBold,
+      );
       return pw.Text(
         text,
-        style: style,
+        style: textStyle,
         textAlign: isRtl ? (textAlign == pw.TextAlign.left ? pw.TextAlign.right : textAlign) : textAlign,
         textDirection: isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
       );
@@ -262,7 +304,7 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
 final invoicesRepositoryProvider =
     StateNotifierProvider.autoDispose<InvoicesRepository, AsyncValue<List<Invoice>>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return InvoicesRepository(ref);
   },
 );

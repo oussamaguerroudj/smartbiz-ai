@@ -1,0 +1,14 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    unnecessary_non_null_assertion: ignore
+    unused_element: ignore
+    unused_field: ignore
+    unused_import: ignore
+    deprecated_member_use: ignore
+
+linter:
+  rules:
+    prefer_const_constructors: false
+    prefer_const_literals_to_create_immutables: false

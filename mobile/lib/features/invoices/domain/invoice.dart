@@ -12,9 +12,9 @@ class InvoiceLineItem {
   final double lineTotal;
 
   factory InvoiceLineItem.fromJson(Map<String, dynamic> json) => InvoiceLineItem(
-        productName: json['product_name'] as String,
-        quantity: (json['quantity'] as num).toInt(),
-        lineTotal: double.parse(json['line_total'].toString()),
+        productName: (json['product_name'] ?? json['productName'] ?? json['name'] ?? json['item_name'] ?? 'Product').toString(),
+        quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+        lineTotal: double.tryParse((json['line_total'] ?? json['subtotal'] ?? json['total'] ?? 0).toString()) ?? 0.0,
       );
 }
 

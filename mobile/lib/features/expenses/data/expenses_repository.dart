@@ -14,6 +14,7 @@ import '../../clothing/presentation/screens/clothing_main_dashboard_screen.dart'
 import '../../pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart' show pharmacyDashboardProvider;
 import '../../restaurant/data/restaurant_repository.dart' show restaurantDashboardProvider;
 import '../../clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
+import '../../reports/data/reports_repository.dart' show invalidateAllReports;
 
 class ExpensesState {
   ExpensesState({required this.expenses, required this.thisMonthTotal});
@@ -47,7 +48,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
           .map((json) => Expense.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      await _upsertToLocal(expenses);
+      await upsertToLocal(expenses);
       final fresh = await _fetchFromLocal();
       if (!mounted) return;
       state = AsyncValue.data(fresh);
@@ -90,13 +91,19 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
     return ExpensesState(expenses: expenses, thisMonthTotal: thisMonthTotal);
   }
 
-  Future<void> _upsertToLocal(List<Expense> expenses) async {
+  Future<void> upsertToLocal(List<Expense> expenses) async {
     final companyId = _companyId;
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
+    final unsyncedExpenseIds = (await db.rawQuery(
+      'SELECT id FROM expenses WHERE company_id = ? AND synced = 0',
+      [companyId],
+    )).map((r) => r['id'] as String).toSet();
+
     final batch = db.batch();
     for (final exp in expenses) {
+      if (unsyncedExpenseIds.contains(exp.id)) continue;
       batch.insert(
         'expenses',
         {
@@ -276,6 +283,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
     _ref.invalidate(pharmacyDashboardProvider);
     _ref.invalidate(restaurantDashboardProvider);
     _ref.invalidate(clinicDashboardProvider);
+    invalidateAllReports(_ref);
   }
 }
 

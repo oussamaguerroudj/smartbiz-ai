@@ -16,6 +16,7 @@ import '../../clothing/presentation/screens/clothing_main_dashboard_screen.dart'
 import '../../pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart' show pharmacyDashboardProvider;
 import '../../restaurant/data/restaurant_repository.dart' show restaurantDashboardProvider;
 import '../../clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
+import '../../reports/data/reports_repository.dart' show invalidateAllReports;
 import '../domain/sale.dart';
 
 class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
@@ -44,7 +45,7 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
           .map((json) => Sale.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      await _upsertToLocal(sales);
+      await upsertToLocal(sales);
 
       final fresh = await _fetchFromLocal();
       if (!mounted) return;
@@ -81,7 +82,7 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
     return rows.map((r) => Sale.fromJson(r)).toList();
   }
 
-  Future<void> _upsertToLocal(List<Sale> sales) async {
+  Future<void> upsertToLocal(List<Sale> sales) async {
     final companyId = _companyId;
     if (companyId == null) return;
 
@@ -91,8 +92,14 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
       [companyId],
     )).map((r) => r['sale_id'] as String).toSet();
 
+    final unsyncedSaleIds = (await db.rawQuery(
+      'SELECT id FROM sales WHERE company_id = ? AND synced = 0',
+      [companyId],
+    )).map((r) => r['id'] as String).toSet();
+
     final batch = db.batch();
     for (final s in sales) {
+      if (unsyncedSaleIds.contains(s.id)) continue;
       final soldAtLocalIso = s.soldAt.toLocal().toIso8601String();
       batch.insert(
         'sales',
@@ -113,9 +120,9 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
 
       // If sale_items has no rows for this synced sale, insert a summary item
       // to preserve unit_cost (COGS) and line_profit (margin) in offline mode
-      if (!existingItemSaleIds.contains(s.id) && s.margin != null) {
-        final cogs = (s.total - s.margin!).clamp(0.0, double.infinity);
-        final lineProfit = s.margin!;
+      if (!existingItemSaleIds.contains(s.id)) {
+        final lineProfit = s.margin ?? 0.0;
+        final cogs = (s.total - lineProfit).clamp(0.0, double.infinity);
         batch.insert(
           'sale_items',
           {
@@ -348,6 +355,7 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
     await _ref.read(invoicesRepositoryProvider.notifier).load();
     await _ref.read(dashboardRepositoryProvider.notifier).load();
     _invalidateAllDashboards();
+    invalidateAllReports(_ref);
     await _ref.read(syncServiceProvider.notifier).refreshQueueCounts();
 
     // Trigger sync in background if online

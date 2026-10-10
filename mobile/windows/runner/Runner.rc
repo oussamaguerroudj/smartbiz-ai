@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "modiri_ai" "\0"
+            VALUE "CompanyName", "Modiri AI" "\0"
+            VALUE "FileDescription", "Modiri AI" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "modiri_ai" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "InternalName", "Modiri AI" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Modiri AI. All rights reserved." "\0"
             VALUE "OriginalFilename", "modiri_ai.exe" "\0"
-            VALUE "ProductName", "modiri_ai" "\0"
+            VALUE "ProductName", "Modiri AI" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

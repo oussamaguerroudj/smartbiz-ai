@@ -10,6 +10,7 @@ import '../../../core/sync/sync_service.dart';
 import '../../customers/presentation/screens/customers_screen.dart' show customersRepositoryProvider;
 import '../../dashboard/data/dashboard_repository.dart';
 import '../../products/data/products_repository.dart';
+import '../../reports/data/reports_repository.dart' show invalidateAllReports;
 
 /// Credit Sale system — a customer buys now and pays part
 /// (or none) of the total immediately; the rest becomes debt tracked on
@@ -264,6 +265,7 @@ class CreditRepository {
     await _ref.read(productsRepositoryProvider.notifier).load();
     await _ref.read(customersRepositoryProvider.notifier).load();
     await _ref.read(dashboardRepositoryProvider.notifier).load();
+    invalidateAllReports(_ref);
 
     // 6. Trigger sync if online
     unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
@@ -351,6 +353,7 @@ class CreditRepository {
 
     await _ref.read(customersRepositoryProvider.notifier).load();
     await _ref.read(dashboardRepositoryProvider.notifier).load();
+    invalidateAllReports(_ref);
 
     unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
   }

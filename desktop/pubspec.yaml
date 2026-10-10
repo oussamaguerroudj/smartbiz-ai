@@ -1,0 +1,41 @@
+name: modiri_desktop
+description: Modiri AI — Enterprise Windows Desktop Edition.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  flutter_riverpod: ^2.5.1
+  http: ^1.2.1
+  google_fonts: ^6.2.1
+  intl: 0.20.2
+  file_picker: ^8.1.2
+  printing: ^5.13.3
+  pdf: ^3.11.1
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.2
+  sqflite_common_ffi: ^2.3.3
+  sqlite3_flutter_libs: ^0.5.24
+  path: ^1.9.0
+  connectivity_plus: ^6.0.5
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/Cairo-Regular.ttf
+    - assets/fonts/Cairo-Bold.ttf
+    - assets/images/app_icon.png

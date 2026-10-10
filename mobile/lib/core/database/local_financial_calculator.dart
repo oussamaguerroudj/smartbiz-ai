@@ -16,6 +16,8 @@ class LocalFinancialCalculator {
       "(CASE WHEN expense_date LIKE '%Z' OR expense_date LIKE '%+%' THEN date(expense_date, 'localtime') ELSE date(expense_date) END)";
   static const String _safeScheduledAtDate =
       "(CASE WHEN scheduled_at LIKE '%Z' OR scheduled_at LIKE '%+%' THEN date(scheduled_at, 'localtime') ELSE date(scheduled_at) END)";
+  static const String _safeCreatedAtDate =
+      "(CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END)";
 
   static Future<ReportData> calculateReport({
     required String period, // 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
@@ -27,7 +29,7 @@ class LocalFinancialCalculator {
   }) async {
     final activeDb = db ?? await AppDatabase.instance.database;
 
-    final resolved = _resolveRange(
+    final resolved = resolveRange(
       period: period,
       date: date,
       month: month,
@@ -41,11 +43,30 @@ class LocalFinancialCalculator {
     final globalSalesRes = await activeDb.rawQuery(
       '''
       SELECT
-        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ?), 0) AS revenue,
-        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ?), 0) AS cogs
+        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status != 'cancelled'), 0) AS revenue,
+        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND s.payment_status != 'cancelled'), 0) AS cogs
       ''',
       [companyId, companyId],
     );
+
+    double globalCreditPayments = 0.0;
+    try {
+      final globalCreditRes = await activeDb.rawQuery(
+        'SELECT COALESCE(SUM(amount), 0) AS total FROM credit_payments WHERE company_id = ?',
+        [companyId],
+      );
+      globalCreditPayments = (globalCreditRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
+    double globalRestRevenue = 0.0;
+    try {
+      final globalRestRes = await activeDb.rawQuery(
+        "SELECT COALESCE(SUM(total_amount), 0) AS total FROM restaurant_orders WHERE company_id = ? AND status != 'cancelled'",
+        [companyId],
+      );
+      globalRestRevenue = (globalRestRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
     final globalExpensesRes = await activeDb.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE company_id = ?',
       [companyId],
@@ -55,7 +76,8 @@ class LocalFinancialCalculator {
       [companyId],
     );
 
-    final allRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
+    final allCoreRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
+    final allRevenue = allCoreRevenue + globalCreditPayments + globalRestRevenue;
     final globalCogs = (globalSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0;
     final allExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
     final globalNetProfit = allRevenue - globalCogs - allExpenses;
@@ -65,9 +87,9 @@ class LocalFinancialCalculator {
     final periodSalesRes = await activeDb.rawQuery(
       '''
       SELECT
-        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS revenue,
-        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs,
-        (SELECT COUNT(*) FROM sales WHERE company_id = ? AND $_safeSoldAtDate BETWEEN date(?) AND date(?)) AS sales_count
+        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status != 'cancelled' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS revenue,
+        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND s.payment_status != 'cancelled' AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs,
+        (SELECT COUNT(*) FROM sales WHERE company_id = ? AND payment_status != 'cancelled' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)) AS sales_count
       ''',
       [companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd],
     );
@@ -75,6 +97,34 @@ class LocalFinancialCalculator {
     final coreRevenue = (periodSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
     final periodCogs = (periodSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0;
     final salesCount = (periodSalesRes.first['sales_count'] as num?)?.toInt() ?? 0;
+
+    double periodCreditPayments = 0.0;
+    try {
+      final periodCreditRes = await activeDb.rawQuery(
+        '''
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM credit_payments
+        WHERE company_id = ? AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)
+        ''',
+        [companyId, rangeStart, rangeEnd],
+      );
+      periodCreditPayments = (periodCreditRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
+    double periodRestRevenue = 0.0;
+    int periodRestCount = 0;
+    try {
+      final periodRestRes = await activeDb.rawQuery(
+        '''
+        SELECT COALESCE(SUM(total_amount), 0) AS total, COUNT(*) AS count
+        FROM restaurant_orders
+        WHERE company_id = ? AND status != 'cancelled' AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)
+        ''',
+        [companyId, rangeStart, rangeEnd],
+      );
+      periodRestRevenue = (periodRestRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      periodRestCount = (periodRestRes.first['count'] as num?)?.toInt() ?? 0;
+    } catch (_) {}
 
     // 3. Operating expenses in period (excluding salary categories) — scoped to this company
     final opExpensesRes = await activeDb.rawQuery(
@@ -103,7 +153,7 @@ class LocalFinancialCalculator {
     final employeeSalaries = (salaryExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
 
     final totalExpenses = operatingExpenses + employeeSalaries;
-    final revenue = coreRevenue;
+    final revenue = coreRevenue + periodCreditPayments + periodRestRevenue;
     final costOfGoodsSold = periodCogs;
     final grossProfit = revenue - costOfGoodsSold;
     final netProfit = grossProfit - totalExpenses;
@@ -113,13 +163,14 @@ class LocalFinancialCalculator {
     final topProductsRes = await activeDb.rawQuery(
       '''
       SELECT
-        COALESCE(si.product_name, 'Product') AS name,
+        COALESCE(NULLIF(si.product_name, ''), p.name, 'Product') AS name,
         SUM(si.quantity) AS units_sold,
         SUM(si.line_total) AS total
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
-      WHERE s.company_id = ? AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)
-      GROUP BY si.product_id, si.product_name
+      LEFT JOIN products p ON p.id = si.product_id AND p.company_id = s.company_id
+      WHERE s.company_id = ? AND s.payment_status != 'cancelled' AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)
+      GROUP BY si.product_id, COALESCE(NULLIF(si.product_name, ''), p.name, 'Product')
       ORDER BY units_sold DESC
       LIMIT 5
       ''',
@@ -245,11 +296,30 @@ class LocalFinancialCalculator {
         final mSales = await activeDb.rawQuery(
           '''
           SELECT
-            COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS rev,
-            COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs
+            COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status != 'cancelled' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS rev,
+            COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND s.payment_status != 'cancelled' AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs
           ''',
           [companyId, mStart, mEnd, companyId, mStart, mEnd],
         );
+
+        double mCredit = 0.0;
+        try {
+          final mCreditRes = await activeDb.rawQuery(
+            '''SELECT COALESCE(SUM(amount), 0) AS total FROM credit_payments WHERE company_id = ? AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)''',
+            [companyId, mStart, mEnd],
+          );
+          mCredit = (mCreditRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        } catch (_) {}
+
+        double mRest = 0.0;
+        try {
+          final mRestRes = await activeDb.rawQuery(
+            '''SELECT COALESCE(SUM(total_amount), 0) AS total FROM restaurant_orders WHERE company_id = ? AND status != 'cancelled' AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)''',
+            [companyId, mStart, mEnd],
+          );
+          mRest = (mRestRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        } catch (_) {}
+
         final mOpExp = await activeDb.rawQuery(
           '''SELECT COALESCE(SUM(amount), 0) AS exp FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND NOT (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
           [companyId, mStart, mEnd],
@@ -259,7 +329,8 @@ class LocalFinancialCalculator {
           [companyId, mStart, mEnd],
         );
 
-        final mRev = (mSales.first['rev'] as num?)?.toDouble() ?? 0.0;
+        final mSalesRev = (mSales.first['rev'] as num?)?.toDouble() ?? 0.0;
+        final mRev = mSalesRev + mCredit + mRest;
         final mCogs = (mSales.first['cogs'] as num?)?.toDouble() ?? 0.0;
         final mGross = mRev - mCogs;
         final mOp = (mOpExp.first['exp'] as num?)?.toDouble() ?? 0.0;
@@ -298,15 +369,15 @@ class LocalFinancialCalculator {
       netProfit: netProfit,
       grossProfit: grossProfit,
       profitMargin: profitMargin,
-      salesCount: salesCount,
+      salesCount: salesCount + periodRestCount,
       topProducts: topProducts,
       expensesByCategory: expensesByCategory,
       employeeSalariesBreakdown: const [],
       revenueBreakdown: RevenueBreakdown(
-        sales: revenue,
-        creditPayments: 0.0,
+        sales: coreRevenue,
+        creditPayments: periodCreditPayments,
         clinicRevenue: 0.0,
-        restaurantRevenue: 0.0,
+        restaurantRevenue: periodRestRevenue,
         totalRevenue: revenue,
       ),
       expensesBreakdown: ExpensesBreakdown(
@@ -328,7 +399,7 @@ class LocalFinancialCalculator {
     );
   }
 
-  static Map<String, String> _resolveRange({
+  static Map<String, String> resolveRange({
     required String period,
     String? date,
     String? month,

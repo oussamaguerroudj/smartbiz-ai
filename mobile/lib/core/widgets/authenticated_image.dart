@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/images_repository.dart';
+import 'file_image_loader.dart';
 
 /// Ch. 17/18 — renders an image stored via ImagesRepository, network URL,
 /// or local file path. When a storage key is passed, the backend requires
@@ -66,19 +66,17 @@ class AuthenticatedImage extends ConsumerWidget {
         (trimmedKey.startsWith('/') || trimmedKey.contains(r':\') || trimmedKey.startsWith('file:'))) {
       final filePath =
           trimmedKey.startsWith('file://') ? trimmedKey.replaceFirst('file://', '') : trimmedKey;
-      child = Image.file(
-        File(filePath),
+      child = buildFileImage(
+        filePath: filePath,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          return errorWidget ??
-              SizedBox(
-                width: width,
-                height: height,
-                child: Icon(Icons.broken_image_outlined, color: Colors.grey.shade400),
-              );
-        },
+        errorWidget: errorWidget ??
+            SizedBox(
+              width: width,
+              height: height,
+              child: Icon(Icons.broken_image_outlined, color: Colors.grey.shade400),
+            ),
       );
     } else {
       final bytesAsync = ref.watch(_imageBytesProvider(trimmedKey));

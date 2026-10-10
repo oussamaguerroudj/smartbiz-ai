@@ -55,4 +55,25 @@ class AppColors {
   // Matches the reference's `.row{box-shadow:0 10px 18px -12px
   // rgba(20,23,60,.22)}` exactly — rgb(20,23,60) is AppColors.textPrimaryLight.
   static Color cardShadow = const Color(0xFF141833).withValues(alpha: 0.22);
+
+  // Cyber-Navy Enterprise Glassmorphism (Windows Desktop & Web Edition)
+  static const Color cyberNavy = Color(0xFF05060F);
+  static const Color surfaceElevatedDark = Color(0xFF070A1A);
+  static const Color surfaceSecondaryDark = Color(0xFF0A0E22);
+  static const Color surfacePanelDark = Color(0xFF0D1230);
+  static const Color surfaceHoverDark = Color(0xFF121938);
+
+  static const Color electricBlue = Color(0xFF3B6DF0);
+  static const Color indigo = Color(0xFF5B5BF6);
+  static const Color aiViolet = Color(0xFF8B5CF6);
+  static const Color successTeal = Color(0xFF14B8A6);
+  static const Color successGreen = Color(0xFF10B981);
+  static const Color warningAmber = Color(0xFFF0A83B);
+  static const Color errorRose = Color(0xFFEF4444);
+
+  static const List<Color> aiGradient = [
+    Color(0xFF3B6DF0),
+    Color(0xFF5B5BF6),
+    Color(0xFF8B5CF6),
+  ];
 }

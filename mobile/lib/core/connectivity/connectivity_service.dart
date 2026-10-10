@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -91,8 +90,6 @@ class ConnectivityNotifier extends StateNotifier<ConnectionStatus> {
       final rootUri = Uri.parse(base).replace(path: '/health');
       final rootRes = await http.get(rootUri).timeout(const Duration(seconds: 5));
       return rootRes.statusCode == 200;
-    } on SocketException {
-      return false;
     } on http.ClientException {
       return false;
     } on TimeoutException {
