@@ -529,9 +529,9 @@ async function getDashboard(companyId) {
     monthRevenue,
     todayExpenses,
     todaySalaryCost,
-    todayCogs,
     outstanding,
     bestSellers,
+    inventoryValRes,
   ] = await Promise.all([
     repo.dashboardStats(companyId),
     repo.revenueForRange(companyId, todayStr, todayStr),
@@ -539,22 +539,19 @@ async function getDashboard(companyId) {
     repo.revenueForRange(companyId, monthStart, todayStr),
     expensesRepo.totalForRange(companyId, todayStr, todayStr),
     employeesRepo.totalSalaryCostForRange(companyId, todayStr, todayStr),
-    // Ch. 16 — see repo.costOfGoodsSoldForRange's doc comment: valued
-    // from auto-deducted recipe consumption only, at current
-    // purchase price.
-    repo.costOfGoodsSoldForRange(companyId, todayStr, todayStr),
     repo.outstandingTotal(companyId),
     repo.bestSellingDishes(companyId, weekStart, todayStr, 5),
+    repo.totalInventoryValue(companyId).catch(() => 0),
   ]);
 
-  // Rigorous restaurant accounting (Section 5):
+  // Rigorous restaurant accounting:
   //   revenue           = total order income received
   //   grossProfit       = revenue (restaurant dishes do not carry retail-style purchase costs)
-  //   totalExpenses     = operating expenses (including inventory purchases) + employee salaries
-  //   todayProfit (net) = grossProfit - totalExpenses
+  //   todayProfit (net) = revenue - current inventory value - eligible paid expenses
   const totalTodayExpenses = todayExpenses + todaySalaryCost;
+  const currentInventoryValue = Number(inventoryValRes || 0);
   const grossProfit = todayRevenue;
-  const netProfit = grossProfit - totalTodayExpenses;
+  const netProfit = grossProfit - currentInventoryValue - totalTodayExpenses;
 
   return {
     ...stats,
@@ -567,6 +564,7 @@ async function getDashboard(companyId) {
     todayCostOfGoodsSold: 0,
     todayGrossProfit: grossProfit,
     todayProfit: netProfit,
+    todayInventoryValue: currentInventoryValue,
     outstandingPayments: outstanding,
     bestSellingDishes: bestSellers,
   };

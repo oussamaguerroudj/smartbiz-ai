@@ -1022,6 +1022,21 @@ async function findInventoryMovements(companyId, itemId) {
   return result.rows;
 }
 
+async function totalInventoryValue(companyId) {
+  const result = await query(
+    `SELECT COALESCE(SUM(
+       CASE
+         WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
+         ELSE 0
+       END
+     ), 0) AS total
+     FROM restaurant_inventory_items
+     WHERE company_id = $1 AND archived_at IS NULL`,
+    [companyId],
+  );
+  return Number(result.rows[0]?.total || 0);
+}
+
 module.exports = {
   createTable,
   findAllTables,
@@ -1064,5 +1079,6 @@ module.exports = {
   findMenuItemIngredients,
   setMenuItemIngredients,
   costOfGoodsSoldForRange,
+  totalInventoryValue,
   VALID_ORDER_STATUSES,
 };

@@ -75,14 +75,14 @@ describe('Restaurant & Multi-Tenant Bug Fixes', () => {
   describe('Restaurant Financial Calculation vs Non-Restaurant Isolation', () => {
     const companyId = '11111111-1111-1111-1111-111111111111';
 
-    test('Restaurant (Section 5): Gross Profit = Revenue (10000), Net Profit = Revenue (10000) - Expenses (4000) = 6000', async () => {
+    test('Restaurant: Gross Profit = Revenue (10000), Net Profit = Revenue (10000) - Inventory Value (3000) - Expenses (1000) = 6000', async () => {
       // 1. Company query: business_type = 'restaurant'
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies WHERE id = $1')) {
           return Promise.resolve({ rows: [{ business_type: 'restaurant' }] });
         }
         if (sql.includes('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses')) {
-          return Promise.resolve({ rows: [{ total: 4000 }] });
+          return Promise.resolve({ rows: [{ total: 1000 }] });
         }
         if (sql.includes('FROM sale_items si')) {
           return Promise.resolve({ rows: [{ revenue: 0 }] });
@@ -108,18 +108,19 @@ describe('Restaurant & Multi-Tenant Bug Fixes', () => {
       creditRepo.totalPaymentsForRange.mockResolvedValue(0);
       clinicRepo.revenueForRange.mockResolvedValue(0);
       restaurantRepo.revenueForRange.mockResolvedValue(10000); // 10,000 DZD sales
+      restaurantRepo.totalInventoryValue = jest.fn().mockResolvedValue(3000); // 3,000 DZD total current inventory value
       restaurantRepo.bestSellingDishes.mockResolvedValue([]);
       employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
-      // 3,000 DZD inventory purchase payments + 1,000 DZD other expenses = 4,000 DZD qualifying expenses
-      expensesRepo.totalForRange.mockResolvedValue(4000);
+      expensesRepo.totalForRange.mockResolvedValue(1000); // 1,000 DZD eligible paid expenses
 
       const result = await financialService.calculateFinancials(companyId, { period: 'monthly' });
 
       expect(result.revenue).toBe(10000);
       expect(result.costOfGoodsSold).toBe(0);
-      expect(result.expenses).toBe(4000);
+      expect(result.inventoryValue).toBe(3000);
+      expect(result.expenses).toBe(1000);
       expect(result.grossProfit).toBe(10000); // Gross Profit = Revenue
-      expect(result.netProfit).toBe(6000); // Net Profit = 10000 - 4000 = 6000
+      expect(result.netProfit).toBe(6000); // Net Profit = 10,000 - 3,000 - 1,000 = 6,000
     });
 
     test('Supermarket: Net Profit = Revenue (1000) - Expenses (100) = 900 (COGS not deducted from net profit)', async () => {
@@ -217,6 +218,42 @@ describe('Restaurant & Multi-Tenant Bug Fixes', () => {
 
       expect(res.id).toBe(customId);
       expect(capturedParams[0]).toBe(customId);
+    });
+  });
+
+  describe('Restaurant Inventory Valuation & Tenant Isolation', () => {
+    const { totalInventoryValue } = jest.requireActual('../restaurant.repository');
+
+    test('totalInventoryValue calculates total inventory value with strict tenant isolation', async () => {
+      let executedSql = '';
+      let executedParams = [];
+      query.mockImplementation((sql, params) => {
+        if (sql.includes('FROM restaurant_inventory_items')) {
+          executedSql = sql;
+          executedParams = params;
+          return Promise.resolve({ rows: [{ total: '3000.00' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const value = await totalInventoryValue('comp-restaurant-1');
+      expect(value).toBe(3000);
+      expect(executedSql).toContain('company_id = $1');
+      expect(executedSql).toContain('archived_at IS NULL');
+      expect(executedSql).toContain('quantity * COALESCE(purchase_price, 0)');
+      expect(executedParams).toEqual(['comp-restaurant-1']);
+    });
+
+    test('totalInventoryValue returns 0 when company has empty inventory', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM restaurant_inventory_items')) {
+          return Promise.resolve({ rows: [{ total: '0' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const value = await totalInventoryValue('comp-empty-1');
+      expect(value).toBe(0);
     });
   });
 });

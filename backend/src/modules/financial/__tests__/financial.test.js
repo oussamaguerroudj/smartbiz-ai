@@ -28,6 +28,7 @@ jest.mock('../../clinic/clinic.repository', () => ({
 
 jest.mock('../../restaurant/restaurant.repository', () => ({
   revenueForRange: jest.fn(),
+  totalInventoryValue: jest.fn().mockResolvedValue(0),
 }));
 
 describe('Financial Calculation Service - Unit Tests', () => {
@@ -526,7 +527,7 @@ describe('Financial Calculation Service - Unit Tests', () => {
       });
     });
 
-    it('Scenario 26: Restaurant Business Rules (Section 5) - Revenue 10,000 DA, Purchases 3,000 DA, Other Expenses 1,000 DA => GP 10,000 DA, NP 6,000 DA', async () => {
+    it('Scenario 26: Restaurant Business Rules - Revenue 10,000 DA, Current Inventory Value 3,000 DA, Eligible Paid Expenses 1,000 DA => GP 10,000 DA, NP 6,000 DA', async () => {
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies')) {
           return Promise.resolve({ rows: [{ business_type: 'restaurant' }] });
@@ -535,16 +536,17 @@ describe('Financial Calculation Service - Unit Tests', () => {
           return Promise.resolve({ rows: [{ count: 12 }] });
         }
         if (sql.includes('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses')) {
-          return Promise.resolve({ rows: [{ total: 4000 }] });
+          return Promise.resolve({ rows: [{ total: 1000 }] });
         }
         return Promise.resolve({ rows: [] });
       });
 
-      expensesRepo.totalForRange.mockResolvedValue(4000); // 3000 purchases + 1000 other expenses
+      expensesRepo.totalForRange.mockResolvedValue(1000); // 1,000 eligible paid expenses
       employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
       creditRepo.totalPaymentsForRange.mockResolvedValue(0);
       clinicRepo.revenueForRange.mockResolvedValue(0);
-      restaurantRepo.revenueForRange.mockResolvedValue(10000);
+      restaurantRepo.revenueForRange.mockResolvedValue(10000); // 10,000 DA revenue
+      restaurantRepo.totalInventoryValue = jest.fn().mockResolvedValue(3000); // 3,000 DA total current inventory value
       restaurantRepo.bestSellingDishes = jest.fn().mockResolvedValue([]);
 
       const result = await calculateFinancials(mockCompanyId, { period: 'monthly' });
@@ -552,8 +554,40 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.revenue).toBe(10000);
       expect(result.costOfGoodsSold).toBe(0);
       expect(result.grossProfit).toBe(10000); // Equal to revenue
-      expect(result.expenses).toBe(4000);
-      expect(result.netProfit).toBe(6000); // 10,000 - 4,000 = 6,000
+      expect(result.inventoryValue).toBe(3000); // Current inventory value
+      expect(result.expenses).toBe(1000);
+      expect(result.netProfit).toBe(6000); // 10,000 - 3,000 - 1,000 = 6,000
+    });
+
+    it('Scenario 26b: Restaurant with Empty Inventory (0 DA inventory value) => NP = Revenue - Expenses', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'restaurant' }] });
+        }
+        if (sql.includes('FROM restaurant_orders')) {
+          return Promise.resolve({ rows: [{ count: 5 }] });
+        }
+        if (sql.includes('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses')) {
+          return Promise.resolve({ rows: [{ total: 1000 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(1000);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(10000);
+      restaurantRepo.totalInventoryValue = jest.fn().mockResolvedValue(0); // 0 DA inventory value
+      restaurantRepo.bestSellingDishes = jest.fn().mockResolvedValue([]);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+
+      expect(result.revenue).toBe(10000);
+      expect(result.grossProfit).toBe(10000);
+      expect(result.inventoryValue).toBe(0);
+      expect(result.expenses).toBe(1000);
+      expect(result.netProfit).toBe(9000); // 10,000 - 0 - 1,000 = 9,000
     });
 
     it('Scenario 27: Unpaid sales excluded from received revenue (Section 4.1)', async () => {

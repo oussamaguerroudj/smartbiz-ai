@@ -152,6 +152,7 @@ async function calculateFinancials(companyId, params = {}) {
     globalRestaurantRes,
     globalExpensesRes,
     globalInventoryRes,
+    globalRestInventoryVal,
   ] = await Promise.all([
     query(
       `SELECT
@@ -187,6 +188,9 @@ async function calculateFinancials(companyId, params = {}) {
        WHERE company_id = $1 AND deleted_at IS NULL`,
       [companyId],
     ),
+    (typeof restaurantRepo.totalInventoryValue === 'function'
+      ? restaurantRepo.totalInventoryValue(companyId)
+      : Promise.resolve(0)).catch(() => 0),
   ]);
 
   const allRevenue =
@@ -195,15 +199,16 @@ async function calculateFinancials(companyId, params = {}) {
     Number(globalClinicRes || 0) +
     Number(globalRestaurantRes || 0);
 
-  const globalCogs = Number(globalSalesRes.rows[0]?.cogs || 0);
+  const isRestaurant = (businessType === 'restaurant' || businessType === 'cafe');
+  const inventoryValue = isRestaurant
+    ? Number(globalRestInventoryVal || 0)
+    : Number(globalInventoryRes.rows[0]?.inventory_value || 0);
+
+  const globalCogs = isRestaurant ? 0 : Number(globalSalesRes.rows[0]?.cogs || 0);
   const allExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
-  let globalNetProfit = allRevenue - globalCogs - allExpenses;
-  if (businessType === 'restaurant' || businessType === 'cafe') {
-    // In restaurant model, dishes do not carry retail purchase costs (COGS = 0).
-    // Inventory purchases affect Net Profit as expenses in this model.
-    globalNetProfit = allRevenue - allExpenses;
-  }
-  const inventoryValue = Number(globalInventoryRes.rows[0]?.inventory_value || 0);
+  const globalNetProfit = isRestaurant
+    ? allRevenue - inventoryValue - allExpenses
+    : allRevenue - globalCogs - allExpenses;
 
   // 2. Period Calculations (Aggregating actual transactions within rangeStart..rangeEnd)
   const [
@@ -339,7 +344,9 @@ async function calculateFinancials(companyId, params = {}) {
   const totalExpenses = operatingExpenses + employeeSalaries;
 
   const grossProfit = revenue - cogsTotal;
-  const netProfit = grossProfit - totalExpenses;
+  const netProfit = isRestaurant
+    ? revenue - inventoryValue - totalExpenses
+    : grossProfit - totalExpenses;
   const profitMargin = revenue > 0 ? Number(((netProfit / revenue) * 100).toFixed(2)) : 0;
 
   // Operating Expenses Breakdown by Category (excluding salary categories)
