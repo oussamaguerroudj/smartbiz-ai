@@ -42,6 +42,11 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
 
     // 2. Fetch from backend in the background if online
     try {
+      final companyId = _companyId;
+      if (companyId != null && await AppDatabase.instance.hasUncompletedClearData(companyId)) {
+        return;
+      }
+
       final client = _ref.read(apiClientProvider);
       final response = await client.get('/expenses');
       final expenses = (response['data'] as List)
@@ -290,7 +295,7 @@ class ExpensesRepository extends StateNotifier<AsyncValue<ExpensesState>> {
 final expensesRepositoryProvider =
     StateNotifierProvider.autoDispose<ExpensesRepository, AsyncValue<ExpensesState>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return ExpensesRepository(ref);
   },
 );

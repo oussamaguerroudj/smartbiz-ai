@@ -151,6 +151,38 @@ void main() {
           synced INTEGER NOT NULL DEFAULT 0
         )
       ''');
+
+      await db.execute('''
+        CREATE TABLE restaurant_orders (
+          id TEXT PRIMARY KEY,
+          company_id TEXT NOT NULL,
+          table_id TEXT,
+          table_name TEXT,
+          order_number INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          total_amount REAL NOT NULL DEFAULT 0,
+          amount_paid REAL NOT NULL DEFAULT 0,
+          payment_status TEXT NOT NULL DEFAULT 'unpaid',
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          completed_at TEXT,
+          synced INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE restaurant_payments (
+          id TEXT PRIMARY KEY,
+          company_id TEXT NOT NULL,
+          order_id TEXT NOT NULL,
+          amount REAL NOT NULL,
+          method TEXT,
+          note TEXT,
+          paid_at TEXT NOT NULL,
+          synced INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
     });
 
     tearDown(() async {
@@ -428,6 +460,218 @@ void main() {
       expect(pdfBytes.length, greaterThan(1000));
       // First 4 bytes of valid PDF: %PDF
       expect(String.fromCharCodes(pdfBytes.sublist(0, 4)), equals('%PDF'));
+    });
+
+    test('Unpaid sales are excluded from revenue until marked paid (Section 4.1)', () async {
+      final now = DateTime.now();
+      final todayIso = now.toIso8601String();
+
+      // Insert unpaid sale: 1000 DZD
+      await db.insert('sales', {
+        'id': 'sale_unpaid_1',
+        'client_transaction_id': 'tx_unpaid_1',
+        'company_id': testCompanyId,
+        'subtotal': 1000.0,
+        'discount': 0.0,
+        'total': 1000.0,
+        'payment_status': 'unpaid',
+        'sold_at': todayIso,
+        'created_at': todayIso,
+        'synced': 0,
+      });
+
+      var report = await LocalFinancialCalculator.calculateReport(
+        period: 'daily',
+        companyId: testCompanyId,
+        date: todayIso.substring(0, 10),
+        db: db,
+      );
+
+      // Revenue must be 0 prior to payment
+      expect(report.revenue, equals(0.0));
+
+      // After customer pays 1000 DZD (status becomes paid)
+      await db.update(
+        'sales',
+        {'payment_status': 'paid'},
+        where: 'id = ?',
+        whereArgs: ['sale_unpaid_1'],
+      );
+
+      report = await LocalFinancialCalculator.calculateReport(
+        period: 'daily',
+        companyId: testCompanyId,
+        date: todayIso.substring(0, 10),
+        db: db,
+      );
+
+      // Revenue must now reflect the paid 1000 DZD
+      expect(report.revenue, equals(1000.0));
+    });
+
+    test('Cancelled sales are excluded from revenue and COGS (Section 6.1)', () async {
+      final now = DateTime.now();
+      final todayIso = now.toIso8601String();
+
+      await db.insert('sales', {
+        'id': 'sale_cancelled_1',
+        'client_transaction_id': 'tx_canc_1',
+        'company_id': testCompanyId,
+        'subtotal': 500.0,
+        'discount': 0.0,
+        'total': 500.0,
+        'payment_status': 'cancelled',
+        'sold_at': todayIso,
+        'created_at': todayIso,
+        'synced': 0,
+      });
+
+      await db.insert('sale_items', {
+        'id': 'si_canc_1',
+        'sale_id': 'sale_cancelled_1',
+        'company_id': testCompanyId,
+        'product_id': 'prod_oil',
+        'product_name': 'زيت زيتون',
+        'quantity': 1,
+        'unit_price': 500.0,
+        'unit_cost': 300.0,
+        'line_total': 500.0,
+        'line_profit': 200.0,
+      });
+
+      final report = await LocalFinancialCalculator.calculateReport(
+        period: 'daily',
+        companyId: testCompanyId,
+        date: todayIso.substring(0, 10),
+        db: db,
+      );
+
+      expect(report.revenue, equals(0.0));
+      expect(report.expensesBreakdown.costOfGoodsSold, equals(0.0));
+      expect(report.salesCount, equals(0));
+    });
+
+    test('Restaurant payments recorded in revenue and unpaid orders excluded (Section 5)', () async {
+      final now = DateTime.now();
+      final todayIso = now.toIso8601String();
+
+      // Unpaid restaurant order: 2500 DZD (must not be counted in revenue)
+      await db.insert('restaurant_orders', {
+        'id': 'ro_unpaid_1',
+        'company_id': testCompanyId,
+        'order_number': 101,
+        'status': 'pending',
+        'total_amount': 2500.0,
+        'amount_paid': 0.0,
+        'payment_status': 'unpaid',
+        'created_at': todayIso,
+        'updated_at': todayIso,
+        'synced': 0,
+      });
+
+      // Paid restaurant payment: 10,000 DZD
+      await db.insert('restaurant_payments', {
+        'id': 'rp_1',
+        'company_id': testCompanyId,
+        'order_id': 'ro_paid_1',
+        'amount': 10000.0,
+        'method': 'cash',
+        'paid_at': todayIso,
+        'synced': 0,
+      });
+
+      // Qualifying expenses paid in period: 4000 DZD (3000 inventory purchases + 1000 other expenses)
+      await db.insert('expenses', {
+        'id': 'exp_rest_1',
+        'company_id': testCompanyId,
+        'category': 'Purchases',
+        'amount': 3000.0,
+        'expense_date': todayIso,
+        'created_at': todayIso,
+        'synced': 0,
+      });
+      await db.insert('expenses', {
+        'id': 'exp_rest_2',
+        'company_id': testCompanyId,
+        'category': 'Utilities',
+        'amount': 1000.0,
+        'expense_date': todayIso,
+        'created_at': todayIso,
+        'synced': 0,
+      });
+
+      final report = await LocalFinancialCalculator.calculateReport(
+        period: 'daily',
+        companyId: testCompanyId,
+        date: todayIso.substring(0, 10),
+        db: db,
+      );
+
+      // Section 5: Revenue = 10,000 DZD, Gross Profit = 10,000 DZD, Expenses = 4,000 DZD, Net Profit = 6,000 DZD
+      expect(report.revenue, equals(10000.0));
+      expect(report.expensesBreakdown.costOfGoodsSold, equals(0.0));
+      expect(report.grossProfit, equals(10000.0));
+      expect(report.expenses, equals(4000.0));
+      expect(report.netProfit, equals(6000.0));
+    });
+
+    test('Restaurant rule verification: Revenue = 10,000 DZD, current inventory = 3,000 DZD, paid expenses = 1,000 DZD => Net Profit = 6,000 DZD', () async {
+      final now = DateTime.now();
+      final todayIso = now.toIso8601String();
+      const restCompany = 'test_comp_rest_rules';
+
+      // 1. Restaurant payment / receipts = 10,000 DZD
+      await db.insert('restaurant_payments', {
+        'id': 'rp_rule_1',
+        'company_id': restCompany,
+        'order_id': 'ro_rule_1',
+        'amount': 10000.0,
+        'method': 'cash',
+        'paid_at': todayIso,
+        'synced': 0,
+      });
+
+      // 2. Current inventory value = 3,000 DZD (30 units * 100 DZD purchase price)
+      await db.insert('products', {
+        'id': 'prod_inv_1',
+        'company_id': restCompany,
+        'name': 'Meat stock',
+        'purchase_price': 100.0,
+        'selling_price': 150.0,
+        'quantity': 30,
+      });
+
+      // 3. Paid expenses in period = 1,000 DZD
+      await db.insert('expenses', {
+        'id': 'exp_rule_1',
+        'company_id': restCompany,
+        'category': 'Electricity',
+        'amount': 1000.0,
+        'expense_date': todayIso,
+        'created_at': todayIso,
+        'synced': 0,
+      });
+
+      final report = await LocalFinancialCalculator.calculateReport(
+        period: 'daily',
+        companyId: restCompany,
+        businessType: 'restaurant',
+        date: todayIso.substring(0, 10),
+        db: db,
+      );
+
+      // Revenue = actual receipts (10,000 DZD)
+      // Gross Profit = Revenue (10,000 DZD)
+      // COGS = 0.0 DZD
+      // Current inventory value = 3,000 DZD
+      // Expenses = 1,000 DZD
+      // Net Profit = Revenue (10,000) - Inventory Value (3,000) - Expenses (1,000) = 6,000 DZD
+      expect(report.revenue, equals(10000.0));
+      expect(report.grossProfit, equals(10000.0));
+      expect(report.expensesBreakdown.costOfGoodsSold, equals(0.0));
+      expect(report.inventoryValue, equals(3000.0));
+      expect(report.expenses, equals(1000.0));
+      expect(report.netProfit, equals(6000.0));
     });
   });
 }

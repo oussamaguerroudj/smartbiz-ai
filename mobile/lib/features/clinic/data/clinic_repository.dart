@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/database/local_financial_calculator.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/session.dart';
 import '../domain/clinic_models.dart';
@@ -49,16 +50,29 @@ class ClinicRepository {
           'SELECT COUNT(*) as count FROM customers WHERE company_id = ?',
           [companyId],
         );
-        final expensesRes = await db.rawQuery(
-          'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE company_id = ? AND expense_date LIKE ?',
-          [companyId, todayPrefix],
-        );
 
         final apptCount = (apptsToday.first['count'] as num?)?.toInt() ?? 0;
         final completedCount = (completedToday.first['count'] as num?)?.toInt() ?? 0;
         final patientCount = (patients.first['count'] as num?)?.toInt() ?? 0;
         final totalPatientCount = (totalPatients.first['count'] as num?)?.toInt() ?? 0;
-        final todayExp = (expensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
+
+        final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+        final dailyReport = await LocalFinancialCalculator.calculateReport(
+          period: 'daily',
+          companyId: companyId,
+          date: todayStr,
+          db: db,
+        );
+        final weeklyReport = await LocalFinancialCalculator.calculateReport(
+          period: 'weekly',
+          companyId: companyId,
+          db: db,
+        );
+        final monthlyReport = await LocalFinancialCalculator.calculateReport(
+          period: 'monthly',
+          companyId: companyId,
+          db: db,
+        );
 
         return ClinicDashboardStats(
           patientsToday: patientCount,
@@ -68,11 +82,11 @@ class ClinicRepository {
           noShowToday: 0,
           newPatientsToday: totalPatientCount,
           doctorCount: 1,
-          todayRevenue: 0,
-          weekRevenue: 0,
-          monthRevenue: 0,
-          todayExpenses: todayExp,
-          todayProfit: -todayExp,
+          todayRevenue: dailyReport.revenue,
+          weekRevenue: weeklyReport.revenue,
+          monthRevenue: monthlyReport.revenue,
+          todayExpenses: dailyReport.expenses,
+          todayProfit: dailyReport.netProfit,
           outstandingPayments: 0,
         );
       } catch (_) {

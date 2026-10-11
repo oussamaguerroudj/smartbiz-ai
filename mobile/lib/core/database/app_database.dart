@@ -457,6 +457,129 @@ class AppDatabase {
     }
   }
 
+  /// Checks whether there is an uncompleted (pending or failed) CLEAR_DATA operation
+  /// for [companyId]. If true, background pulls and screen loaders must not download
+  /// or upsert pre-reset server records into local SQLite.
+  Future<bool> hasUncompletedClearData(String companyId) async {
+    final db = await database;
+    final res = await db.query(
+      'sync_queue',
+      where: "company_id = ? AND entity_type = 'business_data' AND operation_type = 'CLEAR_DATA' AND status NOT IN ('synced', 'cancelled')",
+      whereArgs: [companyId],
+      limit: 1,
+    );
+    return res.isNotEmpty;
+  }
+
+  /// Deletes all business rows strictly scoped to [companyId] in a single transaction.
+  /// If [queueOp] is provided, inserts it atomically in the exact same transaction.
+  /// Preserves other tenants' data and preserves database schema.
+  Future<void> clearCompanyBusinessData(String companyId, {Map<String, dynamic>? queueOp}) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // 1. Sync queue & metadata scoped to this company
+      try {
+        await txn.delete('sync_queue', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.delete('sync_metadata', where: 'key LIKE ?', whereArgs: ['%$companyId%']);
+      } catch (_) {}
+
+      // 2. Multi-cart sessions
+      try {
+        await txn.rawDelete('''
+          DELETE FROM cart_session_items
+          WHERE session_id IN (SELECT id FROM cart_sessions WHERE company_id = ?)
+        ''', [companyId]);
+        await txn.delete('cart_sessions', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 3. Invoices, Sale items, Sales
+      try {
+        await txn.delete('invoices', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.delete('sale_items', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.delete('sales', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 4. Credit System
+      try {
+        await txn.delete('credit_payments', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.rawDelete('''
+          DELETE FROM credit_items
+          WHERE purchase_id IN (SELECT id FROM credit_purchases WHERE company_id = ?)
+        ''', [companyId]);
+        await txn.delete('credit_purchases', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.rawDelete('''
+          DELETE FROM customer_transactions
+          WHERE customer_id IN (SELECT id FROM customers WHERE company_id = ?)
+        ''', [companyId]);
+      } catch (_) {}
+
+      // 5. Customers
+      try {
+        await txn.delete('customers', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 6. Expenses
+      try {
+        await txn.delete('expenses', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 7. Products
+      try {
+        await txn.delete('products', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 8. Suppliers
+      try {
+        await txn.delete('suppliers', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 9. Employees & Salaries
+      try {
+        await txn.delete('salary_payments', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.delete('employees', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 10. Appointments
+      try {
+        await txn.delete('appointments', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 11. Restaurant tables, orders, items, payments
+      try {
+        await txn.delete('restaurant_payments', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.rawDelete('''
+          DELETE FROM restaurant_order_items
+          WHERE order_id IN (SELECT id FROM restaurant_orders WHERE company_id = ?)
+        ''', [companyId]);
+      } catch (_) {}
+      try {
+        await txn.delete('restaurant_orders', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.delete('restaurant_tables', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+
+      // 12. Atomically insert offline queue operation if provided
+      if (queueOp != null) {
+        await txn.insert('sync_queue', queueOp);
+      }
+    });
+  }
+
   /// Deletes all rows from all local business tables in a single transaction.
   /// Use ONLY for explicit destructive actions (factory reset, dev tools).
   /// Do NOT call from logout or login — use company_id-scoped queries instead.

@@ -9,19 +9,28 @@ import 'app_database.dart';
 
 class LocalFinancialCalculator {
   static const String _safeSoldAtDate =
-      "(CASE WHEN sold_at LIKE '%Z' OR sold_at LIKE '%+%' THEN date(sold_at, 'localtime') ELSE date(sold_at) END)";
+      "(COALESCE(CASE WHEN sold_at LIKE '%Z' OR sold_at LIKE '%+%' THEN date(sold_at, 'localtime') ELSE date(sold_at) END, date(substr(sold_at, 1, 10)), substr(sold_at, 1, 10)))";
   static const String _safeSSoldAtDate =
-      "(CASE WHEN s.sold_at LIKE '%Z' OR s.sold_at LIKE '%+%' THEN date(s.sold_at, 'localtime') ELSE date(s.sold_at) END)";
+      "(COALESCE(CASE WHEN s.sold_at LIKE '%Z' OR s.sold_at LIKE '%+%' THEN date(s.sold_at, 'localtime') ELSE date(s.sold_at) END, date(substr(s.sold_at, 1, 10)), substr(s.sold_at, 1, 10)))";
   static const String _safeExpenseDate =
-      "(CASE WHEN expense_date LIKE '%Z' OR expense_date LIKE '%+%' THEN date(expense_date, 'localtime') ELSE date(expense_date) END)";
+      "(COALESCE(CASE WHEN expense_date LIKE '%Z' OR expense_date LIKE '%+%' THEN date(expense_date, 'localtime') ELSE date(expense_date) END, date(substr(expense_date, 1, 10)), substr(expense_date, 1, 10)))";
   static const String _safeScheduledAtDate =
-      "(CASE WHEN scheduled_at LIKE '%Z' OR scheduled_at LIKE '%+%' THEN date(scheduled_at, 'localtime') ELSE date(scheduled_at) END)";
+      "(COALESCE(CASE WHEN scheduled_at LIKE '%Z' OR scheduled_at LIKE '%+%' THEN date(scheduled_at, 'localtime') ELSE date(scheduled_at) END, date(substr(scheduled_at, 1, 10)), substr(scheduled_at, 1, 10)))";
   static const String _safeCreatedAtDate =
-      "(CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END)";
+      "(COALESCE(CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END, date(substr(created_at, 1, 10)), substr(created_at, 1, 10)))";
+
+  static const String safeSoldAtDate = _safeSoldAtDate;
+  static const String safeSSoldAtDate = _safeSSoldAtDate;
+  static const String safeExpenseDate = _safeExpenseDate;
+  static const String safeScheduledAtDate = _safeScheduledAtDate;
+  static const String safeCreatedAtDate = _safeCreatedAtDate;
+  static const String safeDateSoldAt = _safeSoldAtDate;
+  static const String safeDateExpenseDate = _safeExpenseDate;
 
   static Future<ReportData> calculateReport({
     required String period, // 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
     required String companyId, // TENANT ISOLATION: all queries filter by this
+    String? businessType,
     String? date,
     String? month,
     int? year,
@@ -43,8 +52,8 @@ class LocalFinancialCalculator {
     final globalSalesRes = await activeDb.rawQuery(
       '''
       SELECT
-        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status != 'cancelled'), 0) AS revenue,
-        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND s.payment_status != 'cancelled'), 0) AS cogs
+        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status = 'paid'), 0) AS revenue,
+        COALESCE((SELECT SUM(COALESCE(NULLIF(si.unit_cost, 0), p.purchase_price, 0) * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id LEFT JOIN products p ON p.id = si.product_id AND (p.company_id = s.company_id OR p.company_id IS NULL) WHERE s.company_id = ? AND s.payment_status != 'cancelled'), 0) AS cogs
       ''',
       [companyId, companyId],
     );
@@ -61,34 +70,45 @@ class LocalFinancialCalculator {
     double globalRestRevenue = 0.0;
     try {
       final globalRestRes = await activeDb.rawQuery(
-        "SELECT COALESCE(SUM(total_amount), 0) AS total FROM restaurant_orders WHERE company_id = ? AND status != 'cancelled'",
+        'SELECT COALESCE(SUM(amount), 0) AS total FROM restaurant_payments WHERE company_id = ?',
         [companyId],
       );
       globalRestRevenue = (globalRestRes.first['total'] as num?)?.toDouble() ?? 0.0;
-    } catch (_) {}
+    } catch (_) {
+      try {
+        final fallbackRes = await activeDb.rawQuery(
+          "SELECT COALESCE(SUM(amount_paid), 0) AS total FROM restaurant_orders WHERE company_id = ? AND status != 'cancelled'",
+          [companyId],
+        );
+        globalRestRevenue = (fallbackRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      } catch (_) {}
+    }
 
     final globalExpensesRes = await activeDb.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE company_id = ?',
       [companyId],
     );
     final globalInventoryRes = await activeDb.rawQuery(
-      '''SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * (selling_price - purchase_price) ELSE 0 END), 0) AS inventory_value FROM products WHERE company_id = ?''',
+      '''SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS inventory_value FROM products WHERE company_id = ?''',
       [companyId],
     );
 
+    final isRestaurant = (businessType == 'restaurant' || businessType == 'cafe');
     final allCoreRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
     final allRevenue = allCoreRevenue + globalCreditPayments + globalRestRevenue;
-    final globalCogs = (globalSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0;
+    final globalCogs = isRestaurant ? 0.0 : ((globalSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0);
     final allExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
-    final globalNetProfit = allRevenue - globalCogs - allExpenses;
     final inventoryValue = (globalInventoryRes.first['inventory_value'] as num?)?.toDouble() ?? 0.0;
+    final globalNetProfit = isRestaurant
+        ? allRevenue - inventoryValue - allExpenses
+        : allRevenue - globalCogs - allExpenses;
 
     // 2. Period Revenue (Sales revenue in period) — scoped to this company
     final periodSalesRes = await activeDb.rawQuery(
       '''
       SELECT
-        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status != 'cancelled' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS revenue,
-        COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND s.payment_status != 'cancelled' AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs,
+        COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status = 'paid' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS revenue,
+        COALESCE((SELECT SUM(COALESCE(NULLIF(si.unit_cost, 0), p.purchase_price, 0) * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id LEFT JOIN products p ON p.id = si.product_id AND (p.company_id = s.company_id OR p.company_id IS NULL) WHERE s.company_id = ? AND s.payment_status != 'cancelled' AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs,
         (SELECT COUNT(*) FROM sales WHERE company_id = ? AND payment_status != 'cancelled' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)) AS sales_count
       ''',
       [companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd],
@@ -104,7 +124,11 @@ class LocalFinancialCalculator {
         '''
         SELECT COALESCE(SUM(amount), 0) AS total
         FROM credit_payments
-        WHERE company_id = ? AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)
+        WHERE company_id = ? AND (CASE
+          WHEN payment_date IS NOT NULL AND payment_date != '' THEN
+            (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
+          ELSE $_safeCreatedAtDate
+        END) BETWEEN date(?) AND date(?)
         ''',
         [companyId, rangeStart, rangeEnd],
       );
@@ -116,15 +140,31 @@ class LocalFinancialCalculator {
     try {
       final periodRestRes = await activeDb.rawQuery(
         '''
-        SELECT COALESCE(SUM(total_amount), 0) AS total, COUNT(*) AS count
-        FROM restaurant_orders
-        WHERE company_id = ? AND status != 'cancelled' AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)
+        SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
+        FROM restaurant_payments
+        WHERE company_id = ? AND (CASE
+          WHEN paid_at LIKE '%Z' OR paid_at LIKE '%+%' THEN date(paid_at, 'localtime')
+          ELSE date(paid_at)
+        END) BETWEEN date(?) AND date(?)
         ''',
         [companyId, rangeStart, rangeEnd],
       );
       periodRestRevenue = (periodRestRes.first['total'] as num?)?.toDouble() ?? 0.0;
       periodRestCount = (periodRestRes.first['count'] as num?)?.toInt() ?? 0;
-    } catch (_) {}
+    } catch (_) {
+      try {
+        final fallbackRes = await activeDb.rawQuery(
+          '''
+          SELECT COALESCE(SUM(amount_paid), 0) AS total, COUNT(*) AS count
+          FROM restaurant_orders
+          WHERE company_id = ? AND status != 'cancelled' AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)
+          ''',
+          [companyId, rangeStart, rangeEnd],
+        );
+        periodRestRevenue = (fallbackRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        periodRestCount = (fallbackRes.first['count'] as num?)?.toInt() ?? 0;
+      } catch (_) {}
+    }
 
     // 3. Operating expenses in period (excluding salary categories) — scoped to this company
     final opExpensesRes = await activeDb.rawQuery(
@@ -154,9 +194,11 @@ class LocalFinancialCalculator {
 
     final totalExpenses = operatingExpenses + employeeSalaries;
     final revenue = coreRevenue + periodCreditPayments + periodRestRevenue;
-    final costOfGoodsSold = periodCogs;
+    final costOfGoodsSold = isRestaurant ? 0.0 : periodCogs;
     final grossProfit = revenue - costOfGoodsSold;
-    final netProfit = grossProfit - totalExpenses;
+    final netProfit = isRestaurant
+        ? revenue - inventoryValue - totalExpenses
+        : grossProfit - totalExpenses;
     final profitMargin = revenue > 0 ? ((netProfit / revenue) * 100) : 0.0;
 
     // 5. Top Products — scoped to this company
@@ -296,8 +338,8 @@ class LocalFinancialCalculator {
         final mSales = await activeDb.rawQuery(
           '''
           SELECT
-            COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status != 'cancelled' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS rev,
-            COALESCE((SELECT SUM(si.unit_cost * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.company_id = ? AND s.payment_status != 'cancelled' AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs
+            COALESCE((SELECT SUM(total) FROM sales WHERE company_id = ? AND payment_status = 'paid' AND $_safeSoldAtDate BETWEEN date(?) AND date(?)), 0) AS rev,
+            COALESCE((SELECT SUM(COALESCE(NULLIF(si.unit_cost, 0), p.purchase_price, 0) * si.quantity) FROM sale_items si JOIN sales s ON s.id = si.sale_id LEFT JOIN products p ON p.id = si.product_id AND (p.company_id = s.company_id OR p.company_id IS NULL) WHERE s.company_id = ? AND s.payment_status != 'cancelled' AND $_safeSSoldAtDate BETWEEN date(?) AND date(?)), 0) AS cogs
           ''',
           [companyId, mStart, mEnd, companyId, mStart, mEnd],
         );
@@ -305,7 +347,11 @@ class LocalFinancialCalculator {
         double mCredit = 0.0;
         try {
           final mCreditRes = await activeDb.rawQuery(
-            '''SELECT COALESCE(SUM(amount), 0) AS total FROM credit_payments WHERE company_id = ? AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)''',
+            '''SELECT COALESCE(SUM(amount), 0) AS total FROM credit_payments WHERE company_id = ? AND (CASE
+              WHEN payment_date IS NOT NULL AND payment_date != '' THEN
+                (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
+              ELSE $_safeCreatedAtDate
+            END) BETWEEN date(?) AND date(?)''',
             [companyId, mStart, mEnd],
           );
           mCredit = (mCreditRes.first['total'] as num?)?.toDouble() ?? 0.0;
@@ -314,11 +360,20 @@ class LocalFinancialCalculator {
         double mRest = 0.0;
         try {
           final mRestRes = await activeDb.rawQuery(
-            '''SELECT COALESCE(SUM(total_amount), 0) AS total FROM restaurant_orders WHERE company_id = ? AND status != 'cancelled' AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)''',
+            '''SELECT COALESCE(SUM(amount), 0) AS total FROM restaurant_payments WHERE company_id = ? AND (CASE
+              WHEN paid_at LIKE '%Z' OR paid_at LIKE '%+%' THEN date(paid_at, 'localtime') ELSE date(paid_at) END) BETWEEN date(?) AND date(?)''',
             [companyId, mStart, mEnd],
           );
           mRest = (mRestRes.first['total'] as num?)?.toDouble() ?? 0.0;
-        } catch (_) {}
+        } catch (_) {
+          try {
+            final fallbackRes = await activeDb.rawQuery(
+              '''SELECT COALESCE(SUM(amount_paid), 0) AS total FROM restaurant_orders WHERE company_id = ? AND status != 'cancelled' AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)''',
+              [companyId, mStart, mEnd],
+            );
+            mRest = (fallbackRes.first['total'] as num?)?.toDouble() ?? 0.0;
+          } catch (_) {}
+        }
 
         final mOpExp = await activeDb.rawQuery(
           '''SELECT COALESCE(SUM(amount), 0) AS exp FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND NOT (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
@@ -459,10 +514,12 @@ class LocalFinancialCalculator {
   static Future<DashboardData> calculateDashboard({
     required String companyId,
     Database? db,
+    DateTime? asOf,
+    String? date,
   }) async {
     final activeDb = db ?? await AppDatabase.instance.database;
-    final now = DateTime.now();
-    final todayStr = _toIsoDate(now);
+    final now = asOf ?? DateTime.now();
+    final todayStr = (date != null && date.isNotEmpty) ? date : _toIsoDate(now);
 
     final report = await calculateReport(
       period: 'daily',
@@ -486,15 +543,23 @@ class LocalFinancialCalculator {
       [companyId],
     );
 
-    final creditRes = await activeDb.rawQuery(
-      'SELECT COALESCE(SUM(balance_due), 0) AS total FROM customers WHERE company_id = ?',
-      [companyId],
-    );
+    double totalOutstandingCredit = 0.0;
+    try {
+      final creditRes = await activeDb.rawQuery(
+        'SELECT COALESCE(SUM(balance_due), 0) AS total FROM customers WHERE company_id = ?',
+        [companyId],
+      );
+      totalOutstandingCredit = (creditRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
 
-    final apptRes = await activeDb.rawQuery(
-      "SELECT COUNT(*) AS count FROM appointments WHERE company_id = ? AND status = 'scheduled' AND $_safeScheduledAtDate >= date(?)",
-      [companyId, todayStr],
-    );
+    int upcomingAppointmentsCount = 0;
+    try {
+      final apptRes = await activeDb.rawQuery(
+        "SELECT COUNT(*) AS count FROM appointments WHERE company_id = ? AND status = 'scheduled' AND $_safeScheduledAtDate >= date(?)",
+        [companyId, todayStr],
+      );
+      upcomingAppointmentsCount = (apptRes.first['count'] as num?)?.toInt() ?? 0;
+    } catch (_) {}
 
     return DashboardData(
       todayRevenue: report.revenue,
@@ -503,8 +568,8 @@ class LocalFinancialCalculator {
       salesCount: report.salesCount,
       lowStockCount: (lowStockRes.first['count'] as num?)?.toInt() ?? 0,
       unpaidInvoicesCount: (unpaidInvRes.first['count'] as num?)?.toInt() ?? 0,
-      upcomingAppointmentsCount: (apptRes.first['count'] as num?)?.toInt() ?? 0,
-      totalOutstandingCredit: (creditRes.first['total'] as num?)?.toDouble() ?? 0.0,
+      upcomingAppointmentsCount: upcomingAppointmentsCount,
+      totalOutstandingCredit: totalOutstandingCredit,
       inventoryValue: report.inventoryValue,
       todayGrossProfit: report.grossProfit,
     );
@@ -514,10 +579,12 @@ class LocalFinancialCalculator {
   static Future<SuperetteDashboardStats> calculateSuperetteDashboard({
     required String companyId,
     Database? db,
+    DateTime? asOf,
+    String? date,
   }) async {
     final activeDb = db ?? await AppDatabase.instance.database;
-    final now = DateTime.now();
-    final todayStr = _toIsoDate(now);
+    final now = asOf ?? DateTime.now();
+    final todayStr = (date != null && date.isNotEmpty) ? date : _toIsoDate(now);
 
     final dailyReport = await calculateReport(
       period: 'daily',
@@ -644,10 +711,12 @@ class LocalFinancialCalculator {
   static Future<ClothingDashboardStats> calculateClothingDashboard({
     required String companyId,
     Database? db,
+    DateTime? asOf,
+    String? date,
   }) async {
     final activeDb = db ?? await AppDatabase.instance.database;
-    final now = DateTime.now();
-    final todayStr = _toIsoDate(now);
+    final now = asOf ?? DateTime.now();
+    final todayStr = (date != null && date.isNotEmpty) ? date : _toIsoDate(now);
 
     final dailyReport = await calculateReport(
       period: 'daily',
@@ -797,10 +866,12 @@ class LocalFinancialCalculator {
   static Future<PharmacyDashboardStats> calculatePharmacyDashboard({
     required String companyId,
     Database? db,
+    DateTime? asOf,
+    String? date,
   }) async {
     final activeDb = db ?? await AppDatabase.instance.database;
-    final now = DateTime.now();
-    final todayStr = _toIsoDate(now);
+    final now = asOf ?? DateTime.now();
+    final todayStr = (date != null && date.isNotEmpty) ? date : _toIsoDate(now);
 
     final dailyReport = await calculateReport(
       period: 'daily',

@@ -29,16 +29,22 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
     }
 
     final companyId = _companyId ?? 'default';
+    final now = DateTime.now();
+    final todayStr = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
     // 1. Immediately calculate from authoritative local SQLite — scoped to this company
     DashboardData? local;
     try {
       local = await LocalFinancialCalculator.calculateDashboard(
         companyId: companyId,
+        date: todayStr,
       );
       if (!mounted) return;
       state = AsyncValue.data(local);
-    } catch (_) {
+    } catch (e) {
+      // Diagnostic logging (error category and company, no secrets)
+      // ignore: avoid_print
+      print('[DASHBOARD] Local calculation error for tenant=$companyId date=$todayStr: $e');
       local = DashboardData.empty;
       if (!mounted) return;
       state = AsyncValue.data(local);
@@ -55,14 +61,14 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
       final client = _ref.read(apiClientProvider);
       dynamic response;
       try {
-        response = await client.get('/dashboard');
+        response = await client.get('/dashboard', query: {'date': todayStr});
       } on ApiException catch (e) {
         if (e.statusCode == 404) {
           try {
-            response = await client.get('/analytics/dashboard');
+            response = await client.get('/analytics/dashboard', query: {'date': todayStr});
           } on ApiException catch (e2) {
             if (e2.statusCode == 404) {
-              response = await client.get('/analytics');
+              response = await client.get('/analytics', query: {'date': todayStr});
             } else {
               rethrow;
             }
@@ -81,18 +87,19 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
 
       // Reconcile with local unsynchronized transactions (synced = 0) so pending/failed local mutations are preserved without double-counting
       final db = await AppDatabase.instance.database;
-      final now = DateTime.now();
-      final todayStr = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final unsyncedSalesRes = await db.rawQuery(
         '''
         SELECT
           COALESCE(SUM(total), 0) AS revenue,
           COALESCE(SUM(
-            (SELECT COALESCE(SUM(si.unit_cost * si.quantity), 0) FROM sale_items si WHERE si.sale_id = s.id)
+            (SELECT COALESCE(SUM(COALESCE(NULLIF(si.unit_cost, 0), p.purchase_price, 0) * si.quantity), 0)
+             FROM sale_items si
+             LEFT JOIN products p ON p.id = si.product_id AND (p.company_id = s.company_id OR p.company_id IS NULL)
+             WHERE si.sale_id = s.id)
           ), 0) AS cogs,
           COUNT(*) AS sales_count
         FROM sales s
-        WHERE s.company_id = ? AND s.synced = 0 AND (CASE WHEN s.sold_at LIKE '%Z' OR s.sold_at LIKE '%+%' THEN date(s.sold_at, 'localtime') ELSE date(s.sold_at) END) = date(?)
+        WHERE s.company_id = ? AND s.synced = 0 AND s.payment_status != 'cancelled' AND ${LocalFinancialCalculator.safeSSoldAtDate} = date(?)
         ''',
         [companyId, todayStr],
       );
@@ -100,12 +107,31 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
         '''
         SELECT COALESCE(SUM(amount), 0) AS expenses
         FROM expenses
-        WHERE company_id = ? AND synced = 0 AND (CASE WHEN expense_date LIKE '%Z' OR expense_date LIKE '%+%' THEN date(expense_date, 'localtime') ELSE date(expense_date) END) = date(?)
+        WHERE company_id = ? AND synced = 0 AND ${LocalFinancialCalculator.safeExpenseDate} = date(?)
         ''',
         [companyId, todayStr],
       );
 
-      final unsyncedRevenue = (unsyncedSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
+      double unsyncedCredit = 0.0;
+      try {
+        final unsyncedCreditRes = await db.rawQuery(
+          '''
+          SELECT COALESCE(SUM(amount), 0) AS total
+          FROM credit_payments
+          WHERE company_id = ? AND synced = 0
+            AND (CASE
+              WHEN payment_date IS NOT NULL AND payment_date != '' THEN
+                (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
+              ELSE (CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END)
+            END) = date(?)
+          ''',
+          [companyId, todayStr],
+        );
+        unsyncedCredit = (unsyncedCreditRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      } catch (_) {}
+
+      final unsyncedSalesRevenue = (unsyncedSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
+      final unsyncedRevenue = unsyncedSalesRevenue + unsyncedCredit;
       final unsyncedCogs = (unsyncedSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0;
       final unsyncedSalesCount = (unsyncedSalesRes.first['sales_count'] as num?)?.toInt() ?? 0;
       final unsyncedExpenses = (unsyncedExpRes.first['expenses'] as num?)?.toDouble() ?? 0.0;
@@ -142,7 +168,8 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
 final dashboardRepositoryProvider =
     StateNotifierProvider<DashboardRepository, AsyncValue<DashboardData>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
+    ref.watch(connectionStatusProvider);
     return DashboardRepository(ref);
   },
 );

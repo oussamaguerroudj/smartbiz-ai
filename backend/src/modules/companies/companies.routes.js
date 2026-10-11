@@ -1,8 +1,9 @@
 const express = require('express');
-const { query } = require('../../config/db');
+const bcrypt = require('bcryptjs');
+const { query, withTransaction } = require('../../config/db');
 const asyncHandler = require('../../utils/asyncHandler');
 const ApiError = require('../../utils/ApiError');
-const { authMiddleware } = require('../../middlewares/auth.middleware');
+const { authMiddleware, requireRole } = require('../../middlewares/auth.middleware');
 
 /**
  * Companies  -  one row per tenant.
@@ -197,8 +198,131 @@ const updateMe = asyncHandler(async (req, res) => {
   });
 });
 
+const clearBusinessData = asyncHandler(async (req, res) => {
+  const { password } = req.body || {};
+  if (!password || typeof password !== 'string' || password.trim().length === 0) {
+    throw ApiError.badRequest('Password is required to confirm business data reset', 'VALIDATION_ERROR');
+  }
+
+  const userRes = await query(
+    `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [req.user.id],
+  );
+  const user = userRes.rows[0];
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  const matches = await bcrypt.compare(password, user.password_hash);
+  if (!matches) {
+    throw ApiError.badRequest('Password is incorrect', 'INVALID_PASSWORD');
+  }
+
+  const companyId = req.user.companyId;
+
+  await withTransaction(async (client) => {
+    let existing = null;
+    try {
+      const res = await client.query(
+        `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`,
+      );
+      if (res && res.rows) {
+        existing = new Set(res.rows.map((r) => r.table_name));
+      }
+    } catch (_) {
+      existing = null;
+    }
+
+    async function safeDelete(tbl, sql, params) {
+      if (existing && !existing.has(tbl)) return;
+      try {
+        await client.query(sql, params);
+      } catch (err) {
+        if (err && err.code === '42P01') return;
+        throw err;
+      }
+    }
+
+    // 1. Invoices
+    await safeDelete('invoices', `DELETE FROM invoices WHERE company_id = $1`, [companyId]);
+
+    // 2. Sale items & sales
+    await safeDelete(
+      'sale_items',
+      `DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE company_id = $1)`,
+      [companyId],
+    );
+    await safeDelete('sales', `DELETE FROM sales WHERE company_id = $1`, [companyId]);
+
+    // 3. Credit system
+    await safeDelete('credit_payments', `DELETE FROM credit_payments WHERE company_id = $1`, [companyId]);
+    await safeDelete(
+      'credit_purchase_items',
+      `DELETE FROM credit_purchase_items WHERE credit_purchase_id IN (SELECT id FROM credit_purchases WHERE company_id = $1)`,
+      [companyId],
+    );
+    await safeDelete('credit_purchases', `DELETE FROM credit_purchases WHERE company_id = $1`, [companyId]);
+    await safeDelete('customer_transactions', `DELETE FROM customer_transactions WHERE company_id = $1`, [companyId]);
+
+    // 4. Appointments
+    await safeDelete('appointments', `DELETE FROM appointments WHERE company_id = $1`, [companyId]);
+
+    // 5. Enterprise projects
+    await safeDelete('enterprise_projects', `DELETE FROM enterprise_projects WHERE company_id = $1`, [companyId]);
+
+    // 6. Clinic system
+    await safeDelete('clinic_payments', `DELETE FROM clinic_payments WHERE company_id = $1`, [companyId]);
+    await safeDelete(
+      'clinic_prescription_items',
+      `DELETE FROM clinic_prescription_items WHERE prescription_id IN (SELECT id FROM clinic_prescriptions WHERE company_id = $1)`,
+      [companyId],
+    );
+    await safeDelete('clinic_prescriptions', `DELETE FROM clinic_prescriptions WHERE company_id = $1`, [companyId]);
+    await safeDelete('clinic_documents', `DELETE FROM clinic_documents WHERE company_id = $1`, [companyId]);
+    await safeDelete('clinic_visits', `DELETE FROM clinic_visits WHERE company_id = $1`, [companyId]);
+    await safeDelete('clinic_queue', `DELETE FROM clinic_queue WHERE company_id = $1`, [companyId]);
+    await safeDelete('clinic_appointments', `DELETE FROM clinic_appointments WHERE company_id = $1`, [companyId]);
+    await safeDelete('clinic_patients', `DELETE FROM clinic_patients WHERE company_id = $1`, [companyId]);
+
+    // 7. Restaurant system
+    await safeDelete('restaurant_payments', `DELETE FROM restaurant_payments WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_order_items', `DELETE FROM restaurant_order_items WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_orders', `DELETE FROM restaurant_orders WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_reservations', `DELETE FROM restaurant_reservations WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_menu_item_ingredients', `DELETE FROM restaurant_menu_item_ingredients WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_menu_items', `DELETE FROM restaurant_menu_items WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_inventory_movements', `DELETE FROM restaurant_inventory_movements WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_inventory_items', `DELETE FROM restaurant_inventory_items WHERE company_id = $1`, [companyId]);
+    await safeDelete('restaurant_tables', `DELETE FROM restaurant_tables WHERE company_id = $1`, [companyId]);
+
+    // 8. Customers
+    await safeDelete('customers', `DELETE FROM customers WHERE company_id = $1`, [companyId]);
+
+    // 9. Products & inventory
+    await safeDelete('products', `DELETE FROM products WHERE company_id = $1`, [companyId]);
+
+    // 10. Suppliers
+    await safeDelete('suppliers', `DELETE FROM suppliers WHERE company_id = $1`, [companyId]);
+
+    // 11. Employees, Attendance, Salaries, Expenses
+    await safeDelete('salary_adjustments', `DELETE FROM salary_adjustments WHERE company_id = $1`, [companyId]);
+    await safeDelete('attendance_records', `DELETE FROM attendance_records WHERE company_id = $1`, [companyId]);
+    await safeDelete('expenses', `DELETE FROM expenses WHERE company_id = $1`, [companyId]);
+    await safeDelete('employees', `DELETE FROM employees WHERE company_id = $1`, [companyId]);
+
+    // 12. Notifications & AI logs
+    await safeDelete('notifications', `DELETE FROM notifications WHERE company_id = $1`, [companyId]);
+    await safeDelete('ai_logs', `DELETE FROM ai_logs WHERE company_id = $1`, [companyId]);
+  });
+
+  return res.json({
+    success: true,
+    message: 'Business data cleared successfully',
+    companyId,
+  });
+});
+
 const router = express.Router();
-const { requireRole } = require('../../middlewares/auth.middleware');
 
 /*
  * All company endpoints are tenant-scoped through req.user.companyId.
@@ -207,5 +331,8 @@ router.use(authMiddleware);
 
 router.get('/me', getMe);
 router.put('/me', requireRole('owner'), updateMe);
+router.post('/me/clear-business-data', requireRole('owner'), clearBusinessData);
+router.delete('/me/business-data', requireRole('owner'), clearBusinessData);
 
 module.exports = router;
+module.exports.clearBusinessDataHandler = clearBusinessData;

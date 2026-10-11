@@ -832,6 +832,7 @@
   "businessAddressLabel": "عنوان العمل",
   "businessNameRequired": "اسم النشاط التجاري مطلوب",
   "reportRevenueLabel": "الإيرادات",
+  "reportGrossProfitLabel": "مجمل الربح",
   "reportExpensesLabel": "المصاريف",
   "reportNetProfitLabel": "صافي الأرباح",
   "salesCountLabel": "عدد المبيعات",
@@ -1047,6 +1048,28 @@
   "moreSectionOperations": "العمليات والتجارة",
   "moreSectionSpecialized": "النشاط المتخصص",
   "moreSectionIntelligence": "الذكاء الاصطناعي والتحليلات",
-  "moreSectionSystem": "النظام والحساب"
+  "moreSectionSystem": "النظام والحساب",
+  "clearDataTitle": "مسح بيانات النشاط",
+  "clearDataSubtitle": "إعادة ضبط بيانات النشاط والمخزون مع الاحتفاظ بحسابك",
+  "clearDataWarning": "سيؤدي هذا الإجراء إلى حذف جميع سجلات النشاط نهائياً (المنتجات، المبيعات، الفواتير، العملاء، المصاريف، المخزون) لهذا النشاط. سيتم الاحتفاظ بحسابك وجلسة تسجيل الدخول وملف تعريف الشركة.",
+  "clearDataUnsyncedWarning": "تحذير: لديك {count} عملية (عمليات) غير متزامنة بانتظار المزامنة. مسح البيانات الآن سيتجاهلها نهائياً.",
+  "@clearDataUnsyncedWarning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearDataOfflineError": "يلزم الاتصال بالإنترنت للتحقق من كلمة المرور قبل مسح البيانات.",
+  "clearDataOfflineNotice": "الجهاز غير متصل بالإنترنت. يلزم توفر اتصال بالإنترنت لمسح بيانات النشاط. يجب التحقق والحذف على الخادم قبل مسح البيانات المحلية.",
+  "clearDataOfflineSuccess": "تم مسح البيانات المحلية. سيتم مسح بيانات الخادم فور استعادة الاتصال.",
+  "clearDataConfirmCheckbox": "أدرك أنه سيتم حذف جميع بيانات النشاط لهذه الشركة نهائياً",
+  "clearDataPasswordPrompt": "أدخل كلمة المرور للتأكيد",
+  "clearDataButton": "تأكيد ومسح بيانات النشاط",
+  "clearDataSuccess": "تم مسح بيانات النشاط بنجاح",
+  "clearDataIncorrectPassword": "كلمة المرور غير صحيحة",
+  "clearDataRetryAction": "إعادة المزامنة",
+  "clearDataFailedBanner": "فشلت مزامنة مسح البيانات السابقة وتحتاج إلى إعادة المحاولة.",
+  "clearDataRetrySuccess": "تمت مزامنة مسح البيانات بنجاح"
 }
 

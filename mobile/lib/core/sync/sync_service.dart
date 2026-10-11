@@ -53,6 +53,10 @@ class SyncService extends StateNotifier<SyncState> {
     _init();
   }
 
+  /// Configurable flags for tests to avoid background timers and unawaited startup tasks
+  static bool enablePeriodicTimer = true;
+  static bool enableStartupSync = true;
+
   final Ref _ref;
   bool _isLocked = false;
   Timer? _pollingTimer;
@@ -62,31 +66,37 @@ class SyncService extends StateNotifier<SyncState> {
       _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   void _init() {
-    refreshQueueCounts();
+    if (enableStartupSync) {
+      unawaited(reconcileLegacyClearDataOps());
+      unawaited(refreshQueueCounts());
 
-    // Listen to network changes: when back online, trigger auto-sync sequentially
-    _ref.listen<ConnectionStatus>(connectionStatusProvider, (previous, current) async {
-      if (current == ConnectionStatus.online && (previous != ConnectionStatus.online)) {
-        await syncPending();
-        await pullInitialData();
-      }
-    });
-
-    // Also trigger on startup if online
-    final initialStatus = _ref.read(connectionStatusProvider);
-    if (initialStatus == ConnectionStatus.online) {
-      Future.microtask(() async {
-        await syncPending();
+      // Listen to network changes: when back online, trigger auto-sync sequentially
+      _ref.listen<ConnectionStatus>(connectionStatusProvider, (previous, current) async {
+        if (current == ConnectionStatus.online && (previous != ConnectionStatus.online)) {
+          await syncPending();
+          await pullInitialData();
+        }
       });
+
+      // Also trigger on startup if online
+      final initialStatus = _ref.read(connectionStatusProvider);
+      if (initialStatus == ConnectionStatus.online) {
+        Future.microtask(() async {
+          if (!mounted) return;
+          await syncPending();
+        });
+      }
     }
 
     // Periodic check every 45 seconds if online
-    _pollingTimer = Timer.periodic(const Duration(seconds: 45), (_) {
-      final status = _ref.read(connectionStatusProvider);
-      if (status == ConnectionStatus.online && state.pendingCount > 0) {
-        syncPending();
-      }
-    });
+    if (enablePeriodicTimer) {
+      _pollingTimer = Timer.periodic(const Duration(seconds: 45), (_) {
+        final status = _ref.read(connectionStatusProvider);
+        if (status == ConnectionStatus.online && state.pendingCount > 0) {
+          syncPending();
+        }
+      });
+    }
   }
 
   Future<void> refreshQueueCounts() async {
@@ -164,6 +174,50 @@ class SyncService extends StateNotifier<SyncState> {
     }
   }
 
+  /// Safely resets retry metadata for an existing failed CLEAR_DATA operation for [companyId],
+  /// allowing it to be immediately retried by the background sync worker.
+  /// Explicit reconciliation: Cancels any legacy offline CLEAR_DATA queue entries
+  /// so they cannot bypass the online-only rule or silently delete backend data.
+  Future<int> reconcileLegacyClearDataOps({String? companyId}) async {
+    final targetCompanyId = companyId ?? _companyId;
+    if (targetCompanyId == null) return 0;
+
+    final db = await AppDatabase.instance.database;
+    final count = await db.update(
+      'sync_queue',
+      {
+        'status': 'cancelled',
+        'last_error': 'Legacy offline CLEAR_DATA cancelled: data reset requires direct online confirmation.',
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: "company_id = ? AND entity_type = 'business_data' AND operation_type = 'CLEAR_DATA' AND status IN ('pending', 'failed')",
+      whereArgs: [targetCompanyId],
+    );
+
+    if (count > 0 && mounted) {
+      await refreshQueueCounts();
+    }
+    return count;
+  }
+
+  /// Cancels any legacy failed reset operations so they do not block queue processing.
+  Future<bool> retryFailedReset({String? companyId}) async {
+    final targetCompanyId = companyId ?? _companyId;
+    if (targetCompanyId == null) return false;
+
+    final count = await reconcileLegacyClearDataOps(companyId: targetCompanyId);
+    if (count > 0) return true;
+
+    final db = await AppDatabase.instance.database;
+    final existing = await db.query(
+      'sync_queue',
+      where: "company_id = ? AND entity_type = 'business_data' AND operation_type = 'CLEAR_DATA'",
+      whereArgs: [targetCompanyId],
+      limit: 1,
+    );
+    return existing.isNotEmpty;
+  }
+
   Future<void> syncPending() async {
     if (!mounted) return;
     final companyId = _companyId;
@@ -200,12 +254,27 @@ class SyncService extends StateNotifier<SyncState> {
 
       final client = _ref.read(apiClientProvider);
 
+      // If there is an uncompleted CLEAR_DATA for this company, do not process
+      // any subsequent business mutations until the reset has completed successfully.
+      final uncompletedClearOps = await db.query(
+        'sync_queue',
+        where: "company_id = ? AND entity_type = 'business_data' AND operation_type = 'CLEAR_DATA' AND status NOT IN ('synced', 'cancelled')",
+        whereArgs: [companyId],
+        limit: 1,
+      );
+      bool hasUncompletedClear = uncompletedClearOps.isNotEmpty;
+
       for (final op in pendingOps) {
         final opId = op['id'] as String;
         final clientTxId = op['client_transaction_id'] as String;
         final entityType = op['entity_type'] as String;
         final opType = op['operation_type'] as String;
         final currentRetry = (op['retry_count'] as num?)?.toInt() ?? 0;
+
+        // Ensure post-reset mutations cannot reach the server before reset succeeds
+        if (hasUncompletedClear && !(entityType == 'business_data' && opType == 'CLEAR_DATA')) {
+          break;
+        }
 
         try {
           Map<String, dynamic> payload;
@@ -237,6 +306,7 @@ class SyncService extends StateNotifier<SyncState> {
                   'items': reconstructedItems,
                   'discount': (saleRow['discount'] as num?)?.toDouble() ?? 0.0,
                   'paymentStatus': saleRow['payment_status']?.toString() ?? 'paid',
+                  if (saleRow['sold_at'] != null) 'soldAt': saleRow['sold_at'].toString(),
                   if (saleRow['customer_id'] != null) 'customerId': saleRow['customer_id'].toString(),
                   if (saleRow['employee_id'] != null) 'employeeId': saleRow['employee_id'].toString(),
                 };
@@ -453,6 +523,22 @@ class SyncService extends StateNotifier<SyncState> {
           } else if (entityType == 'restaurant_order' && opType == 'RECORD_PAYMENT') {
             await client.post('/restaurant/orders/${payload['orderId'] ?? op['entity_id']}/payments', body: payload);
             await db.update('restaurant_payments', {'synced': 1}, where: 'order_id = ?', whereArgs: [op['entity_id']]);
+          } else if (entityType == 'business_data' && opType == 'CLEAR_DATA') {
+            // Under online-only policy, legacy queued CLEAR_DATA operations cannot bypass
+            // the online-only rule or silently delete backend data upon reconnection.
+            // Safely cancel the legacy entry, leave server and local business records intact.
+            await db.update(
+              'sync_queue',
+              {
+                'status': 'cancelled',
+                'last_error': 'Legacy offline CLEAR_DATA cancelled: data reset requires direct online confirmation.',
+                'updated_at': DateTime.now().toIso8601String(),
+              },
+              where: 'id = ?',
+              whereArgs: [opId],
+            );
+            hasUncompletedClear = false;
+            continue;
           }
 
           // Mark op synced
@@ -513,6 +599,9 @@ class SyncService extends StateNotifier<SyncState> {
               where: 'id = ?',
               whereArgs: [opId],
             );
+            if (entityType == 'business_data' && opType == 'CLEAR_DATA') {
+              break;
+            }
           }
         } catch (e) {
           await db.update(
@@ -526,6 +615,9 @@ class SyncService extends StateNotifier<SyncState> {
             where: 'id = ?',
             whereArgs: [opId],
           );
+          if (entityType == 'business_data' && opType == 'CLEAR_DATA') {
+            break;
+          }
         }
       }
 
@@ -559,6 +651,9 @@ class SyncService extends StateNotifier<SyncState> {
     try {
       final client = _ref.read(apiClientProvider);
       final db = await AppDatabase.instance.database;
+
+      // Defensive check: if a reset is pending or failed for this company, never pull stale data!
+      if (await AppDatabase.instance.hasUncompletedClearData(companyId)) return;
 
       // 1. Company info (scoped by companyId)
       try {

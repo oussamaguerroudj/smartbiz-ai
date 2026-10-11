@@ -3418,6 +3418,12 @@ abstract class AppLocalizations {
   /// **'Revenue'**
   String get reportRevenueLabel;
 
+  /// No description provided for @reportGrossProfitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gross Profit'**
+  String get reportGrossProfitLabel;
+
   /// No description provided for @reportExpensesLabel.
   ///
   /// In en, this message translates to:
@@ -4599,6 +4605,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'System & Account'**
   String get moreSectionSystem;
+
+  /// No description provided for @clearDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Business Data'**
+  String get clearDataTitle;
+
+  /// No description provided for @clearDataSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset business data and inventory while keeping your account'**
+  String get clearDataSubtitle;
+
+  /// No description provided for @clearDataWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This action will permanently erase all business records (products, sales, invoices, customers, expenses, inventory) for this business. Your user account, login session, and company profile will be preserved.'**
+  String get clearDataWarning;
+
+  /// No description provided for @clearDataUnsyncedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning: You have {count} unsynchronized operation(s) waiting to sync. Clearing data now will permanently discard them.'**
+  String clearDataUnsyncedWarning(int count);
+
+  /// No description provided for @clearDataOfflineError.
+  ///
+  /// In en, this message translates to:
+  /// **'An Internet connection is required to verify your password before clearing data.'**
+  String get clearDataOfflineError;
+
+  /// No description provided for @clearDataOfflineNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Device is offline. An internet connection is required to clear business data. Server verification and deletion must succeed before local data can be cleared.'**
+  String get clearDataOfflineNotice;
+
+  /// No description provided for @clearDataOfflineSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Local data cleared. Online data deletion will sync when back online.'**
+  String get clearDataOfflineSuccess;
+
+  /// No description provided for @clearDataConfirmCheckbox.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand that all business data for this company will be permanently deleted'**
+  String get clearDataConfirmCheckbox;
+
+  /// No description provided for @clearDataPasswordPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password to confirm'**
+  String get clearDataPasswordPrompt;
+
+  /// No description provided for @clearDataButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & Clear Business Data'**
+  String get clearDataButton;
+
+  /// No description provided for @clearDataSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Business data cleared successfully'**
+  String get clearDataSuccess;
+
+  /// No description provided for @clearDataIncorrectPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is incorrect'**
+  String get clearDataIncorrectPassword;
+
+  /// No description provided for @clearDataRetryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Sync'**
+  String get clearDataRetryAction;
+
+  /// No description provided for @clearDataFailedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous business data reset synchronization failed and needs to be retried.'**
+  String get clearDataFailedBanner;
+
+  /// No description provided for @clearDataRetrySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Business data reset synchronized successfully'**
+  String get clearDataRetrySuccess;
 }
 
 class _AppLocalizationsDelegate

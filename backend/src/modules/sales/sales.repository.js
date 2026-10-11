@@ -119,12 +119,13 @@ async function insertSale(
     total,
     paymentStatus,
     clientTransactionId,
+    soldAt,
   },
 ) {
   const result = await client.query(
     `INSERT INTO sales
-       (company_id, customer_id, employee_id, subtotal, discount, total, payment_status, client_transaction_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (company_id, customer_id, employee_id, subtotal, discount, total, payment_status, client_transaction_id, sold_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9::timestamptz, now()))
      RETURNING *`,
     [
       companyId,
@@ -135,6 +136,7 @@ async function insertSale(
       total,
       paymentStatus,
       clientTransactionId || null,
+      soldAt || null,
     ],
   );
 

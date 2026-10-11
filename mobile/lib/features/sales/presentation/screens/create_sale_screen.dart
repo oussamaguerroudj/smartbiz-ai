@@ -11,7 +11,6 @@ import '../../data/sales_repository.dart';
 import '../../data/cart_manager.dart';
 import '../../domain/cart_session.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../invoices/presentation/screens/invoices_screen.dart';
 import '../../../ai/presentation/screens/ai_scanner_screen.dart';
 import '../../../customers/data/customers_repository.dart';
 
@@ -187,31 +186,9 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
     final salesRepo = ref.read(salesRepositoryProvider.notifier);
 
     try {
-      final result = await manager.checkoutActiveCart(salesRepo);
+      await manager.checkoutActiveCart(salesRepo);
       if (mounted) {
-        final nav = Navigator.of(context);
-        final messenger = ScaffoldMessenger.of(context);
-        nav.pop();
-
-        final invoice = result['invoice'] as Map<String, dynamic>?;
-        final invoiceId = invoice?['id']?.toString();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.saleRecordedSuccessfully),
-            action: invoiceId != null
-                ? SnackBarAction(
-                    label: l10n.invoicesTitle,
-                    onPressed: () {
-                      nav.push(
-                        MaterialPageRoute(
-                          builder: (_) => InvoiceDetailsScreen(invoiceId: invoiceId),
-                        ),
-                      );
-                    },
-                  )
-                : null,
-          ),
-        );
+        Navigator.of(context).pop();
       }
     } on ApiException catch (e) {
       if (mounted) _showSnack(l10n.couldNotCompleteSale(e.message));

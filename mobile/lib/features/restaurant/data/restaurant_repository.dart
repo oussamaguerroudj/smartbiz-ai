@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/database/local_financial_calculator.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
@@ -38,18 +39,19 @@ class RestaurantRepository {
       }
       try {
         final db = await AppDatabase.instance.database;
-        final todayPrefix = '${DateTime.now().toIso8601String().substring(0, 10)}%';
+        final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+        final dailyReport = await LocalFinancialCalculator.calculateReport(
+          period: 'daily',
+          companyId: companyId,
+          date: todayStr,
+          db: db,
+        );
+
         final salesRes = await db.rawQuery(
-          'SELECT COALESCE(SUM(total), 0) as revenue, COUNT(*) as orders FROM sales WHERE company_id = ? AND sold_at LIKE ?',
-          [companyId, todayPrefix],
+          '''SELECT COUNT(*) as orders FROM sales WHERE company_id = ? AND (CASE WHEN sold_at LIKE '%Z' OR sold_at LIKE '%+%' THEN date(sold_at, 'localtime') ELSE date(sold_at) END) = date(?)''',
+          [companyId, todayStr],
         );
-        final expRes = await db.rawQuery(
-          'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE company_id = ? AND expense_date LIKE ?',
-          [companyId, todayPrefix],
-        );
-        final rev = (salesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
-        final orders = (salesRes.first['orders'] as num?)?.toInt() ?? 0;
-        final exp = (expRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        final orders = (salesRes.first['orders'] as num?)?.toInt() ?? dailyReport.salesCount;
 
         return RestaurantDashboardStats(
           ordersToday: orders,
@@ -61,9 +63,9 @@ class RestaurantRepository {
           tablesOccupied: 0,
           tablesAvailable: 0,
           reservationsToday: 0,
-          todayRevenue: rev,
-          todayExpenses: exp,
-          todayProfit: rev - exp,
+          todayRevenue: dailyReport.revenue,
+          todayExpenses: dailyReport.expenses,
+          todayProfit: dailyReport.netProfit,
         );
       } catch (_) {
         return RestaurantDashboardStats(
@@ -890,5 +892,6 @@ class RestaurantRepository {
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) => RestaurantRepository(ref));
 
 final restaurantDashboardProvider = FutureProvider.autoDispose((ref) {
+  ref.watch(connectionStatusProvider);
   return ref.read(restaurantRepositoryProvider).dashboard();
 });

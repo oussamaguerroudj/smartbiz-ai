@@ -1799,6 +1799,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportRevenueLabel => 'Revenue';
 
   @override
+  String get reportGrossProfitLabel => 'Gross Profit';
+
+  @override
   String get reportExpensesLabel => 'Expenses';
 
   @override
@@ -2436,4 +2439,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moreSectionSystem => 'System & Account';
+
+  @override
+  String get clearDataTitle => 'Clear Business Data';
+
+  @override
+  String get clearDataSubtitle =>
+      'Reset business data and inventory while keeping your account';
+
+  @override
+  String get clearDataWarning =>
+      'This action will permanently erase all business records (products, sales, invoices, customers, expenses, inventory) for this business. Your user account, login session, and company profile will be preserved.';
+
+  @override
+  String clearDataUnsyncedWarning(int count) {
+    return 'Warning: You have $count unsynchronized operation(s) waiting to sync. Clearing data now will permanently discard them.';
+  }
+
+  @override
+  String get clearDataOfflineError =>
+      'An Internet connection is required to verify your password before clearing data.';
+
+  @override
+  String get clearDataOfflineNotice =>
+      'Device is offline. An internet connection is required to clear business data. Server verification and deletion must succeed before local data can be cleared.';
+
+  @override
+  String get clearDataOfflineSuccess =>
+      'Local data cleared. Online data deletion will sync when back online.';
+
+  @override
+  String get clearDataConfirmCheckbox =>
+      'I understand that all business data for this company will be permanently deleted';
+
+  @override
+  String get clearDataPasswordPrompt => 'Enter your password to confirm';
+
+  @override
+  String get clearDataButton => 'Confirm & Clear Business Data';
+
+  @override
+  String get clearDataSuccess => 'Business data cleared successfully';
+
+  @override
+  String get clearDataIncorrectPassword => 'Password is incorrect';
+
+  @override
+  String get clearDataRetryAction => 'Retry Sync';
+
+  @override
+  String get clearDataFailedBanner =>
+      'Previous business data reset synchronization failed and needs to be retried.';
+
+  @override
+  String get clearDataRetrySuccess =>
+      'Business data reset synchronized successfully';
 }

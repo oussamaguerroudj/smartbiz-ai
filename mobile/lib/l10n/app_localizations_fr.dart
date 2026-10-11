@@ -1814,6 +1814,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportRevenueLabel => 'Revenus';
 
   @override
+  String get reportGrossProfitLabel => 'Marge brute';
+
+  @override
   String get reportExpensesLabel => 'Dépenses';
 
   @override
@@ -2460,4 +2463,60 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get moreSectionSystem => 'Système et compte';
+
+  @override
+  String get clearDataTitle => 'Effacer les données d\'activité';
+
+  @override
+  String get clearDataSubtitle =>
+      'Réinitialiser les données d\'activité et de stock en conservant votre compte';
+
+  @override
+  String get clearDataWarning =>
+      'Cette action effacera définitivement tous les enregistrements (produits, ventes, factures, clients, dépenses, stock) de cette activité. Votre compte, votre session et le profil de l\'entreprise seront conservés.';
+
+  @override
+  String clearDataUnsyncedWarning(int count) {
+    return 'Avertissement : Vous avez $count opération(s) non synchronisée(s). Effacer les données maintenant les supprimera définitivement.';
+  }
+
+  @override
+  String get clearDataOfflineError =>
+      'Une connexion Internet est requise pour vérifier votre mot de passe avant d\'effacer les données.';
+
+  @override
+  String get clearDataOfflineNotice =>
+      'L\'appareil est hors ligne. Une connexion Internet est requise pour effacer les données d\'activité. La vérification et la suppression sur le serveur doivent réussir avant l\'effacement local.';
+
+  @override
+  String get clearDataOfflineSuccess =>
+      'Données locales effacées. La suppression en ligne sera synchronisée dès la reconnexion.';
+
+  @override
+  String get clearDataConfirmCheckbox =>
+      'Je comprends que toutes les données d\'activité de cette entreprise seront définitivement supprimées';
+
+  @override
+  String get clearDataPasswordPrompt =>
+      'Entrez votre mot de passe pour confirmer';
+
+  @override
+  String get clearDataButton => 'Confirmer et effacer les données d\'activité';
+
+  @override
+  String get clearDataSuccess => 'Données d\'activité effacées avec succès';
+
+  @override
+  String get clearDataIncorrectPassword => 'Mot de passe incorrect';
+
+  @override
+  String get clearDataRetryAction => 'Réessayer la synchronisation';
+
+  @override
+  String get clearDataFailedBanner =>
+      'La synchronisation de la réinitialisation précédente a échoué et doit être réessayée.';
+
+  @override
+  String get clearDataRetrySuccess =>
+      'Réinitialisation des données synchronisée avec succès';
 }

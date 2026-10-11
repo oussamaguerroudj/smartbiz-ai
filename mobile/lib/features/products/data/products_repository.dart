@@ -29,6 +29,11 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
 
     // 2. Fetch from backend in the background if possible
     try {
+      final companyId = _companyId;
+      if (companyId != null && await AppDatabase.instance.hasUncompletedClearData(companyId)) {
+        return;
+      }
+
       final client = _ref.read(apiClientProvider);
       final response = await client.get(
         '/products',

@@ -39,6 +39,11 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
 
     // 2. Fetch from backend in the background if online
     try {
+      final companyId = _companyId;
+      if (companyId != null && await AppDatabase.instance.hasUncompletedClearData(companyId)) {
+        return;
+      }
+
       final client = _ref.read(apiClientProvider);
       final response = await client.get('/sales');
       final sales = (response['data'] as List)
@@ -323,6 +328,7 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
           }).toList(),
           'discount': discount,
           'paymentStatus': paymentStatusToApi(paymentStatus),
+          'soldAt': nowIso,
           if (customerId != null) 'customerId': customerId,
         }),
         'status': 'pending',

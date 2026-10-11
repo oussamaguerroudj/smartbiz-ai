@@ -1,9 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import '../../../core/connectivity/connectivity_service.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../reports/data/reports_repository.dart' show invalidateAllReports;
+import '../../dashboard/data/dashboard_repository.dart' show dashboardRepositoryProvider;
+import '../../expenses/data/expenses_repository.dart' show expensesRepositoryProvider;
+import '../../sales/data/sales_repository.dart' show salesRepositoryProvider;
 import 'companies_repository.dart';
 
 class AuthRepository {
@@ -147,6 +155,72 @@ class AuthRepository {
     final client = _ref.read(apiClientProvider);
     await client.delete('/auth/account', body: {'password': password});
     await logout();
+  }
+
+  Future<void> verifyPassword({required String password}) async {
+    final client = _ref.read(apiClientProvider);
+    await client.post('/auth/verify-password', body: {'password': password});
+  }
+
+  /// Resets the current authenticated company's business data completely
+  /// while preserving the user account, login session, tokens, company identity,
+  /// profile, and other companies' data.
+  Future<Map<String, dynamic>> clearBusinessData({required String password}) async {
+    final session = _ref.read(sessionProvider);
+    final companyId = session.companyId ?? session.userId;
+    if (companyId == null) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'No active company found for this session.',
+        code: 'NO_ACTIVE_COMPANY',
+      );
+    }
+
+    final connStatus = _ref.read(connectionStatusProvider);
+    final isOnline = connStatus == ConnectionStatus.online;
+
+    if (!isOnline) {
+      throw ApiException(
+        statusCode: 0,
+        message: 'An active internet connection is required to clear business data. Server verification and deletion must occur before local data can be cleared.',
+        code: 'NETWORK_REQUIRED',
+      );
+    }
+
+    final client = _ref.read(apiClientProvider);
+    // 1. Authoritative server reset scoped strictly to req.user.companyId
+    final response = await client.post('/companies/me/clear-business-data', body: {
+      'password': password,
+    });
+
+    if (response is Map && response['success'] == false) {
+      throw ApiException(
+        statusCode: 400,
+        message: response['message']?.toString() ?? 'Failed to clear business data',
+        code: 'CLEAR_FAILED',
+      );
+    }
+
+    // 2. Clear local SQLite records for this company only, strictly after confirmed backend success
+    await AppDatabase.instance.clearCompanyBusinessData(companyId);
+
+    // Invalidate providers so UI instantly reflects empty state
+    _invalidateBusinessProviders();
+
+    return {'cleared': true, 'isOffline': false};
+  }
+
+  void _invalidateBusinessProviders() {
+    _ref.invalidate(companyInfoProvider);
+    invalidateAllReports(_ref);
+    _ref.invalidate(dashboardRepositoryProvider);
+    _ref.invalidate(expensesRepositoryProvider);
+    _ref.invalidate(salesRepositoryProvider);
+  }
+
+  /// Backward-compatible alias for existing code
+  Future<void> clearApplicationData({required String password}) async {
+    await clearBusinessData(password: password);
   }
 
   /// Ends the current session. SQLite data is intentionally NOT deleted.

@@ -345,39 +345,56 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                   // A. Primary Financial KPI Cards for the Selected Period
                   FadeSlideIn(
-                    child: Row(
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: _FinancialStatCard(
-                            label: l10n.reportRevenueLabel,
-                            value: report.revenue,
-                            color: AppColors.primary,
-                            icon: Icons.trending_up,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _FinancialStatCard(
+                                label: l10n.reportRevenueLabel,
+                                value: report.revenue,
+                                color: AppColors.primary,
+                                icon: Icons.trending_up,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: _FinancialStatCard(
+                                label: l10n.reportGrossProfitLabel,
+                                value: report.grossProfit,
+                                color: const Color(0xFF0D9488),
+                                icon: Icons.pie_chart_outline_rounded,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Expanded(
-                          child: _FinancialStatCard(
-                            label: l10n.reportExpensesLabel,
-                            value: report.expenses,
-                            color: AppColors.danger,
-                            icon: Icons.trending_down,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Expanded(
-                          child: _FinancialStatCard(
-                            label: report.netProfit >= 0
-                                ? l10n.reportNetProfitLabel
-                                : l10n.netLossLabel,
-                            value: report.netProfit,
-                            color: report.netProfit >= 0
-                                ? AppColors.info
-                                : AppColors.danger,
-                            icon: report.netProfit >= 0
-                                ? Icons.account_balance_wallet
-                                : Icons.warning_amber_rounded,
-                          ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _FinancialStatCard(
+                                label: l10n.reportExpensesLabel,
+                                value: report.expenses,
+                                color: AppColors.danger,
+                                icon: Icons.trending_down,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: _FinancialStatCard(
+                                label: report.netProfit >= 0
+                                    ? l10n.reportNetProfitLabel
+                                    : l10n.netLossLabel,
+                                value: report.netProfit,
+                                color: report.netProfit >= 0
+                                    ? AppColors.info
+                                    : AppColors.danger,
+                                icon: report.netProfit >= 0
+                                    ? Icons.account_balance_wallet
+                                    : Icons.warning_amber_rounded,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -1079,6 +1096,28 @@ class _ProfitCalculationCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (report.costOfGoodsSold > 0) ...[
+                  Expanded(
+                    child: _FormulaBlock(
+                      label: l10n.localeName.startsWith('ar')
+                          ? 'تكلفة السلع'
+                          : (l10n.localeName.startsWith('fr') ? 'Coût march.' : 'COGS'),
+                      amount: report.costOfGoodsSold,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Text(
+                      '—',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                ],
                 Expanded(
                   child: _FormulaBlock(
                     label: l10n.totalExpensesLabel,
@@ -1109,7 +1148,13 @@ class _ProfitCalculationCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            l10n.profitFormulaExplanation,
+            report.costOfGoodsSold > 0
+                ? (l10n.localeName.startsWith('ar')
+                    ? 'صافي الربح = إجمالي الإيرادات - تكلفة السلع - إجمالي المصاريف'
+                    : (l10n.localeName.startsWith('fr')
+                        ? 'Bénéfice Net = Revenus - Coût des Marchandises - Dépenses'
+                        : 'Net Profit = Revenue - COGS - Expenses'))
+                : l10n.profitFormulaExplanation,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),

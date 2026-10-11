@@ -1,4 +1,5 @@
 import '../../../../core/widgets/directional_chevron.dart';
+import '../../../../core/connectivity/connectivity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -37,6 +38,7 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 /// CONTENT changes: today's sales/profit, low-stock + expiry alerts,
 /// and inventory value instead of a patient queue or an orders board.
 final pharmacyDashboardProvider = FutureProvider.autoDispose((ref) {
+  ref.watch(connectionStatusProvider);
   return ref.read(pharmacyRepositoryProvider).dashboard();
 });
 

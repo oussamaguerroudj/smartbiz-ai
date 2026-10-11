@@ -304,6 +304,10 @@ class ReportData {
     this.inventoryValue = 0.0,
   });
 
+  double get costOfGoodsSold => expensesBreakdown.costOfGoodsSold > 0
+      ? expensesBreakdown.costOfGoodsSold
+      : (revenue - grossProfit).clamp(0.0, double.infinity);
+
   factory ReportData.fromJson(Map<String, dynamic> json) {
     final revBreakdown = json['revenueBreakdown'] is Map<String, dynamic>
         ? RevenueBreakdown.fromJson(

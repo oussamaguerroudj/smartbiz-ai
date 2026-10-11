@@ -1793,6 +1793,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportRevenueLabel => 'الإيرادات';
 
   @override
+  String get reportGrossProfitLabel => 'مجمل الربح';
+
+  @override
   String get reportExpensesLabel => 'المصاريف';
 
   @override
@@ -2429,4 +2432,58 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get moreSectionSystem => 'النظام والحساب';
+
+  @override
+  String get clearDataTitle => 'مسح بيانات النشاط';
+
+  @override
+  String get clearDataSubtitle =>
+      'إعادة ضبط بيانات النشاط والمخزون مع الاحتفاظ بحسابك';
+
+  @override
+  String get clearDataWarning =>
+      'سيؤدي هذا الإجراء إلى حذف جميع سجلات النشاط نهائياً (المنتجات، المبيعات، الفواتير، العملاء، المصاريف، المخزون) لهذا النشاط. سيتم الاحتفاظ بحسابك وجلسة تسجيل الدخول وملف تعريف الشركة.';
+
+  @override
+  String clearDataUnsyncedWarning(int count) {
+    return 'تحذير: لديك $count عملية (عمليات) غير متزامنة بانتظار المزامنة. مسح البيانات الآن سيتجاهلها نهائياً.';
+  }
+
+  @override
+  String get clearDataOfflineError =>
+      'يلزم الاتصال بالإنترنت للتحقق من كلمة المرور قبل مسح البيانات.';
+
+  @override
+  String get clearDataOfflineNotice =>
+      'الجهاز غير متصل بالإنترنت. يلزم توفر اتصال بالإنترنت لمسح بيانات النشاط. يجب التحقق والحذف على الخادم قبل مسح البيانات المحلية.';
+
+  @override
+  String get clearDataOfflineSuccess =>
+      'تم مسح البيانات المحلية. سيتم مسح بيانات الخادم فور استعادة الاتصال.';
+
+  @override
+  String get clearDataConfirmCheckbox =>
+      'أدرك أنه سيتم حذف جميع بيانات النشاط لهذه الشركة نهائياً';
+
+  @override
+  String get clearDataPasswordPrompt => 'أدخل كلمة المرور للتأكيد';
+
+  @override
+  String get clearDataButton => 'تأكيد ومسح بيانات النشاط';
+
+  @override
+  String get clearDataSuccess => 'تم مسح بيانات النشاط بنجاح';
+
+  @override
+  String get clearDataIncorrectPassword => 'كلمة المرور غير صحيحة';
+
+  @override
+  String get clearDataRetryAction => 'إعادة المزامنة';
+
+  @override
+  String get clearDataFailedBanner =>
+      'فشلت مزامنة مسح البيانات السابقة وتحتاج إلى إعادة المحاولة.';
+
+  @override
+  String get clearDataRetrySuccess => 'تمت مزامنة مسح البيانات بنجاح';
 }

@@ -35,6 +35,11 @@ class EmployeesRepository extends StateNotifier<AsyncValue<List<Employee>>> {
     }
 
     try {
+      final companyId = _companyId;
+      if (companyId != null && await AppDatabase.instance.hasUncompletedClearData(companyId)) {
+        return;
+      }
+
       final client = _ref.read(apiClientProvider);
       final response = await client.get('/employees');
       final employees = (response['data'] as List)

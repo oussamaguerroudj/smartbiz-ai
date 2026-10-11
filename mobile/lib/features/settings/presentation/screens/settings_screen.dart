@@ -6,6 +6,7 @@ import '../../../../core/widgets/fade_slide_in.dart';
 import '../../data/settings_providers.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../widgets/clear_application_data_dialog.dart';
 import 'profile_screen.dart';
 
 /// Settings — Spec Ch. 23. Business profile / currency editing from
@@ -76,6 +77,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           _SettingsTile(
+            icon: Icons.delete_forever_rounded,
+            title: l10n.clearDataTitle,
+            subtitle: l10n.clearDataSubtitle,
+            iconColor: AppColors.danger,
+            onTap: () => _showClearDataDialog(context, ref),
+          ),
+          _SettingsTile(
             icon: Icons.logout_rounded,
             title: l10n.logoutTitle,
             iconColor: AppColors.danger,
@@ -84,6 +92,19 @@ class SettingsScreen extends ConsumerWidget {
         ].staggered(),
       ),
     );
+  }
+
+  Future<void> _showClearDataDialog(BuildContext context, WidgetRef ref) async {
+    final result = await ClearApplicationDataDialog.show(context);
+    if (result != null && context.mounted) {
+      final isSuccess = result == true || (result is Map && result['cleared'] == true);
+      if (isSuccess) {
+        final l10n = AppLocalizations.of(context)!;
+        final isOffline = (result is Map && result['isOffline'] == true);
+        _snack(context, isOffline ? l10n.clearDataOfflineSuccess : l10n.clearDataSuccess);
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    }
   }
 
   void _snack(BuildContext context, String msg) =>

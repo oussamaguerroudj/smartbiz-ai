@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/connectivity/connectivity_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../data/clinic_repository.dart';
@@ -8,6 +9,7 @@ import 'clinic_patients_screen.dart';
 import '../../../../l10n/app_localizations.dart';
 
 final clinicDashboardProvider = FutureProvider.autoDispose((ref) {
+  ref.watch(connectionStatusProvider);
   return ref.read(clinicRepositoryProvider).dashboard();
 });
 

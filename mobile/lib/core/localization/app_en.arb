@@ -832,6 +832,7 @@
   "businessAddressLabel": "Business Address",
   "businessNameRequired": "Business name is required",
   "reportRevenueLabel": "Revenue",
+  "reportGrossProfitLabel": "Gross Profit",
   "reportExpensesLabel": "Expenses",
   "reportNetProfitLabel": "Net Profit",
   "salesCountLabel": "Sales count",
@@ -1117,6 +1118,28 @@
   "moreSectionOperations": "Operations & Commerce",
   "moreSectionSpecialized": "Specialized Activity",
   "moreSectionIntelligence": "AI & Intelligence",
-  "moreSectionSystem": "System & Account"
+  "moreSectionSystem": "System & Account",
+  "clearDataTitle": "Clear Business Data",
+  "clearDataSubtitle": "Reset business data and inventory while keeping your account",
+  "clearDataWarning": "This action will permanently erase all business records (products, sales, invoices, customers, expenses, inventory) for this business. Your user account, login session, and company profile will be preserved.",
+  "clearDataUnsyncedWarning": "Warning: You have {count} unsynchronized operation(s) waiting to sync. Clearing data now will permanently discard them.",
+  "@clearDataUnsyncedWarning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearDataOfflineError": "An Internet connection is required to verify your password before clearing data.",
+  "clearDataOfflineNotice": "Device is offline. An internet connection is required to clear business data. Server verification and deletion must succeed before local data can be cleared.",
+  "clearDataOfflineSuccess": "Local data cleared. Online data deletion will sync when back online.",
+  "clearDataConfirmCheckbox": "I understand that all business data for this company will be permanently deleted",
+  "clearDataPasswordPrompt": "Enter your password to confirm",
+  "clearDataButton": "Confirm & Clear Business Data",
+  "clearDataSuccess": "Business data cleared successfully",
+  "clearDataIncorrectPassword": "Password is incorrect",
+  "clearDataRetryAction": "Retry Sync",
+  "clearDataFailedBanner": "Previous business data reset synchronization failed and needs to be retried.",
+  "clearDataRetrySuccess": "Business data reset synchronized successfully"
 }
 

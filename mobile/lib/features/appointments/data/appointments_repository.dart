@@ -112,6 +112,7 @@ class AppointmentsRepository extends StateNotifier<AsyncValue<List<Appointment>>
 
     final companyId = _companyId;
     if (companyId == null) return;
+    if (await AppDatabase.instance.hasUncompletedClearData(companyId)) return;
 
     try {
       final client = _ref.read(apiClientProvider);

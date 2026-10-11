@@ -58,6 +58,11 @@ class CustomersRepository extends StateNotifier<AsyncValue<List<Customer>>> {
     }
 
     try {
+      final companyId = _companyId;
+      if (companyId != null && await AppDatabase.instance.hasUncompletedClearData(companyId)) {
+        return;
+      }
+
       final client = _ref.read(apiClientProvider);
       final response = await client.get('/customers');
       final serverCustomers = (response['data'] as List)

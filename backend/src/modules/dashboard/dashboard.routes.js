@@ -13,6 +13,7 @@ const { calculateFinancials } = require('../financial/financial.service');
  */
 const getDashboard = asyncHandler(async (req, res) => {
   const companyId = req.user.companyId;
+  const targetDate = req.query.date;
 
   const [
     financials,
@@ -23,7 +24,7 @@ const getDashboard = asyncHandler(async (req, res) => {
     upcomingAppointments,
     outstandingCredit,
   ] = await Promise.all([
-    calculateFinancials(companyId, { period: 'daily' }),
+    calculateFinancials(companyId, { period: 'daily', date: targetDate }),
     clinicRepo.outstandingTotal(companyId),
     restaurantRepo.outstandingTotal(companyId),
     query(

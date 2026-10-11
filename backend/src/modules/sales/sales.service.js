@@ -101,8 +101,11 @@ async function createSale(
     discount = 0,
     paymentStatus = 'paid',
     clientTransactionId,
+    soldAt,
+    sold_at,
   },
 ) {
+  const transactionTime = soldAt || sold_at || null;
   validateSaleInput({
     items,
     discount,
@@ -201,6 +204,7 @@ async function createSale(
       total,
       paymentStatus,
       clientTransactionId,
+      soldAt: transactionTime,
     });
 
     const savedItems = [];

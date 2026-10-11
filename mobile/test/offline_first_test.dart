@@ -438,8 +438,8 @@ void main() {
       // netProfit = grossProfit - totalExpenses = 100 - 45 = 55
       expect(report.netProfit, 55.0);
 
-      // inventoryValue = SUM(quantity * (selling_price - purchase_price)) = 10*(100-60) + 5*(50-30) = 400 + 100 = 500
-      expect(report.inventoryValue, 500.0);
+      // inventoryValue = SUM(quantity * purchase_price) = 10*60 + 5*30 = 600 + 150 = 750
+      expect(report.inventoryValue, 750.0);
 
       // Top products verification
       expect(report.topProducts.length, 2);
