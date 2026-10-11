@@ -778,6 +778,26 @@ async function deleteAccount(userId, { password } = {}) {
   });
 }
 
+async function verifyPassword(userId, { password } = {}) {
+  if (typeof password !== 'string' || password.length === 0) {
+    throw ApiError.badRequest('Password is required', 'VALIDATION_ERROR');
+  }
+
+  const userRes = await query(
+    `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [userId],
+  );
+  const user = userRes.rows[0];
+  if (!user) throw ApiError.notFound('User not found');
+
+  const matches = await bcrypt.compare(password, user.password_hash);
+  if (!matches) {
+    throw ApiError.badRequest('Password is incorrect', 'INVALID_PASSWORD');
+  }
+
+  return { verified: true };
+}
+
 module.exports = {
   register,
   login,
@@ -790,4 +810,5 @@ module.exports = {
   updateProfile,
   changePassword,
   deleteAccount,
+  verifyPassword,
 };

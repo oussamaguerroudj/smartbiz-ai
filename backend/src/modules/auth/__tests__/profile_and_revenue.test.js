@@ -77,4 +77,35 @@ describe('Profile, Password Change, Account Deletion & Calculations', () => {
       expect(updated.avatarUrl).toBe('http://example.com/new.jpg');
     });
   });
+
+  describe('verifyPassword', () => {
+    it('returns verified: true when password matches hash', async () => {
+      const bcrypt = require('bcryptjs');
+      const hash = await bcrypt.hash('CorrectPass123', 10);
+      query.mockResolvedValueOnce({
+        rows: [{ id: 'u123', password_hash: hash }],
+      });
+
+      const res = await authService.verifyPassword('u123', { password: 'CorrectPass123' });
+      expect(res).toEqual({ verified: true });
+    });
+
+    it('rejects with INVALID_PASSWORD when password is wrong', async () => {
+      const bcrypt = require('bcryptjs');
+      const hash = await bcrypt.hash('CorrectPass123', 10);
+      query.mockResolvedValueOnce({
+        rows: [{ id: 'u123', password_hash: hash }],
+      });
+
+      await expect(
+        authService.verifyPassword('u123', { password: 'WrongPassword' }),
+      ).rejects.toThrow('Password is incorrect');
+    });
+
+    it('rejects when password is empty', async () => {
+      await expect(
+        authService.verifyPassword('u123', { password: '' }),
+      ).rejects.toThrow('Password is required');
+    });
+  });
 });

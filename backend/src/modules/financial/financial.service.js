@@ -180,7 +180,7 @@ async function calculateFinancials(companyId, params = {}) {
     query(
       `SELECT COALESCE(SUM(
          CASE
-           WHEN quantity > 0 THEN quantity * (COALESCE(selling_price, 0) - COALESCE(purchase_price, 0))
+           WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
            ELSE 0
          END
        ), 0) AS inventory_value

@@ -8,6 +8,7 @@ const {
   validateResendVerification,
   validateForgotPassword,
   validateResetPassword,
+  validateVerifyPassword,
 } = require('./auth.validators');
 
 const { authMiddleware } = require('../../middlewares/auth.middleware');
@@ -33,6 +34,7 @@ router.get('/profile', authMiddleware, controller.getProfile);
 router.get('/me', authMiddleware, controller.getProfile);
 router.put('/profile', authMiddleware, controller.updateProfile);
 router.put('/change-password', authMiddleware, controller.changePassword);
+router.post('/verify-password', authMiddleware, validateVerifyPassword, controller.verifyPassword);
 router.delete('/account', authMiddleware, controller.deleteAccount);
 
 module.exports = router;

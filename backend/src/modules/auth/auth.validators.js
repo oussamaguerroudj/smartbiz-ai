@@ -225,6 +225,16 @@ function validateResetPassword(req, res, next) {
   return next();
 }
 
+function validateVerifyPassword(req, _res, next) {
+  const { password } = req.body || {};
+  if (!password || typeof password !== 'string') {
+    return next(
+      ApiError.badRequest('Password is required', 'VALIDATION_ERROR'),
+    );
+  }
+  return next();
+}
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -233,6 +243,7 @@ module.exports = {
   validateResendVerification,
   validateForgotPassword,
   validateResetPassword,
+  validateVerifyPassword,
   VALID_INDUSTRIES,
   VALID_TYPES,
 };

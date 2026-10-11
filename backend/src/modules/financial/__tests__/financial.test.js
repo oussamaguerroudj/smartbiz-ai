@@ -638,6 +638,34 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.salesCount).toBe(0);
       expect(result.costOfGoodsSold).toBe(0);
     });
+
+    it('Scenario 29: Product inventory value reflects acquisition cost (quantity * purchase_price)', async () => {
+      let inventoryQueryCaptured = false;
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          inventoryQueryCaptured = sql.includes('quantity * COALESCE(purchase_price, 0)');
+          return Promise.resolve({ rows: [{ inventory_value: 15000 }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 5000, cogs: 2000, sales_count: 5 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(1000);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'daily' });
+
+      expect(inventoryQueryCaptured).toBe(true);
+      expect(result.inventoryValue).toBe(15000);
+    });
   });
 });
 
