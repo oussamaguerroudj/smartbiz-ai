@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'database_initializer.dart';
 
@@ -6,6 +7,13 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   Database? _db;
+
+  /// Allows tests to provide an in-memory or mock database.
+  /// Never invoked in production runtime.
+  @visibleForTesting
+  static void setTestDatabase(Database? db) {
+    instance._db = db;
+  }
 
   Future<Database> get database async {
     if (_db != null && _db!.isOpen) return _db!;

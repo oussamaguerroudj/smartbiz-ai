@@ -8,6 +8,9 @@ import '../network/api_client.dart';
 import '../network/api_exception.dart';
 import '../network/session.dart';
 import '../../features/reports/data/reports_repository.dart' show invalidateAllReports;
+import '../../features/dashboard/data/dashboard_repository.dart' show dashboardRepositoryProvider;
+import '../../features/expenses/data/expenses_repository.dart' show expensesRepositoryProvider;
+import '../../features/sales/data/sales_repository.dart' show salesRepositoryProvider;
 
 class SyncState {
   final int pendingCount;
@@ -55,18 +58,27 @@ class SyncService extends StateNotifier<SyncState> {
   Timer? _pollingTimer;
 
   /// Active company from the current session. Null when not logged in.
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId =>
+      _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   void _init() {
     refreshQueueCounts();
 
-    // Listen to network changes: when back online, trigger auto-sync
-    _ref.listen<ConnectionStatus>(connectionStatusProvider, (previous, current) {
+    // Listen to network changes: when back online, trigger auto-sync sequentially
+    _ref.listen<ConnectionStatus>(connectionStatusProvider, (previous, current) async {
       if (current == ConnectionStatus.online && (previous != ConnectionStatus.online)) {
-        syncPending();
-        pullInitialData();
+        await syncPending();
+        await pullInitialData();
       }
     });
+
+    // Also trigger on startup if online
+    final initialStatus = _ref.read(connectionStatusProvider);
+    if (initialStatus == ConnectionStatus.online) {
+      Future.microtask(() async {
+        await syncPending();
+      });
+    }
 
     // Periodic check every 45 seconds if online
     _pollingTimer = Timer.periodic(const Duration(seconds: 45), (_) {
@@ -262,33 +274,104 @@ class SyncService extends StateNotifier<SyncState> {
               ...payload,
               'clientTransactionId': clientTxId,
             });
-            await db.update('sales', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            String? serverSaleId;
+            if (res is Map && res['data'] is Map && res['data']['sale'] is Map) {
+              serverSaleId = res['data']['sale']['id']?.toString();
+            } else if (res is Map && res['data'] is Map && res['data']['id'] != null) {
+              serverSaleId = res['data']['id']?.toString();
+            }
+
+            if (serverSaleId != null && serverSaleId != op['entity_id']) {
+              final existingServerRow = await db.query(
+                'sales',
+                columns: ['id'],
+                where: 'id = ? AND company_id = ?',
+                whereArgs: [serverSaleId, companyId],
+              );
+              if (existingServerRow.isNotEmpty) {
+                // Server row already pulled. Transfer detailed items and invoices, then remove placeholder.
+                await db.delete('sale_items', where: 'sale_id = ? AND product_id = "synced-summary"', whereArgs: [serverSaleId]);
+                await db.update(
+                  'sale_items',
+                  {'sale_id': serverSaleId},
+                  where: 'sale_id = ? AND company_id = ?',
+                  whereArgs: [op['entity_id'], companyId],
+                );
+                await db.delete('invoices', where: 'sale_id = ? AND company_id = ?', whereArgs: [serverSaleId, companyId]);
+                await db.update(
+                  'invoices',
+                  {'sale_id': serverSaleId},
+                  where: 'sale_id = ? AND company_id = ?',
+                  whereArgs: [op['entity_id'], companyId],
+                );
+                await db.delete('sales', where: 'id = ? AND company_id = ?', whereArgs: [op['entity_id'], companyId]);
+              } else {
+                await db.update(
+                  'sales',
+                  {'id': serverSaleId, 'synced': 1},
+                  where: 'id = ? AND company_id = ?',
+                  whereArgs: [op['entity_id'], companyId],
+                );
+                await db.update(
+                  'sale_items',
+                  {'sale_id': serverSaleId},
+                  where: 'sale_id = ? AND company_id = ?',
+                  whereArgs: [op['entity_id'], companyId],
+                );
+                await db.update(
+                  'invoices',
+                  {'sale_id': serverSaleId},
+                  where: 'sale_id = ? AND company_id = ?',
+                  whereArgs: [op['entity_id'], companyId],
+                );
+              }
+              await db.update(
+                'sync_queue',
+                {'entity_id': serverSaleId},
+                where: 'entity_id = ? AND company_id = ?',
+                whereArgs: [op['entity_id'], companyId],
+              );
+            } else {
+              await db.update('sales', {'synced': 1}, where: 'id = ? AND company_id = ?', whereArgs: [op['entity_id'], companyId]);
+            }
+
             if (res is Map && res['data'] is Map && res['data']['invoice'] is Map) {
               final inv = res['data']['invoice'] as Map<String, dynamic>;
               final serverInvoiceId = inv['id']?.toString();
               final serverInvoiceNumber = inv['invoice_number']?.toString();
-              if (serverInvoiceId != null) {
-                await db.delete(
-                  'invoices',
-                  where: 'sale_id = ? AND id != ?',
-                  whereArgs: [op['entity_id'], serverInvoiceId],
-                );
-              }
-              if (serverInvoiceNumber != null) {
+              final effectiveSaleId = serverSaleId ?? op['entity_id'];
+              final invoiceUpdates = <String, dynamic>{};
+              if (serverInvoiceId != null) invoiceUpdates['id'] = serverInvoiceId;
+              if (serverInvoiceNumber != null) invoiceUpdates['invoice_number'] = serverInvoiceNumber;
+
+              if (invoiceUpdates.isNotEmpty) {
                 await db.update(
                   'invoices',
-                  {'invoice_number': serverInvoiceNumber},
-                  where: 'sale_id = ?',
-                  whereArgs: [op['entity_id']],
+                  invoiceUpdates,
+                  where: 'sale_id = ? AND company_id = ?',
+                  whereArgs: [effectiveSaleId, companyId],
                 );
               }
             }
           } else if (entityType == 'expense' && opType == 'CREATE') {
-            await client.post('/expenses', body: {
+            final res = await client.post('/expenses', body: {
               ...payload,
               'clientId': clientTxId,
             });
-            await db.update('expenses', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            String? serverId;
+            if (res is Map && res['data'] is Map && res['data']['id'] != null) {
+              serverId = res['data']['id'].toString();
+            }
+            if (serverId != null && serverId != op['entity_id']) {
+              await db.update(
+                'expenses',
+                {'id': serverId, 'synced': 1},
+                where: 'id = ?',
+                whereArgs: [op['entity_id']],
+              );
+            } else {
+              await db.update('expenses', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            }
           } else if (entityType == 'payment' && opType == 'CREATE') {
             await client.post('/credit/payments', body: {
               ...payload,
@@ -384,8 +467,31 @@ class SyncService extends StateNotifier<SyncState> {
           );
         } on ApiException catch (e) {
           // If server reports duplicate or 404 on delete, treat as idempotent success
-          if ((e.statusCode == 400 && (e.message.contains('already exists') || e.code == 'DUPLICATE')) ||
-              (e.statusCode == 404 && (opType == 'DELETE' || opType == 'UPDATE_STATUS'))) {
+          final isDuplicateSalary = e.statusCode == 409 ||
+              e.code == 'DUPLICATE_SALARY_PAYMENT' ||
+              e.message.contains('A salary payment for this employee') ||
+              e.message.contains('already exists');
+          final isDuplicate = (e.statusCode == 400 && (e.message.contains('already exists') || e.code == 'DUPLICATE')) ||
+              isDuplicateSalary;
+          final isIdempotent404 = e.statusCode == 404 && (opType == 'DELETE' || opType == 'UPDATE_STATUS');
+
+          if (isDuplicate || isIdempotent404) {
+            // Update entity to synced = 1 so local entity state is consistent
+            if (entityType == 'expense') {
+              await db.update('expenses', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else if (entityType == 'sale') {
+              await db.update('sales', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else if (entityType == 'payment') {
+              await db.update('credit_payments', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else if (entityType == 'customer') {
+              await db.update('customers', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else if (entityType == 'employee') {
+              await db.update('employees', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else if (entityType == 'product') {
+              await db.update('products', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else if (entityType == 'supplier') {
+              await db.update('suppliers', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            }
             await db.update(
               'sync_queue',
               {
@@ -430,6 +536,9 @@ class SyncService extends StateNotifier<SyncState> {
         state = state.copyWith(isSyncing: false, lastSyncedAt: DateTime.now());
       }
       invalidateAllReports(_ref);
+      _ref.invalidate(dashboardRepositoryProvider);
+      _ref.invalidate(expensesRepositoryProvider);
+      _ref.invalidate(salesRepositoryProvider);
     } finally {
       if (mounted) {
         _ref.read(connectionStatusProvider.notifier).setSyncing(false);
@@ -444,7 +553,7 @@ class SyncService extends StateNotifier<SyncState> {
     final status = _ref.read(connectionStatusProvider);
     if (status != ConnectionStatus.online) return;
 
-    final companyId = _ref.read(sessionProvider).companyId;
+    final companyId = _companyId;
     if (companyId == null) return;
 
     try {
@@ -611,14 +720,49 @@ class SyncService extends StateNotifier<SyncState> {
             [companyId],
           )).map((r) => r['sale_id'] as String).toSet();
 
-          final unsyncedSaleIds = (await db.rawQuery(
-            'SELECT id FROM sales WHERE company_id = ? AND synced = 0',
-            [companyId],
-          )).map((r) => r['id'] as String).toSet();
+          final unsyncedSaleRows = await db.query(
+            'sales',
+            columns: ['id', 'client_transaction_id'],
+            where: 'company_id = ? AND synced = 0',
+            whereArgs: [companyId],
+          );
+          final unsyncedSaleIds = unsyncedSaleRows.map((r) => r['id'] as String).toSet();
+          final unsyncedClientTxIds = unsyncedSaleRows
+              .map((r) => r['client_transaction_id'] as String?)
+              .whereType<String>()
+              .toSet();
 
           for (final s in res['data']) {
             final saleId = s['id']?.toString() ?? '';
+            final clientTxId = s['client_transaction_id']?.toString() ?? s['clientTransactionId']?.toString();
             if (saleId.isEmpty || unsyncedSaleIds.contains(saleId)) continue;
+            if (clientTxId != null && unsyncedClientTxIds.contains(clientTxId)) continue;
+
+            if (clientTxId != null && clientTxId.isNotEmpty) {
+              final dupRows = await db.query(
+                'sales',
+                columns: ['id'],
+                where: 'company_id = ? AND client_transaction_id = ? AND id != ? AND synced = 1',
+                whereArgs: [companyId, clientTxId, saleId],
+              );
+              for (final dup in dupRows) {
+                final dupId = dup['id'] as String;
+                final detailedItems = await db.query(
+                  'sale_items',
+                  where: 'sale_id = ? AND company_id = ? AND product_id != "synced-summary"',
+                  whereArgs: [dupId, companyId],
+                );
+                if (detailedItems.isNotEmpty) {
+                  await db.delete('sale_items', where: 'sale_id = ? AND product_id = "synced-summary"', whereArgs: [saleId]);
+                  await db.update('sale_items', {'sale_id': saleId}, where: 'sale_id = ? AND company_id = ?', whereArgs: [dupId, companyId]);
+                } else {
+                  await db.delete('sale_items', where: 'sale_id = ? AND company_id = ?', whereArgs: [dupId, companyId]);
+                }
+                await db.update('invoices', {'sale_id': saleId}, where: 'sale_id = ? AND company_id = ?', whereArgs: [dupId, companyId]);
+                await db.delete('sales', where: 'id = ? AND company_id = ?', whereArgs: [dupId, companyId]);
+              }
+            }
+
             final soldAtStr = (s['sold_at'] ?? s['soldAt'] ?? s['created_at'] ?? s['createdAt'] ?? DateTime.now().toIso8601String()).toString();
             final total = (s['total'] as num?)?.toDouble() ?? 0.0;
             final subtotal = (s['subtotal'] as num?)?.toDouble() ?? total;
@@ -631,6 +775,7 @@ class SyncService extends StateNotifier<SyncState> {
               'sales',
               {
                 'id': saleId,
+                if (clientTxId != null) 'client_transaction_id': clientTxId,
                 'company_id': companyId,
                 'customer_name': customerName,
                 'subtotal': subtotal,
@@ -674,20 +819,39 @@ class SyncService extends StateNotifier<SyncState> {
         final res = await client.get('/expenses');
         if (res is Map && res['data'] is List) {
           final batch = db.batch();
-          final unsyncedExpenseIds = (await db.rawQuery(
-            'SELECT id FROM expenses WHERE company_id = ? AND synced = 0',
-            [companyId],
-          )).map((r) => r['id'] as String).toSet();
+          final unsyncedRows = await db.query(
+            'expenses',
+            columns: ['id', 'client_id'],
+            where: 'company_id = ? AND synced = 0',
+            whereArgs: [companyId],
+          );
+          final unsyncedExpenseIds = unsyncedRows.map((r) => r['id'] as String).toSet();
+          final unsyncedClientIds = unsyncedRows
+              .map((r) => r['client_id'] as String?)
+              .whereType<String>()
+              .toSet();
 
           for (final exp in res['data']) {
             final expId = exp['id']?.toString() ?? '';
+            final expClientId = exp['client_id']?.toString() ?? exp['clientId']?.toString();
             if (expId.isEmpty || unsyncedExpenseIds.contains(expId)) continue;
+            if (expClientId != null && unsyncedClientIds.contains(expClientId)) continue;
+
+            if (expClientId != null && expClientId.isNotEmpty) {
+              await db.delete(
+                'expenses',
+                where: 'company_id = ? AND client_id = ? AND id != ?',
+                whereArgs: [companyId, expClientId, expId],
+              );
+            }
+
             final dateStr = (exp['expense_date'] ?? exp['expenseDate'] ?? exp['created_at'] ?? exp['createdAt'] ?? DateTime.now().toIso8601String()).toString().substring(0, 10);
             final amount = (exp['amount'] as num?)?.toDouble() ?? 0.0;
             batch.insert(
               'expenses',
               {
                 'id': expId,
+                if (expClientId != null) 'client_id': expClientId,
                 'company_id': companyId,
                 'category': exp['category'] ?? 'other',
                 'description': exp['description'],
@@ -707,8 +871,11 @@ class SyncService extends StateNotifier<SyncState> {
         }
       } catch (_) {}
 
-      // Invalidate reports once data is populated locally
+      // Invalidate reports and providers once data is populated locally
       invalidateAllReports(_ref);
+      _ref.invalidate(dashboardRepositoryProvider);
+      _ref.invalidate(expensesRepositoryProvider);
+      _ref.invalidate(salesRepositoryProvider);
     } catch (_) {}
   }
 
@@ -720,6 +887,6 @@ class SyncService extends StateNotifier<SyncState> {
 }
 
 final syncServiceProvider = StateNotifierProvider<SyncService, SyncState>((ref) {
-  ref.watch(sessionProvider.select((s) => s.companyId));
+  ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
   return SyncService(ref);
 });
