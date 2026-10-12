@@ -95,7 +95,7 @@ const otpVerifyLimiter = createRateLimiter({
 
 const apiGlobalLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  max: 600,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 600,
   keyPrefix: 'api-global',
   includeEmail: false,
 });

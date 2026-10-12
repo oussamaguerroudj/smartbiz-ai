@@ -26,6 +26,8 @@ app.use((req, res, next) => {
 
 const path = require('path');
 const landingHtmlPath = path.join(__dirname, 'public', 'index.html');
+const adminPublicDir = path.join(__dirname, 'public', 'admin');
+const adminHtmlPath = path.join(adminPublicDir, 'index.html');
 
 app.use(
   helmet({
@@ -34,11 +36,27 @@ app.use(
   }),
 );
 app.use(cors({ origin: env.corsOrigin }));
-app.use(express.json({ limit: '20mb' }));
+app.use(
+  express.json({
+    limit: '20mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
 
 app.get(['/', '/download'], (req, res) => res.sendFile(landingHtmlPath));
 app.get('/health', (req, res) => res.json({ status: 'ok', env: env.nodeEnv }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', env: env.nodeEnv }));
+
+app.use('/admin', express.static(adminPublicDir));
+app.get(['/admin', '/admin/*'], (req, res) => {
+  const fs = require('fs');
+  if (fs.existsSync(adminHtmlPath)) {
+    return res.sendFile(adminHtmlPath);
+  }
+  return res.status(404).send('Admin dashboard not found');
+});
 
 app.use('/api', apiGlobalLimiter, routes);
 

@@ -72,6 +72,13 @@ function toPublicUser(row) {
     businessType: row.business_type || null,
     onboardingCompleted: row.onboarding_completed === true,
     emailVerified: row.email_verified === true,
+    entitlementType: row.entitlement_type || 'none',
+    trialStartsAt: row.trial_starts_at || null,
+    trialEndsAt: row.trial_ends_at || null,
+    licenseExpiresAt: row.license_expires_at || null,
+    accountApprovalStatus: row.account_approval_status || 'approved',
+    isSuspended: row.is_suspended === true,
+    suspensionReason: row.suspension_reason || null,
   };
 }
 
@@ -169,7 +176,9 @@ async function register({ name, email, password }) {
 async function login({ email, password }) {
   const normalizedEmail = normalizeEmail(email);
   const result = await query(
-    `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed
+    `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed,
+            c.entitlement_type, c.trial_starts_at, c.trial_ends_at, c.license_expires_at,
+            c.account_approval_status, c.is_suspended, c.suspension_reason
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
      WHERE lower(trim(u.email)) = $1 AND u.deleted_at IS NULL`,
@@ -237,6 +246,13 @@ async function login({ email, password }) {
       name: user.company_name,
       businessType: user.business_type || null,
       onboardingCompleted: user.onboarding_completed === true,
+      entitlementType: user.entitlement_type || 'none',
+      trialStartsAt: user.trial_starts_at || null,
+      trialEndsAt: user.trial_ends_at || null,
+      licenseExpiresAt: user.license_expires_at || null,
+      accountApprovalStatus: user.account_approval_status || 'approved',
+      isSuspended: user.is_suspended === true,
+      suspensionReason: user.suspension_reason || null,
     },
     ...tokens,
   };
@@ -258,7 +274,9 @@ async function refresh({ refreshToken }) {
   }
 
   const result = await query(
-    `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed
+    `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed,
+            c.entitlement_type, c.trial_starts_at, c.trial_ends_at, c.license_expires_at,
+            c.account_approval_status, c.is_suspended, c.suspension_reason
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
      WHERE u.id = $1 AND u.deleted_at IS NULL`,
@@ -287,6 +305,13 @@ async function refresh({ refreshToken }) {
       name: user.company_name,
       businessType: user.business_type || null,
       onboardingCompleted: user.onboarding_completed === true,
+      entitlementType: user.entitlement_type || 'none',
+      trialStartsAt: user.trial_starts_at || null,
+      trialEndsAt: user.trial_ends_at || null,
+      licenseExpiresAt: user.license_expires_at || null,
+      accountApprovalStatus: user.account_approval_status || 'approved',
+      isSuspended: user.is_suspended === true,
+      suspensionReason: user.suspension_reason || null,
     },
     ...tokens,
   };
@@ -636,7 +661,9 @@ async function resetPassword({ email, code, newPassword }) {
 
 async function getProfile(userId) {
   const result = await query(
-    `SELECT u.*, c.name AS company_name, c.business_type, c.onboarding_completed, c.currency, c.phone AS company_phone, c.address AS company_address
+    `SELECT u.*, c.name AS company_name, c.business_type, c.onboarding_completed, c.currency, c.phone AS company_phone, c.address AS company_address,
+            c.entitlement_type, c.trial_starts_at, c.trial_ends_at, c.license_expires_at,
+            c.account_approval_status, c.is_suspended, c.suspension_reason
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
      WHERE u.id = $1 AND u.deleted_at IS NULL`,
@@ -658,6 +685,13 @@ async function getProfile(userId) {
       currency: user.currency,
       phone: user.company_phone || null,
       address: user.company_address || null,
+      entitlementType: user.entitlement_type || 'none',
+      trialStartsAt: user.trial_starts_at || null,
+      trialEndsAt: user.trial_ends_at || null,
+      licenseExpiresAt: user.license_expires_at || null,
+      accountApprovalStatus: user.account_approval_status || 'approved',
+      isSuspended: user.is_suspended === true,
+      suspensionReason: user.suspension_reason || null,
     },
   };
 }

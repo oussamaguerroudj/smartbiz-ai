@@ -22,11 +22,19 @@ const pharmacyRoutes = require('../modules/pharmacy/pharmacy.routes');
 const superetteRoutes = require('../modules/superette/superette.routes');
 const clothingRoutes = require('../modules/clothing/clothing.routes');
 const enterpriseRoutes = require('../modules/enterprise/enterprise.routes');
+const subscriptionsRoutes = require('../modules/subscriptions/subscriptions.routes');
+const paymentsRoutes = require('../modules/payments/payments.routes');
+const adminRoutes = require('../modules/admin/admin.routes');
+const supportRoutes = require('../modules/support/support.routes');
 
 const router = express.Router();
 
 router.use('/auth', authRoutes);
 router.use('/companies', companiesRoutes);
+router.use('/subscriptions', subscriptionsRoutes);
+router.use('/payments', paymentsRoutes);
+router.use('/admin', adminRoutes);
+router.use('/support', supportRoutes);
 router.use('/products', productsRoutes);
 router.use('/sales', salesRoutes);
 router.use('/invoices', invoicesRoutes);

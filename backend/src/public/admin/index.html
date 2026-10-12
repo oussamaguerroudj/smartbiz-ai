@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modiri AI — لوحة تحكم الإدارة | Admin Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --font-family: 'Cairo', 'Inter', -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-family); }
+    body {
+      background: radial-gradient(circle at 50% 0%, #1e293b, var(--bg-dark) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Layout */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .brand-badge {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--primary);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-warning { background: var(--warning); color: #fff; }
+    .btn-outline { background: transparent; border-color: var(--card-border); color: var(--text); }
+    .btn-outline:hover { background: rgba(255, 255, 255, 0.05); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    /* Tabs */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 28px;
+      background: rgba(15, 23, 42, 0.6);
+      border-bottom: 1px solid var(--card-border);
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Content Area */
+    .main-container {
+      padding: 24px 28px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+    .grid-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .kpi-title { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .kpi-val { font-size: 26px; font-weight: 800; color: #fff; }
+    .kpi-sub { font-size: 11px; margin-top: 4px; }
+
+    /* Table styling */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+    }
+    html[dir="ltr"] table { text-align: left; }
+    th {
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--card-border);
+    }
+    td {
+      padding: 12px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .badge-primary { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .badge-muted { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+
+    /* Filter Toolbar */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .search-input {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      min-width: 260px;
+    }
+    .select-input {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      padding: 16px;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal-box {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-body { margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .form-control {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    /* Login Form Card */
+    .login-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="brand">
+      <span>🛡️ Modiri AI</span>
+      <span class="brand-badge" id="roleBadge">Super Admin</span>
+    </div>
+    <div class="nav-actions">
+      <select id="langSelect" class="select-input" onchange="switchLanguage(this.value)">
+        <option value="ar" selected>العربية (Arabic)</option>
+        <option value="fr">Français (French)</option>
+        <option value="en">English</option>
+      </select>
+      <div id="authActions" style="display: none;">
+        <span id="adminName" style="font-size: 13px; color: var(--text-muted); margin-left: 8px;"></span>
+        <button class="btn btn-outline btn-sm" onclick="logout()">تسجيل الخروج</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs (Only visible when logged in) -->
+  <nav class="tabs-bar" id="tabsBar" style="display: none;">
+    <button class="tab-btn active" onclick="showTab('overview')" id="tab-overview">📊 نظرة عامة (Overview)</button>
+    <button class="tab-btn" onclick="showTab('users')" id="tab-users">👥 المستخدمون والتراخيص (Users)</button>
+    <button class="tab-btn" onclick="showTab('payments')" id="tab-payments">💳 مراجعة الدفع CCP (Payments)</button>
+    <button class="tab-btn" onclick="showTab('support')" id="tab-support">📩 الدعم الفني (Support)</button>
+    <button class="tab-btn" onclick="showTab('feedback')" id="tab-feedback">💡 الملاحظات (Feedback)</button>
+    <button class="tab-btn" onclick="showTab('audit')" id="tab-audit">🛡️ سجل الأمان (Audit Logs)</button>
+  </nav>
+
+  <!-- Login Screen -->
+  <div class="login-container" id="loginView">
+    <div class="login-card">
+      <div style="font-size: 44px; margin-bottom: 12px;">🔐</div>
+      <h2 style="font-size: 22px; margin-bottom: 6px;">بوابة الإدارة المركزية</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Modiri AI Administrative Portal</p>
+      
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group" style="text-align: right;">
+          <label>البريد الإلكتروني للإدارة</label>
+          <input type="email" id="loginEmail" class="form-control" required placeholder="admin@domain.com">
+        </div>
+        <div class="form-group" style="text-align: right;">
+          <label>كلمة المرور</label>
+          <input type="password" id="loginPassword" class="form-control" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 12px;" id="loginBtn">
+          تسجيل الدخول للإدارة
+        </button>
+      </form>
+      <div id="loginError" style="color: var(--danger); font-size: 13px; margin-top: 14px; display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Authenticated Admin Content Area -->
+  <main class="main-container" id="dashboardView" style="display: none;">
+    
+    <!-- Tab 1: Overview KPIs -->
+    <div id="tabContent-overview">
+      <div class="grid-kpis" id="kpiContainer">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+
+    <!-- Tab 2: User & License Management -->
+    <div id="tabContent-users" style="display: none;">
+      <div class="card">
+        <div class="toolbar">
+          <input type="text" id="userSearchInput" class="search-input" placeholder="🔍 بحث بالاسم أو البريد..." oninput="debounceUserSearch()">
+          <select id="userFilterSelect" class="select-input" onchange="loadUsers()">
+            <option value="all">جميع الحسابات (All Accounts)</option>
+            <option value="active_trial">فترة تجريبية نشطة (Active Trial)</option>
+            <option value="expiring_48h">تنتهي خلال 48 ساعة (Expiring in 48h)</option>
+            <option value="expiring_24h">تنتهي خلال 24 ساعة (Expiring in 24h)</option>
+            <option value="expired_trial">فترة تجريبية منتهية (Expired Trial)</option>
+            <option value="lifetime">رخصة مدى الحياة (Lifetime License)</option>
+            <option value="temporary">رخصة مؤقتة (Temporary License)</option>
+            <option value="pending_approval">في انتظار الموافقة (Pending Approval)</option>
+            <option value="suspended">حسابات موقوفة (Suspended)</option>
+            <option value="pending_manual_payment">بانتظار مراجعة الدفع (Pending Payment)</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>الاسم والبريد</th>
+                <th>المؤسسة / النشاط</th>
+                <th>الترخيص الحالي</th>
+                <th>تاريخ الانتهاء</th>
+                <th>حالة الحساب</th>
+                <th>إجراءات الإدارة</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Manual Payments Review -->
+    <div id="tabContent-payments" style="display: none;">
+      <div class="card">
+        <h3 style="font-size: 16px; margin-bottom: 16px;">طلبات الدفع اليدوي عبر CCP وتأكيد الوصل</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>رقم الطلب</th>
+                <th>المستخدم والمؤسسة</th>
+                <th>المبلغ المتوقع</th>
+                <th>المرجع</th>
+                <th>وصل الدفع</th>
+                <th>الحالة</th>
+                <th>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Support Messages Inbox -->
+    <div id="tabContent-support" style="display: none;">
+      <div class="card">
+        <div class="toolbar">
+          <h3 style="font-size: 16px;">صندوق رسائل الدعم الفني</h3>
+          <select id="supportFilterSelect" class="select-input" onchange="loadSupport()">
+            <option value="all">جميع الرسائل (All)</option>
+            <option value="new" selected>جديدة (New)</option>
+            <option value="in_progress">قيد المعالجة (In Progress)</option>
+            <option value="answered">تم الرد (Answered)</option>
+            <option value="closed">مغلقة (Closed)</option>
+          </select>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>رقم التذكرة</th>
+                <th>المرسل</th>
+                <th>التصنيف</th>
+                <th>الرسالة</th>
+                <th>الحالة</th>
+                <th>إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="supportTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Feedback Submissions -->
+    <div id="tabContent-feedback" style="display: none;">
+      <div class="card">
+        <h3 style="font-size: 16px; margin-bottom: 16px;">ملاحظات واقتراحات المستخدمين</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>النوع</th>
+                <th>التقييم</th>
+                <th>المحتوى</th>
+                <th>الحالة</th>
+                <th>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody id="feedbackTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 6: Audit Logs -->
+    <div id="tabContent-audit" style="display: none;">
+      <div class="card">
+        <h3 style="font-size: 16px; margin-bottom: 16px;">سجل العمليات والأمان الإداري غير القابل للتعديل</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ (UTC)</th>
+                <th>المسؤول</th>
+                <th>الإجراء</th>
+                <th>المؤسسة المستهدفة</th>
+                <th>السبب والملاحظات</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Action Modals -->
+  <div class="modal-overlay" id="actionModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitle">إجراء إداري</h3>
+        <button class="btn btn-outline btn-sm" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentToken = sessionStorage.getItem('modiri_admin_token');
+    let currentAdmin = JSON.parse(sessionStorage.getItem('modiri_admin_user') || 'null');
+    let activeTab = 'overview';
+    let searchTimeout = null;
+
+    function getHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      };
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errBox = document.getElementById('loginError');
+      errBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Login failed');
+
+        currentToken = data.data.accessToken;
+        currentAdmin = data.data.admin;
+        sessionStorage.setItem('modiri_admin_token', currentToken);
+        sessionStorage.setItem('modiri_admin_user', JSON.stringify(currentAdmin));
+        initDashboard();
+      } catch (err) {
+        errBox.textContent = err.message;
+        errBox.style.display = 'block';
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('modiri_admin_token');
+      sessionStorage.removeItem('modiri_admin_user');
+      currentToken = null;
+      currentAdmin = null;
+      document.getElementById('loginView').style.display = 'flex';
+      document.getElementById('dashboardView').style.display = 'none';
+      document.getElementById('tabsBar').style.display = 'none';
+      document.getElementById('authActions').style.display = 'none';
+    }
+
+    function initDashboard() {
+      if (!currentToken) {
+        document.getElementById('loginView').style.display = 'flex';
+        document.getElementById('dashboardView').style.display = 'none';
+        return;
+      }
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('dashboardView').style.display = 'block';
+      document.getElementById('tabsBar').style.display = 'flex';
+      document.getElementById('authActions').style.display = 'flex';
+      document.getElementById('adminName').textContent = `${currentAdmin.name} (${currentAdmin.role})`;
+      document.getElementById('roleBadge').textContent = currentAdmin.role === 'super_admin' ? 'Super Admin' : 'Support Desk';
+
+      showTab(activeTab);
+    }
+
+    function showTab(tabId) {
+      activeTab = tabId;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`tab-${tabId}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      ['overview', 'users', 'payments', 'support', 'feedback', 'audit'].forEach(t => {
+        const el = document.getElementById(`tabContent-${t}`);
+        if (el) el.style.display = (t === tabId) ? 'block' : 'none';
+      });
+
+      if (tabId === 'overview') loadOverview();
+      if (tabId === 'users') loadUsers();
+      if (tabId === 'payments') loadPayments();
+      if (tabId === 'support') loadSupport();
+      if (tabId === 'feedback') loadFeedback();
+      if (tabId === 'audit') loadAudit();
+    }
+
+    async function loadOverview() {
+      try {
+        const res = await fetch('/api/admin/overview', { headers: getHeaders() });
+        if (res.status === 401 || res.status === 403) return logout();
+        const json = await res.json();
+        const m = json.data;
+
+        const kpis = [
+          { title: 'إجمالي الحسابات المسجلة', val: m.totalAccounts, sub: `المفعلة: ${m.verifiedAccounts}`, color: '#3b82f6' },
+          { title: 'فترات تجريبية نشطة', val: m.activeTrials, sub: `تنتهي خلال 48 س: ${m.trialsExpiring48h}`, color: '#10b981' },
+          { title: 'تجارب تنتهي خلال 24 س', val: m.trialsExpiring24h, sub: 'تتطلب متابعة المبيعات', color: '#f59e0b' },
+          { title: 'تجارب مجانية منتهية', val: m.expiredTrials, sub: 'جاهزة للترقية', color: '#ef4444' },
+          { title: 'رخص مدى الحياة نشطة', val: m.lifetimeLicenses, sub: '15,000 دج مدفوعة', color: '#10b981' },
+          { title: 'رخص مؤقتة نشطة', val: m.temporaryLicenses, sub: 'ممنوحة إدارياً', color: '#8b5cf6' },
+          { title: 'وصل CCP قيد المراجعة', val: m.manualPaymentsUnderReview, sub: 'تحتاج تأكيد فوري', color: '#ec4899' },
+          { title: 'رسائل دعم بحاجة للرد', val: m.unansweredSupportMessages, sub: 'تذاكر جديدة', color: '#06b6d4' },
+        ];
+
+        document.getElementById('kpiContainer').innerHTML = kpis.map(k => `
+          <div class="card" style="border-top: 3px solid ${k.color}">
+            <div class="kpi-title">${k.title}</div>
+            <div class="kpi-val">${k.val}</div>
+            <div class="kpi-sub" style="color: ${k.color}">${k.sub}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function debounceUserSearch() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(loadUsers, 300);
+    }
+
+    async function loadUsers() {
+      const search = document.getElementById('userSearchInput').value;
+      const filter = document.getElementById('userFilterSelect').value;
+      try {
+        const res = await fetch(`/api/admin/users?search=${encodeURIComponent(search)}&filter=${filter}`, { headers: getHeaders() });
+        const json = await res.json();
+        const users = json.data.users;
+
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = users.map(u => {
+          let badge = `<span class="badge badge-muted">none</span>`;
+          if (u.entitlementType === 'lifetime') badge = `<span class="badge badge-success">مدى الحياة (Lifetime)</span>`;
+          else if (u.entitlementType === 'trial') badge = `<span class="badge badge-warning">تجريبي (Trial)</span>`;
+          else if (u.entitlementType === 'temporary') badge = `<span class="badge badge-primary">مؤقت (${u.entitlementType})</span>`;
+
+          let expiry = u.entitlementType === 'lifetime' ? 'دائم (Permanent)' : (u.licenseExpiresAt || u.trialEndsAt ? new Date(u.licenseExpiresAt || u.trialEndsAt).toLocaleDateString() : '-');
+
+          let statusBadge = u.isSuspended
+            ? `<span class="badge badge-danger">موقوف</span>`
+            : (u.accountApprovalStatus === 'pending' ? `<span class="badge badge-warning">بانتظار الموافقة</span>` : `<span class="badge badge-success">نشط</span>`);
+
+          return `
+            <tr>
+              <td>
+                <div style="font-weight: 700;">${u.name}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">${u.email}</div>
+              </td>
+              <td>${u.companyName || 'بدون مؤسسة'} (${u.businessType || 'عام'})</td>
+              <td>${badge}</td>
+              <td>${expiry}</td>
+              <td>${statusBadge}</td>
+              <td>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-outline btn-sm" onclick="openGrantLifetimeModal('${u.companyId}', '${u.name}')">منح مدى الحياة</button>
+                  <button class="btn btn-outline btn-sm" onclick="openGrantTempModal('${u.companyId}', '${u.name}')">منح مؤقت</button>
+                  <button class="btn btn-outline btn-sm" onclick="openExtendModal('${u.companyId}', '${u.name}')">تمديد</button>
+                  <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="toggleSuspend('${u.companyId}', ${u.isSuspended})">
+                    ${u.isSuspended ? 'إلغاء التوقيف' : 'توقيف'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadPayments() {
+      try {
+        const res = await fetch('/api/admin/payments/manual', { headers: getHeaders() });
+        const json = await res.json();
+        const payments = json.data;
+
+        document.getElementById('paymentsTableBody').innerHTML = payments.map(p => {
+          let receiptLink = p.receipt_storage_path
+            ? `<a href="/api/payments/receipts/${encodeURIComponent(p.receipt_storage_path)}" target="_blank" class="btn btn-outline btn-sm">عرض الوصل 📄</a>`
+            : `<span style="color: var(--text-muted); font-size: 11px;">لم يرفع بعد</span>`;
+
+          let statusBadge = p.status === 'approved'
+            ? `<span class="badge badge-success">مقبول</span>`
+            : (p.status === 'rejected' ? `<span class="badge badge-danger">مرفوض</span>` : `<span class="badge badge-warning">قيد المراجعة</span>`);
+
+          let actions = p.status === 'under_review' || p.status === 'pending' ? `
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-success btn-sm" onclick="decidePayment('${p.id}', 'approve')">قبول وتفعيل</button>
+              <button class="btn btn-danger btn-sm" onclick="openRejectPaymentModal('${p.id}')">رفض</button>
+            </div>
+          ` : `<span style="font-size: 12px; color: var(--text-muted);">مكتمل</span>`;
+
+          return `
+            <tr>
+              <td><code>${p.order_number || p.id.substring(0,8)}</code></td>
+              <td>${p.user_name} (${p.company_name})</td>
+              <td><strong>${Number(p.amount).toLocaleString()} دج</strong></td>
+              <td>${p.transfer_reference || '-'}</td>
+              <td>${receiptLink}</td>
+              <td>${statusBadge}</td>
+              <td>${actions}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadSupport() {
+      const status = document.getElementById('supportFilterSelect').value;
+      try {
+        const res = await fetch(`/api/admin/support?status=${status}`, { headers: getHeaders() });
+        const json = await res.json();
+        const messages = json.data;
+
+        document.getElementById('supportTableBody').innerHTML = messages.map(m => `
+          <tr>
+            <td><code>${m.ticket_number}</code></td>
+            <td>
+              <div>${m.name}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">${m.email} ${m.phone ? '• ' + m.phone : ''}</div>
+            </td>
+            <td><span class="badge badge-muted">${m.category}</span></td>
+            <td><div style="max-width: 320px; white-space: pre-wrap; font-size: 12px;">${m.message}</div></td>
+            <td><span class="badge ${m.status === 'new' ? 'badge-warning' : 'badge-success'}">${m.status}</span></td>
+            <td>
+              <select class="select-input" onchange="updateSupportStatus('${m.id}', this.value)" style="font-size: 11px; padding: 4px;">
+                <option value="new" ${m.status==='new'?'selected':''}>جديدة</option>
+                <option value="in_progress" ${m.status==='in_progress'?'selected':''}>قيد المعالجة</option>
+                <option value="answered" ${m.status==='answered'?'selected':''}>تم الرد</option>
+                <option value="closed" ${m.status==='closed'?'selected':''}>مغلقة</option>
+              </select>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function updateSupportStatus(id, status) {
+      await fetch(`/api/admin/support/${id}/status`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ status })
+      });
+      loadSupport();
+    }
+
+    async function loadFeedback() {
+      try {
+        const res = await fetch('/api/admin/feedback', { headers: getHeaders() });
+        const json = await res.json();
+        const feedback = json.data;
+
+        document.getElementById('feedbackTableBody').innerHTML = feedback.map(f => `
+          <tr>
+            <td>${new Date(f.created_at).toLocaleDateString()}</td>
+            <td><span class="badge badge-primary">${f.category}</span></td>
+            <td>${f.rating ? '⭐ ' + f.rating : '-'}</td>
+            <td><div style="max-width: 350px; font-size: 12px;">${f.message}</div></td>
+            <td><span class="badge badge-muted">${f.status}</span></td>
+            <td>
+              <button class="btn btn-outline btn-sm" onclick="markFeedbackReviewed('${f.id}')">تم الاطلاع</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function markFeedbackReviewed(id) {
+      await fetch(`/api/admin/feedback/${id}/status`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ status: 'reviewed' })
+      });
+      loadFeedback();
+    }
+
+    async function loadAudit() {
+      try {
+        const res = await fetch('/api/admin/audit-logs', { headers: getHeaders() });
+        const json = await res.json();
+        const logs = json.data;
+
+        document.getElementById('auditTableBody').innerHTML = logs.map(l => `
+          <tr>
+            <td><small>${new Date(l.created_at).toISOString().replace('T', ' ').substring(0, 19)}</small></td>
+            <td>${l.actor_name || 'System'} (${l.actor_email || '-'})</td>
+            <td><span class="badge badge-primary">${l.action}</span></td>
+            <td>${l.company_name || '-'}</td>
+            <td><small>${l.reason || '-'}</small></td>
+          </tr>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    /* Modal Handlers */
+    function openModal(title, html) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('actionModal').classList.add('open');
+    }
+    function closeModal() {
+      document.getElementById('actionModal').classList.remove('open');
+    }
+
+    function openGrantLifetimeModal(companyId, name) {
+      openModal(`منح رخصة مدى الحياة: ${name}`, `
+        <form onsubmit="submitGrantLifetime(event, '${companyId}')">
+          <div class="form-group">
+            <label>سبب المنح الإداري (مطلوب لأغراض التدقيق)</label>
+            <textarea id="grantReason" class="form-control" rows="3" required placeholder="مثال: تسوية يدوية معتمدة أو عميل VIP"></textarea>
+          </div>
+          <button type="submit" class="btn btn-success" style="width: 100%;">تأكيد منح الرخصة مدى الحياة</button>
+        </form>
+      `);
+    }
+
+    async function submitGrantLifetime(e, companyId) {
+      e.preventDefault();
+      const reason = document.getElementById('grantReason').value;
+      const res = await fetch(`/api/admin/users/${companyId}/grant-lifetime`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ reason })
+      });
+      if (res.ok) { closeModal(); loadUsers(); }
+      else alert('Failed to grant license');
+    }
+
+    function openGrantTempModal(companyId, name) {
+      openModal(`منح رخصة مؤقتة: ${name}`, `
+        <form onsubmit="submitGrantTemp(event, '${companyId}')">
+          <div class="form-group">
+            <label>المدة المحددة</label>
+            <select id="tempPreset" class="form-control" onchange="document.getElementById('customDaysWrap').style.display = this.value === 'custom' ? 'block' : 'none'">
+              <option value="15d">15 يوماً</option>
+              <option value="1m">شهر واحد (1 Month)</option>
+              <option value="3m">3 أشهر (3 Months)</option>
+              <option value="6m">6 أشهر (6 Months)</option>
+              <option value="1y">سنة كاملة (1 Year)</option>
+              <option value="custom">أيام مخصصة (Custom Days)</option>
+            </select>
+          </div>
+          <div class="form-group" id="customDaysWrap" style="display: none;">
+            <label>عدد الأيام</label>
+            <input type="number" id="tempCustomDays" class="form-control" min="1" max="3650" placeholder="مثال: 45">
+          </div>
+          <div class="form-group">
+            <label>سبب المنح</label>
+            <input type="text" id="tempReason" class="form-control" required placeholder="توضيح سبب المنح">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">تأكيد المنح</button>
+        </form>
+      `);
+    }
+
+    async function submitGrantTemp(e, companyId) {
+      e.preventDefault();
+      const durationPreset = document.getElementById('tempPreset').value;
+      const customDays = document.getElementById('tempCustomDays').value;
+      const reason = document.getElementById('tempReason').value;
+
+      const res = await fetch(`/api/admin/users/${companyId}/grant-temporary`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ durationPreset, customDays, reason })
+      });
+      if (res.ok) { closeModal(); loadUsers(); }
+      else alert('Failed to grant temporary license');
+    }
+
+    function openExtendModal(companyId, name) {
+      openModal(`تمديد رخصة: ${name}`, `
+        <form onsubmit="submitExtend(event, '${companyId}')">
+          <div class="form-group">
+            <label>عدد الأيام للإضافة</label>
+            <input type="number" id="extendDays" class="form-control" min="1" max="365" value="30" required>
+          </div>
+          <div class="form-group">
+            <label>السبب</label>
+            <input type="text" id="extendReason" class="form-control" placeholder="تمديد تجربة أو ترخيص">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">تأكيد التمديد</button>
+        </form>
+      `);
+    }
+
+    async function submitExtend(e, companyId) {
+      e.preventDefault();
+      const daysToAdd = document.getElementById('extendDays').value;
+      const reason = document.getElementById('extendReason').value;
+
+      const res = await fetch(`/api/admin/users/${companyId}/extend`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ daysToAdd, reason })
+      });
+      if (res.ok) { closeModal(); loadUsers(); }
+      else alert('Failed to extend license');
+    }
+
+    async function toggleSuspend(companyId, currentSuspended) {
+      const reason = prompt(currentSuspended ? 'سبب إلغاء التوقيف:' : 'سبب توقيف الحساب:');
+      if (reason === null) return;
+
+      const res = await fetch(`/api/admin/users/${companyId}/suspend`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ isSuspended: !currentSuspended, reason })
+      });
+      if (res.ok) loadUsers();
+      else alert('Action failed');
+    }
+
+    async function decidePayment(id, decision) {
+      if (!confirm('هل أنت متأكد من تأكيد استلام الأموال وتفعيل الرخصة مدى الحياة لهذا الحساب؟')) return;
+      const res = await fetch(`/api/admin/payments/manual/${id}/decide`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ decision })
+      });
+      if (res.ok) loadPayments();
+      else alert('Failed to approve payment');
+    }
+
+    function openRejectPaymentModal(id) {
+      openModal('رفض وصل الدفع اليدوي', `
+        <form onsubmit="submitRejectPayment(event, '${id}')">
+          <div class="form-group">
+            <label>سبب الرفض (سيتم إرساله للمستخدم)</label>
+            <textarea id="rejectReason" class="form-control" rows="3" required placeholder="مثال: الوصل غير واضح، أو المبلغ غير متطابق"></textarea>
+          </div>
+          <button type="submit" class="btn btn-danger" style="width: 100%;">تأكيد الرفض</button>
+        </form>
+      `);
+    }
+
+    async function submitRejectPayment(e, id) {
+      e.preventDefault();
+      const rejectionReason = document.getElementById('rejectReason').value;
+      const res = await fetch(`/api/admin/payments/manual/${id}/decide`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ decision: 'reject', rejectionReason })
+      });
+      if (res.ok) { closeModal(); loadPayments(); }
+      else alert('Failed to reject payment');
+    }
+
+    function switchLanguage(lang) {
+      const html = document.documentElement;
+      if (lang === 'ar') {
+        html.dir = 'rtl';
+        html.lang = 'ar';
+      } else {
+        html.dir = 'ltr';
+        html.lang = lang;
+      }
+    }
+
+    // Auto-login on load if token exists
+    if (currentToken) {
+      initDashboard();
+    }
+  </script>
+</body>
+</html>

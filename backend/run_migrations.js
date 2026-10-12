@@ -25,6 +25,10 @@ async function runMigrations() {
     await client.connect();
     console.log('Connected to PostgreSQL database successfully.');
 
+    // 0. Acquire migration advisory lock to serialize concurrent application startups
+    console.log('Acquiring migration advisory lock...');
+    await client.query("SELECT pg_advisory_lock(hashtext('smartbiz_schema_migrations_lock'))");
+
     // 1. Ensure tracking table exists
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -64,7 +68,7 @@ async function runMigrations() {
       }
     }
 
-    // 4. Run pending migrations in strict sequential order
+    // 4. Run pending migrations in strict sequential order inside atomic transactions
     let ranCount = 0;
     for (const file of files) {
       if (executedSet.has(file)) {
@@ -76,33 +80,57 @@ async function runMigrations() {
       const sql = fs.readFileSync(filePath, 'utf8');
 
       try {
+        await client.query('BEGIN');
         await client.query(sql);
         await client.query(
           'INSERT INTO schema_migrations (version) VALUES ($1)',
           [file],
         );
+        await client.query('COMMIT');
         ranCount += 1;
         console.log(`  OK: ${file}`);
       } catch (err) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (_) {}
         console.error(`FATAL: Migration failed on ${file}:`, err.message);
         throw err;
       }
     }
 
-    await client.end();
     if (ranCount === 0) {
       console.log('Database is already up to date. No pending migrations.');
     } else {
       console.log(`Successfully executed ${ranCount} pending migration(s).`);
     }
-    process.exit(0);
+
+    // Release advisory lock
+    try {
+      await client.query("SELECT pg_advisory_unlock(hashtext('smartbiz_schema_migrations_lock'))");
+    } catch (_) {}
+
+    await client.end();
+    if (require.main === module) {
+      process.exit(0);
+    }
+    return { success: true, ranCount };
   } catch (err) {
     console.error('Migration runner failed:', err.message);
     try {
+      await client.query("SELECT pg_advisory_unlock(hashtext('smartbiz_schema_migrations_lock'))");
+    } catch (_) {}
+    try {
       await client.end();
     } catch (_) {}
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    }
+    throw err;
   }
 }
 
-runMigrations();
+if (require.main === module) {
+  runMigrations();
+}
+
+module.exports = { runMigrations };
