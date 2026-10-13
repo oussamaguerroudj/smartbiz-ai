@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { query, withTransaction } = require('../../config/db');
 const env = require('../../config/env');
 const ApiError = require('../../utils/ApiError');
+const pushService = require('../notifications/push.service');
 
 function signAdminToken(user) {
   const payload = {
@@ -277,6 +278,14 @@ async function grantLifetimeLicense({ companyId, adminId, reason }) {
           `An administrator has granted your account a Modiri AI Lifetime License. Reason: ${reason}`,
         ],
       );
+
+      await pushService.sendPushNotification({
+        userId: ownerRes.rows[0].id,
+        companyId,
+        title: 'Lifetime License Granted | تم منح رخصة مدى الحياة',
+        body: `An administrator has granted your account a Modiri AI Lifetime License. Reason: ${reason}`,
+        data: { type: 'license_granted' },
+      });
     }
 
     return { success: true, companyId, entitlementType: 'lifetime' };
@@ -674,6 +683,14 @@ async function decideManualPayment({ requestId, adminId, decision, rejectionReas
         ],
       );
 
+      await pushService.sendPushNotification({
+        userId: request.user_id,
+        companyId: request.company_id,
+        title: 'Manual Payment Approved | تم قبول وصل الدفع وتفعيل الرخصة',
+        body: 'Your manual CCP payment has been verified by the administrator. Your Modiri AI Lifetime License is permanently active!',
+        data: { type: 'license_granted' },
+      });
+
       return { success: true, status: 'approved', companyId: request.company_id };
     } else {
       // Reject
@@ -721,6 +738,14 @@ async function decideManualPayment({ requestId, adminId, decision, rejectionReas
           `Your manual payment receipt was rejected: ${rejectionReason}. You may re-upload a clear receipt from the purchase screen.`,
         ],
       );
+
+      await pushService.sendPushNotification({
+        userId: request.user_id,
+        companyId: request.company_id,
+        title: 'Receipt Verification Rejected | تنبيه بخصوص وصل الدفع',
+        body: `Your manual payment receipt was rejected: ${rejectionReason}.`,
+        data: { type: 'payment_update' },
+      });
 
       return { success: true, status: 'rejected', companyId: request.company_id };
     }
@@ -811,7 +836,19 @@ async function updateSupportStatus({ messageId, adminId, status, adminNotes, pub
   }
 
   if (!res.rows[0]) throw ApiError.notFound('Support message not found');
-  return res.rows[0];
+
+  const updated = res.rows[0];
+  if (publicReply && (updated.user_id || updated.company_id)) {
+    await pushService.sendPushNotification({
+      userId: updated.user_id,
+      companyId: updated.company_id,
+      title: 'Support Reply | رد من فريق الدعم',
+      body: String(publicReply).slice(0, 150),
+      data: { type: 'support_reply', messageId: updated.id },
+    });
+  }
+
+  return updated;
 }
 
 async function listFeedback({ status = 'all' }) {

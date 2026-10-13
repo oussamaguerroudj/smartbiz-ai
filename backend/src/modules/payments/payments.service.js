@@ -4,6 +4,7 @@ const path = require('path');
 const { query, withTransaction } = require('../../config/db');
 const subscriptionConfig = require('../../config/subscription');
 const ApiError = require('../../utils/ApiError');
+const pushService = require('../notifications/push.service');
 
 const RECEIPTS_DIR = path.join(__dirname, '..', '..', '..', 'storage', 'receipts');
 
@@ -121,7 +122,7 @@ async function createChargilyCheckout({ companyId, userId, successUrl, failureUr
 
         const chargilyData = await chargilyRes.json();
         if (chargilyRes.ok && chargilyData && chargilyData.checkout_url) {
-          checkoutUrl = chargilyData.checkout_url;
+          checkoutUrl = String(chargilyData.checkout_url).replace(/^http:\/\//i, 'https://');
           providerCheckoutId = chargilyData.id;
 
           await client.query(
@@ -376,6 +377,14 @@ async function processChargilyWebhook({ rawBody, signatureHeader, eventData }) {
           'Thank you! Your payment of 15,000 DZD has been verified. Your Modiri AI lifetime license is permanently active.\n\nشكراً لك! تم تأكيد دفع 15,000 دج. رخصة Modiri AI مدى الحياة مفعلة لحسابك بشكل دائم.\n\nMerci ! Votre paiement de 15 000 DZD est validé. Votre licence à vie Modiri AI est activée.',
         ],
       );
+
+      await pushService.sendPushNotification({
+        userId: order.user_id,
+        companyId: order.company_id,
+        title: 'Lifetime License Activated | تم تفعيل رخصة مدى الحياة',
+        body: 'Thank you! Your payment of 15,000 DZD has been verified. Your Modiri AI lifetime license is permanently active.',
+        data: { type: 'license_granted', orderId: order.id },
+      });
 
       return { status: 'activated', orderId: order.id };
     } else if (isExplicitlyFailed) {

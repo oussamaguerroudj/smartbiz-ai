@@ -1,6 +1,7 @@
 const { query, withTransaction } = require('../../config/db');
 const env = require('../../config/env');
 const { sendMail } = require('../../utils/email');
+const pushService = require('./push.service');
 
 /**
  * Dispatches an email notification if Brevo email delivery is configured,
@@ -101,6 +102,15 @@ async function processTrialReminders() {
         body,
       });
 
+      // Dispatch push notification to registered devices
+      await pushService.sendPushNotification({
+        userId: row.user_id,
+        companyId: row.id,
+        title,
+        body,
+        data: { type: 'trial_reminder_48h' },
+      });
+
       // Update company timestamp
       await client.query(
         `UPDATE companies
@@ -173,6 +183,15 @@ async function processTrialReminders() {
         body,
       });
 
+      // Dispatch push notification to registered devices
+      await pushService.sendPushNotification({
+        userId: row.user_id,
+        companyId: row.id,
+        title,
+        body,
+        data: { type: 'trial_reminder_24h' },
+      });
+
       await client.query(
         `UPDATE companies
          SET trial_reminder_24h_sent_at = now(), updated_at = now()
@@ -240,6 +259,15 @@ async function processTrialReminders() {
         subject: 'Modiri AI — Free Trial Expired | انتهت فترتك التجريبية المجانية',
         title,
         body,
+      });
+
+      // Dispatch push notification to registered devices
+      await pushService.sendPushNotification({
+        userId: row.user_id,
+        companyId: row.id,
+        title,
+        body,
+        data: { type: 'trial_expired' },
       });
 
       await client.query(

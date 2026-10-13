@@ -124,11 +124,52 @@ const markRead = asyncHandler(async (req, res) => {
   });
 });
 
+const pushService = require('./push.service');
+
+const registerToken = asyncHandler(async (req, res) => {
+  const { token, platform, deviceInfo } = req.body;
+  if (!token || typeof token !== 'string' || !token.trim()) {
+    throw ApiError.badRequest('Push device token is required', 'VALIDATION_ERROR');
+  }
+
+  const result = await pushService.registerDeviceToken({
+    userId: req.user.id,
+    companyId: req.user.companyId,
+    token: token.trim(),
+    platform: platform || 'android',
+    deviceInfo: deviceInfo || {},
+  });
+
+  return res.status(201).json({
+    data: result,
+    message: 'Device token registered successfully',
+  });
+});
+
+const unregisterToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token || typeof token !== 'string' || !token.trim()) {
+    throw ApiError.badRequest('Device token is required', 'VALIDATION_ERROR');
+  }
+
+  const result = await pushService.unregisterDeviceToken({
+    userId: req.user.id,
+    token: token.trim(),
+  });
+
+  return res.json({
+    data: result,
+    message: 'Device token unregistered successfully',
+  });
+});
+
 const router = express.Router();
 
 router.use(authMiddleware);
 
 router.get('/', list);
 router.put('/:id/read', markRead);
+router.post('/device-token', registerToken);
+router.delete('/device-token', unregisterToken);
 
 module.exports = router;
