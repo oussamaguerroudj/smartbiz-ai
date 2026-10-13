@@ -6,6 +6,7 @@ import '../../../../core/network/session.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/external_launcher.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../data/subscriptions_repository.dart';
 
@@ -195,10 +196,11 @@ class _AccountSuspendedScreenState extends ConsumerState<AccountSuspendedScreen>
       ar: 'السلام عليكم فريق دعم Modiri AI، حسابي ($accountLabel) معلّق وأود طلب مراجعة لإعادة تفعيله.',
       fr: 'Bonjour Support Modiri AI, mon compte ($accountLabel) est suspendu. Je souhaite demander une révision.',
     );
-    final uri = Uri.parse('$_whatsappUrl?text=${Uri.encodeComponent(text)}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await ExternalLauncher.launchWhatsApp(
+      context,
+      phone: '0774195871',
+      message: text,
+    );
   }
 
   Future<void> _handleSwitchAccount() async {

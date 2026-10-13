@@ -1,7 +1,7 @@
 name: modiri_ai
 description: Modiri AI — AI-powered small business management app.
 publish_to: 'none'
-version: 0.1.2+8
+version: 0.1.3+9
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -49,6 +49,8 @@ dependencies:
   connectivity_plus: ^6.0.5
   uuid: ^4.4.0
   flutter_native_splash: ^2.4.6
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
 
 dev_dependencies:
   flutter_test:

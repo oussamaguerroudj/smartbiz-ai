@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'core/database/app_database.dart';
 import 'core/network/session.dart';
 import 'core/network/api_client.dart';
+import 'core/services/notification_service.dart';
 import 'features/settings/data/settings_providers.dart';
 import 'features/onboarding/presentation/screens/video_splash_screen.dart';
 import 'features/onboarding/presentation/screens/language_select_screen.dart';
@@ -41,6 +42,7 @@ Future<void> main() async {
   // drawn already reflects the real session and language settings.
   await container.read(sessionProvider.notifier).restore();
   await container.read(localeProvider.notifier).ready;
+  await container.read(notificationServiceProvider).initialize();
 
   runApp(
     UncontrolledProviderScope(

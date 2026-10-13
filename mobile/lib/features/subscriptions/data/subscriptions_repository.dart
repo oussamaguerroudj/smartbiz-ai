@@ -220,4 +220,18 @@ class SubscriptionsRepository {
     });
     return (response as Map<String, dynamic>)['data'] as Map<String, dynamic>;
   }
+
+  Future<void> registerDeviceToken(String token, {Map<String, dynamic>? deviceInfo}) async {
+    await _apiClient.post('/notifications/device-token', body: {
+      'token': token,
+      'platform': 'android',
+      if (deviceInfo != null) 'deviceInfo': deviceInfo,
+    });
+  }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    await _apiClient.delete('/notifications/device-token', body: {
+      'token': token,
+    });
+  }
 }

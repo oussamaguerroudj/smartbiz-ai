@@ -6,6 +6,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/external_launcher.dart';
 import '../../../../core/widgets/directional_chevron.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -55,15 +56,14 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
       final checkoutUrl = data['checkoutUrl']?.toString();
 
       if (checkoutUrl != null && checkoutUrl.isNotEmpty) {
-        final uri = Uri.parse(checkoutUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not launch payment URL: $checkoutUrl')),
-            );
-          }
+        if (mounted) {
+          await ExternalLauncher.launchPaymentUrl(context, checkoutUrl);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payment gateway did not return a valid URL')),
+          );
         }
       }
     } on ApiException catch (e) {
@@ -86,18 +86,11 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
           "Bonjour, je souhaite acheter la licence Modiri AI à vie au prix de 15 000 DZD. Merci de me confirmer les instructions de paiement CCP et la procédure d'envoi du reçu.";
     }
 
-    final encodedText = Uri.encodeComponent(prefilledText);
-    final uri = Uri.parse('$whatsappUrl?text=$encodedText');
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('WhatsApp application could not be opened')),
-        );
-      }
-    }
+    await ExternalLauncher.launchWhatsApp(
+      context,
+      phone: '0774195871',
+      message: prefilledText,
+    );
   }
 
   Future<void> _pickReceiptFile() async {

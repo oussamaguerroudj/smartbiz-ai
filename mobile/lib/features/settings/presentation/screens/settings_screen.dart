@@ -10,6 +10,7 @@ import '../widgets/clear_application_data_dialog.dart';
 import 'profile_screen.dart';
 import '../../../subscriptions/data/subscriptions_repository.dart';
 import '../../../subscriptions/presentation/screens/purchase_screen.dart';
+import '../../../subscriptions/presentation/screens/subscription_screen.dart';
 import '../../../support/presentation/screens/contact_us_screen.dart';
 import '../../../support/presentation/screens/feedback_screen.dart';
 
@@ -65,7 +66,7 @@ class SettingsScreen extends ConsumerWidget {
             iconColor: entitlement?.entitlementType == 'lifetime' ? AppColors.success : AppColors.primary,
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const PurchaseScreen()),
+                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
               );
             },
           ),

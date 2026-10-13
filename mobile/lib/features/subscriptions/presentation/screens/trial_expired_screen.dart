@@ -6,6 +6,7 @@ import '../../../../core/network/session.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/external_launcher.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../data/subscriptions_repository.dart';
 
@@ -104,10 +105,11 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
       ar: 'السلام عليكم، انتهت الفترة التجريبية لحسابي ($accountLabel) وأريد تفعيل رخصة Modiri AI مدى الحياة (15,000 دج).',
       fr: "Bonjour Support Modiri AI, ma période d'essai pour ($accountLabel) a expiré et je souhaite activer la licence à vie (15 000 DZD).",
     );
-    final uri = Uri.parse('$_whatsappUrl?text=${Uri.encodeComponent(text)}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await ExternalLauncher.launchWhatsApp(
+      context,
+      phone: '0774195871',
+      message: text,
+    );
   }
 
   Future<void> _handleSwitchAccount() async {
