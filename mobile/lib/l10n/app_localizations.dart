@@ -4695,6 +4695,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Business data reset synchronized successfully'**
   String get clearDataRetrySuccess;
+
+  /// No description provided for @welcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Modiri AI'**
+  String get welcomeTitle;
+
+  /// No description provided for @welcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Business Management & Growth System'**
+  String get welcomeSubtitle;
+
+  /// No description provided for @welcomeLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Log In'**
+  String get welcomeLogin;
+
+  /// No description provided for @welcomeRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get welcomeRegister;
+
+  /// No description provided for @welcomeContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get welcomeContact;
+
+  /// No description provided for @welcomeFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get welcomeFeedback;
+
+  /// No description provided for @planSelectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Modiri AI'**
+  String get planSelectTitle;
+
+  /// No description provided for @planSelectSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you want to continue.'**
+  String get planSelectSubtitle;
+
+  /// No description provided for @freeTrialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Free Trial'**
+  String get freeTrialTitle;
+
+  /// No description provided for @freeTrialDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 15 days, subject to the actual eligibility and approval rules.'**
+  String get freeTrialDesc;
+
+  /// No description provided for @continueWithFreePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Free Plan'**
+  String get continueWithFreePlan;
+
+  /// No description provided for @upgradeToLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Lifetime License'**
+  String get upgradeToLifetime;
+
+  /// No description provided for @lifetimeLicenseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Modiri AI — Lifetime License'**
+  String get lifetimeLicenseTitle;
+
+  /// No description provided for @lifetimeLicenseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'15,000 DZD — One-time payment'**
+  String get lifetimeLicenseSubtitle;
+
+  /// No description provided for @payWithChargily.
+  ///
+  /// In en, this message translates to:
+  /// **'Electronic Payment (Chargily Pay)'**
+  String get payWithChargily;
+
+  /// No description provided for @payWithCcp.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Manually via CCP'**
+  String get payWithCcp;
+
+  /// No description provided for @ccpAccountHolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Holder: Oussama Guerroudj'**
+  String get ccpAccountHolder;
+
+  /// No description provided for @ccpAccountNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'CCP Account: 00799999002915122873'**
+  String get ccpAccountNumber;
+
+  /// No description provided for @ccpLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location: حي بشيري العيد، وادي السلام، غليزان'**
+  String get ccpLocation;
+
+  /// No description provided for @contactOnWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us on WhatsApp'**
+  String get contactOnWhatsApp;
+
+  /// No description provided for @uploadReceiptAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Payment Receipt'**
+  String get uploadReceiptAction;
+
+  /// No description provided for @receiptUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending payment verification — your license has not been activated yet.'**
+  String get receiptUnderReview;
+
+  /// No description provided for @trialExpiringNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your trial expires in {days} day(s). Upgrade to Lifetime License.'**
+  String trialExpiringNotice(int days);
+
+  /// No description provided for @trialExpiredNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your free trial has expired. Upgrade to continue.'**
+  String get trialExpiredNotice;
+
+  /// No description provided for @contactUsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get contactUsTitle;
+
+  /// No description provided for @contactNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Name'**
+  String get contactNameLabel;
+
+  /// No description provided for @contactEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Email'**
+  String get contactEmailLabel;
+
+  /// No description provided for @contactPhoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number (Optional)'**
+  String get contactPhoneLabel;
+
+  /// No description provided for @contactCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get contactCategoryLabel;
+
+  /// No description provided for @contactSubjectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get contactSubjectLabel;
+
+  /// No description provided for @contactMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get contactMessageLabel;
+
+  /// No description provided for @submitMessageAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Message'**
+  String get submitMessageAction;
+
+  /// No description provided for @feedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Feedback'**
+  String get feedbackTitle;
+
+  /// No description provided for @feedbackRatingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get feedbackRatingLabel;
+
+  /// No description provided for @submitFeedbackAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Feedback'**
+  String get submitFeedbackAction;
+
+  /// No description provided for @licenseActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Lifetime License'**
+  String get licenseActive;
 }
 
 class _AppLocalizationsDelegate

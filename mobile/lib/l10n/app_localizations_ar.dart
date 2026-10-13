@@ -2486,4 +2486,116 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get clearDataRetrySuccess => 'تمت مزامنة مسح البيانات بنجاح';
+
+  @override
+  String get welcomeTitle => 'أهلاً بك في Modiri AI';
+
+  @override
+  String get welcomeSubtitle => 'نظام إدارة ونمو الأعمال الذكي';
+
+  @override
+  String get welcomeLogin => 'تسجيل الدخول';
+
+  @override
+  String get welcomeRegister => 'إنشاء حساب';
+
+  @override
+  String get welcomeContact => 'اتصل بنا';
+
+  @override
+  String get welcomeFeedback => 'إرسال ملاحظات';
+
+  @override
+  String get planSelectTitle => 'أهلاً بك في Modiri AI';
+
+  @override
+  String get planSelectSubtitle => 'اختر طريقة المتابعة المناسبة لك.';
+
+  @override
+  String get freeTrialTitle => 'تجربة مجانية';
+
+  @override
+  String get freeTrialDesc => 'تجربة مجانية لمدة تصل إلى 15 يومًا';
+
+  @override
+  String get continueWithFreePlan => 'مواصلة بالخطة المجانية';
+
+  @override
+  String get upgradeToLifetime => 'الترقية إلى الرخصة مدى الحياة';
+
+  @override
+  String get lifetimeLicenseTitle => 'رخصة Modiri AI مدى الحياة';
+
+  @override
+  String get lifetimeLicenseSubtitle => '15,000 دج — دفعة واحدة';
+
+  @override
+  String get payWithChargily => 'الدفع الإلكتروني عبر شارجيلي (Chargily Pay)';
+
+  @override
+  String get payWithCcp => 'الدفع اليدوي عبر CCP';
+
+  @override
+  String get ccpAccountHolder => 'صاحب الحساب: أسامة قروج';
+
+  @override
+  String get ccpAccountNumber => 'رقم الحساب الجاري CCP: 00799999002915122873';
+
+  @override
+  String get ccpLocation => 'المقر: حي بشيري العيد، وادي السلام، غليزان';
+
+  @override
+  String get contactOnWhatsApp => 'تواصل معنا عبر واتساب';
+
+  @override
+  String get uploadReceiptAction => 'رفع وصل الدفع';
+
+  @override
+  String get receiptUnderReview =>
+      'وصل الدفع قيد المراجعة — لم يتم تفعيل الرخصة بعد.';
+
+  @override
+  String trialExpiringNotice(int days) {
+    return 'تنتهي تجربتك المجانية خلال $days يوم. قم بالترقية للرخصة مدى الحياة.';
+  }
+
+  @override
+  String get trialExpiredNotice =>
+      'انتهت فترتك التجريبية المجانية. يرجى الترقية للاستمرار.';
+
+  @override
+  String get contactUsTitle => 'اتصل بنا';
+
+  @override
+  String get contactNameLabel => 'الاسم الكامل';
+
+  @override
+  String get contactEmailLabel => 'البريد الإلكتروني';
+
+  @override
+  String get contactPhoneLabel => 'رقم الهاتف (اختياري)';
+
+  @override
+  String get contactCategoryLabel => 'التصنيف';
+
+  @override
+  String get contactSubjectLabel => 'الموضوع';
+
+  @override
+  String get contactMessageLabel => 'الرسالة';
+
+  @override
+  String get submitMessageAction => 'إرسال الرسالة';
+
+  @override
+  String get feedbackTitle => 'إرسال ملاحظات';
+
+  @override
+  String get feedbackRatingLabel => 'التقييم';
+
+  @override
+  String get submitFeedbackAction => 'إرسال الملاحظات';
+
+  @override
+  String get licenseActive => 'رخصة مدى الحياة نشطة';
 }

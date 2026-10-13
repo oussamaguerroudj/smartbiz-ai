@@ -8,6 +8,10 @@ import '../../../auth/data/auth_repository.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../widgets/clear_application_data_dialog.dart';
 import 'profile_screen.dart';
+import '../../../subscriptions/data/subscriptions_repository.dart';
+import '../../../subscriptions/presentation/screens/purchase_screen.dart';
+import '../../../support/presentation/screens/contact_us_screen.dart';
+import '../../../support/presentation/screens/feedback_screen.dart';
 
 /// Settings — Spec Ch. 23. Business profile / currency editing from
 /// Settings still needs its own dedicated edit screen — PUT /companies/me
@@ -34,12 +38,37 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
     final l10n = AppLocalizations.of(context)!;
+    final entitlementAsync = ref.watch(entitlementProvider);
+    final entitlement = entitlementAsync.valueOrNull;
+
+    String licenseSubtitle = l10n.lifetimeLicenseSubtitle;
+    if (entitlement != null) {
+      if (entitlement.entitlementType == 'lifetime') {
+        licenseSubtitle = 'Licence à vie active / Active';
+      } else if (entitlement.entitlementType == 'trial') {
+        final days = entitlement.daysRemaining ?? 0;
+        licenseSubtitle = l10n.trialExpiringNotice(days);
+      } else if (entitlement.status == 'expired') {
+        licenseSubtitle = l10n.trialExpiredNotice;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.sm),
         children: [
+          _SettingsTile(
+            icon: Icons.workspace_premium_rounded,
+            title: l10n.lifetimeLicenseTitle,
+            subtitle: licenseSubtitle,
+            iconColor: entitlement?.entitlementType == 'lifetime' ? AppColors.success : AppColors.primary,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PurchaseScreen()),
+              );
+            },
+          ),
           _SettingsTile(
             icon: Icons.storefront_outlined,
             title: l10n.businessProfileTitle,
@@ -77,6 +106,26 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           _SettingsTile(
+            icon: Icons.support_agent_rounded,
+            title: l10n.contactUsTitle,
+            subtitle: l10n.contactOnWhatsApp,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ContactUsScreen()),
+              );
+            },
+          ),
+          _SettingsTile(
+            icon: Icons.rate_review_outlined,
+            title: l10n.feedbackTitle,
+            subtitle: l10n.submitFeedbackAction,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const FeedbackScreen()),
+              );
+            },
+          ),
+          _SettingsTile(
             icon: Icons.delete_forever_rounded,
             title: l10n.clearDataTitle,
             subtitle: l10n.clearDataSubtitle,
@@ -93,6 +142,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+
 
   Future<void> _showClearDataDialog(BuildContext context, WidgetRef ref) async {
     final result = await ClearApplicationDataDialog.show(context);

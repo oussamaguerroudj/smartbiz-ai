@@ -56,12 +56,13 @@ const extendLicense = asyncHandler(async (req, res) => {
 
 const setSuspension = asyncHandler(async (req, res) => {
   const { id } = req.params; // companyId
-  const { isSuspended, reason } = req.body || {};
+  const { isSuspended, reason, message } = req.body || {};
   const result = await adminService.setAccountSuspension({
     companyId: id,
     adminId: req.user.id,
     isSuspended,
     reason,
+    message,
   });
   return res.json({ data: result });
 });
@@ -97,19 +98,20 @@ const decideManualPayment = asyncHandler(async (req, res) => {
 });
 
 const listSupport = asyncHandler(async (req, res) => {
-  const { status } = req.query || {};
-  const messages = await adminService.listSupportMessages({ status });
+  const { status, category } = req.query || {};
+  const messages = await adminService.listSupportMessages({ status, category });
   return res.json({ data: messages });
 });
 
 const updateSupport = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, adminNotes } = req.body || {};
+  const { status, adminNotes, publicReply, internalAdminNotes } = req.body || {};
   const result = await adminService.updateSupportStatus({
     messageId: id,
     adminId: req.user.id,
     status,
-    adminNotes,
+    adminNotes: internalAdminNotes !== undefined ? internalAdminNotes : adminNotes,
+    publicReply,
   });
   return res.json({ data: result });
 });

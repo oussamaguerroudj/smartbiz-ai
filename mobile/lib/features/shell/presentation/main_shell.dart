@@ -44,6 +44,9 @@ import '../../dashboard/presentation/screens/all_pages_screen.dart';
 import '../../auth/data/companies_repository.dart';
 import '../../auth/presentation/screens/business_type_screen.dart';
 import '../../auth/presentation/screens/business_setup_screen.dart';
+import '../../subscriptions/presentation/screens/account_suspended_screen.dart';
+import '../../subscriptions/presentation/screens/trial_expired_screen.dart';
+import '../../subscriptions/presentation/screens/purchase_screen.dart';
 import '../../../core/network/session.dart';
 
 /// Main App Shell  -  Spec Ch. 7 (Navigation)
@@ -131,6 +134,26 @@ class _MainShellState extends ConsumerState<MainShell> {
     }
     if (session.role == 'support') {
       return const SupportDashboardScreen();
+    }
+
+    if (session.isSuspendedLocked) {
+      return AccountSuspendedScreen(
+        onSwitchAccount: () {},
+        onCreateNewAccount: () {},
+        onAccountReactivated: () {},
+      );
+    }
+    if (session.isTrialOrLicenseExpired) {
+      return TrialExpiredScreen(
+        onUpgradeSelected: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PurchaseScreen()),
+          );
+        },
+        onLicenseActivated: () {},
+        onSwitchAccount: () {},
+        onCreateNewAccount: () {},
+      );
     }
 
     final l10n = AppLocalizations.of(context)!;

@@ -24,6 +24,26 @@ services:
         value: 30d
       - key: CORS_ORIGIN
         value: "*"
+      - key: CHARGILY_MODE
+        value: test
+      - key: CHARGILY_API_KEY
+        sync: false
+      - key: CHARGILY_SECRET_KEY
+        sync: false
+      - key: SCHEDULER_SECRET
+        sync: false
+      - key: SUPPORT_WHATSAPP
+        value: "0774195871"
+      - key: SUPPORT_EMAIL
+        value: oussama.guerroudj@ensia.edu.dz
+      - key: BUSINESS_OWNER_NAME
+        value: Oussama Guerroudj
+      - key: BUSINESS_OWNER_NAME_AR
+        value: أسامة قروج
+      - key: BUSINESS_CCP_ACCOUNT
+        value: "00799999002915122873"
+      - key: BUSINESS_ADDRESS
+        value: حي بشيري العيد، وادي السلام، غليزان
       - key: BREVO_API_KEY
         sync: false
       - key: BREVO_FROM_EMAIL

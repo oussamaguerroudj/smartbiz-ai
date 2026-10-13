@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS support_messages (
   subject      VARCHAR(200),
   message      TEXT NOT NULL,
   status       VARCHAR(30) NOT NULL DEFAULT 'new', -- 'new','in_progress','answered','closed'
+  public_reply TEXT,
   admin_notes  TEXT,
   assigned_to  UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),

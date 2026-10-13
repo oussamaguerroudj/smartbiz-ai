@@ -233,7 +233,11 @@ class ReportsRepository {
     }
 
     // 3. Offline Mode: If cached server report exists, reconcile with local unsynced mutations
-    final cached = await _getCachedServerReport(cacheKey, db: db);
+    var cached = await _getCachedServerReport(cacheKey, db: db);
+    if (cached == null) {
+      final legacyKey = 'report_cache_${companyId}_${period}_${date ?? ''}_${month ?? ''}_${year ?? ''}';
+      cached = await _getCachedServerReport(legacyKey, db: db);
+    }
     if (cached != null) {
       final activeDb = db ?? await AppDatabase.instance.database;
       final resolved = LocalFinancialCalculator.resolveRange(

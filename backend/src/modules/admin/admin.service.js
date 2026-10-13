@@ -82,6 +82,8 @@ async function getOverviewMetrics() {
     pendingManualRes,
     newSupportRes,
     newFeedbackRes,
+    suspendedAccountsRes,
+    openAppealsRes,
   ] = await Promise.all([
     query('SELECT count(*)::int AS count FROM users WHERE deleted_at IS NULL'),
     query('SELECT count(*)::int AS count FROM users WHERE email_verified = true AND deleted_at IS NULL'),
@@ -97,6 +99,8 @@ async function getOverviewMetrics() {
     query("SELECT count(*)::int AS count FROM manual_payment_requests WHERE status IN ('pending', 'under_review')"),
     query("SELECT count(*)::int AS count FROM support_messages WHERE status = 'new'"),
     query("SELECT count(*)::int AS count FROM feedback_submissions WHERE status = 'new'"),
+    query('SELECT count(*)::int AS count FROM companies WHERE is_suspended = true'),
+    query("SELECT count(*)::int AS count FROM support_messages WHERE category = 'suspension_appeal' AND status IN ('new', 'in_progress')"),
   ]);
 
   return {
@@ -114,6 +118,8 @@ async function getOverviewMetrics() {
     manualPaymentsUnderReview: pendingManualRes.rows[0].count,
     unansweredSupportMessages: newSupportRes.rows[0].count,
     unreviewedFeedback: newFeedbackRes.rows[0].count,
+    suspendedAccounts: suspendedAccountsRes.rows[0].count,
+    openAppeals: openAppealsRes.rows[0].count,
   };
 }
 
@@ -424,38 +430,85 @@ async function extendTemporaryLicense({ companyId, adminId, daysToAdd, reason })
   });
 }
 
-async function setAccountSuspension({ companyId, adminId, isSuspended, reason }) {
+async function setAccountSuspension({ companyId, adminId, isSuspended, reason, message }) {
+  const suspendFlag = isSuspended === true;
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const effectiveReason = trimmedMessage || trimmedReason;
+
+  if (suspendFlag && (!effectiveReason || effectiveReason.length < 3)) {
+    throw ApiError.badRequest(
+      'A suspension reason or user-facing message (at least 3 characters) is required when suspending an account.',
+      'SUSPENSION_REASON_REQUIRED',
+    );
+  }
+
   return withTransaction(async (client) => {
     const compRes = await client.query(
-      'SELECT id, is_suspended, entitlement_type FROM companies WHERE id = $1 FOR UPDATE',
+      'SELECT id, name, is_suspended, entitlement_type FROM companies WHERE id = $1 FOR UPDATE',
       [companyId],
     );
     const company = compRes.rows[0];
     if (!company) throw ApiError.notFound('Company not found');
 
-    await client.query(
+    const updateRes = await client.query(
       `UPDATE companies
        SET is_suspended = $2,
            suspension_reason = $3,
            suspended_at = CASE WHEN $2 THEN now() ELSE NULL END,
            updated_at = now()
-       WHERE id = $1`,
-      [companyId, isSuspended === true, isSuspended ? (reason || 'Administrative suspension') : null],
+       WHERE id = $1
+       RETURNING id, is_suspended, suspension_reason, suspended_at`,
+      [companyId, suspendFlag, suspendFlag ? effectiveReason : null],
     );
+
+    const updated = updateRes.rows[0];
 
     await client.query(
       `INSERT INTO license_audit_logs (
-         company_id, actor_id, action, reason
-       ) VALUES ($1, $2, $3, $4)`,
+         company_id, actor_id, action, reason, metadata
+       ) VALUES ($1, $2, $3, $4, $5)`,
       [
         companyId,
         adminId,
-        isSuspended ? 'suspend' : 'restore',
-        reason || (isSuspended ? 'Suspended by administrator' : 'Access restored by administrator'),
+        suspendFlag ? 'suspend' : 'restore',
+        effectiveReason || (suspendFlag ? 'Suspended by administrator' : 'Access restored by administrator'),
+        JSON.stringify({
+          isSuspended: suspendFlag,
+          reason: trimmedReason || effectiveReason || null,
+          message: trimmedMessage || effectiveReason || null,
+        }),
       ],
     );
 
-    return { success: true, companyId, isSuspended: isSuspended === true };
+    // If restoring access, automatically mark open suspension appeals as answered
+    if (!suspendFlag) {
+      await client.query(
+        `UPDATE support_messages
+         SET status = 'answered',
+             admin_notes = COALESCE(admin_notes || E'\\n', '') || $2,
+             assigned_to = COALESCE(assigned_to, $3),
+             updated_at = now()
+         WHERE company_id = $1
+           AND category = 'suspension_appeal'
+           AND status IN ('new', 'in_progress')`,
+        [
+          companyId,
+          effectiveReason
+            ? `Account reactivated by administrator: ${effectiveReason}`
+            : 'Account reactivated by administrator.',
+          adminId,
+        ],
+      );
+    }
+
+    return {
+      success: true,
+      companyId,
+      isSuspended: updated.is_suspended === true,
+      suspensionReason: updated.suspension_reason || null,
+      suspendedAt: updated.suspended_at || null,
+    };
   });
 }
 
@@ -674,22 +727,38 @@ async function decideManualPayment({ requestId, adminId, decision, rejectionReas
   });
 }
 
-async function listSupportMessages({ status = 'all' }) {
+async function listSupportMessages({ status = 'all', category = 'all' } = {}) {
   const conditions = [];
   const params = [];
 
   if (status && status !== 'all') {
     params.push(status);
-    conditions.push(`status = $${params.length}`);
+    conditions.push(`s.status = $${params.length}`);
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push(`s.category = $${params.length}`);
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const res = await query(
-    `SELECT s.*, u.name as user_account_name
+    `SELECT s.*,
+            u.name AS user_account_name,
+            c.name AS company_name,
+            c.is_suspended AS company_is_suspended,
+            c.suspension_reason AS company_suspension_reason,
+            c.suspended_at AS company_suspended_at,
+            c.entitlement_type AS company_entitlement_type
      FROM support_messages s
      LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN companies c ON c.id = s.company_id
      ${where}
-     ORDER BY s.created_at DESC
+     ORDER BY
+       CASE WHEN s.category = 'suspension_appeal' AND s.status IN ('new', 'in_progress') THEN 0
+            WHEN s.status = 'new' THEN 1
+            ELSE 2 END,
+       s.created_at DESC
      LIMIT 200`,
     params,
   );
@@ -697,17 +766,49 @@ async function listSupportMessages({ status = 'all' }) {
   return res.rows;
 }
 
-async function updateSupportStatus({ messageId, adminId, status, adminNotes }) {
-  const res = await query(
-    `UPDATE support_messages
-     SET status = $2,
-         admin_notes = coalesce($3, admin_notes),
-         assigned_to = coalesce($4, assigned_to),
-         updated_at = now()
-     WHERE id = $1
-     RETURNING *`,
-    [messageId, status, adminNotes || null, adminId],
-  );
+async function updateSupportStatus({ messageId, adminId, status, adminNotes, publicReply }) {
+  const colRes = await query(`
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'support_messages' AND column_name = 'public_reply'
+  `);
+  const hasPublicReply = colRes.rows && colRes.rows.length > 0;
+
+  let res;
+  if (hasPublicReply) {
+    res = await query(
+      `UPDATE support_messages
+       SET status = coalesce($2, status),
+           admin_notes = coalesce($3, admin_notes),
+           public_reply = coalesce($4, public_reply),
+           assigned_to = coalesce($5, assigned_to),
+           updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [
+        messageId,
+        status || null,
+        adminNotes !== undefined ? adminNotes : null,
+        publicReply !== undefined ? publicReply : null,
+        adminId,
+      ],
+    );
+  } else {
+    res = await query(
+      `UPDATE support_messages
+       SET status = coalesce($2, status),
+           admin_notes = coalesce($3, admin_notes),
+           assigned_to = coalesce($4, assigned_to),
+           updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [
+        messageId,
+        status || null,
+        adminNotes !== undefined ? adminNotes : null,
+        adminId,
+      ],
+    );
+  }
 
   if (!res.rows[0]) throw ApiError.notFound('Support message not found');
   return res.rows[0];

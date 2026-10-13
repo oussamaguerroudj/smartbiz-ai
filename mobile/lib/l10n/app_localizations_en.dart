@@ -2494,4 +2494,117 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get clearDataRetrySuccess =>
       'Business data reset synchronized successfully';
+
+  @override
+  String get welcomeTitle => 'Welcome to Modiri AI';
+
+  @override
+  String get welcomeSubtitle => 'Smart Business Management & Growth System';
+
+  @override
+  String get welcomeLogin => 'Log In';
+
+  @override
+  String get welcomeRegister => 'Create Account';
+
+  @override
+  String get welcomeContact => 'Contact Us';
+
+  @override
+  String get welcomeFeedback => 'Feedback';
+
+  @override
+  String get planSelectTitle => 'Welcome to Modiri AI';
+
+  @override
+  String get planSelectSubtitle => 'Choose how you want to continue.';
+
+  @override
+  String get freeTrialTitle => 'Free Trial';
+
+  @override
+  String get freeTrialDesc =>
+      'Up to 15 days, subject to the actual eligibility and approval rules.';
+
+  @override
+  String get continueWithFreePlan => 'Continue with Free Plan';
+
+  @override
+  String get upgradeToLifetime => 'Upgrade to Lifetime License';
+
+  @override
+  String get lifetimeLicenseTitle => 'Modiri AI — Lifetime License';
+
+  @override
+  String get lifetimeLicenseSubtitle => '15,000 DZD — One-time payment';
+
+  @override
+  String get payWithChargily => 'Electronic Payment (Chargily Pay)';
+
+  @override
+  String get payWithCcp => 'Pay Manually via CCP';
+
+  @override
+  String get ccpAccountHolder => 'Account Holder: Oussama Guerroudj';
+
+  @override
+  String get ccpAccountNumber => 'CCP Account: 00799999002915122873';
+
+  @override
+  String get ccpLocation => 'Location: حي بشيري العيد، وادي السلام، غليزان';
+
+  @override
+  String get contactOnWhatsApp => 'Contact us on WhatsApp';
+
+  @override
+  String get uploadReceiptAction => 'Upload Payment Receipt';
+
+  @override
+  String get receiptUnderReview =>
+      'Pending payment verification — your license has not been activated yet.';
+
+  @override
+  String trialExpiringNotice(int days) {
+    return 'Your trial expires in $days day(s). Upgrade to Lifetime License.';
+  }
+
+  @override
+  String get trialExpiredNotice =>
+      'Your free trial has expired. Upgrade to continue.';
+
+  @override
+  String get contactUsTitle => 'Contact Us';
+
+  @override
+  String get contactNameLabel => 'Your Name';
+
+  @override
+  String get contactEmailLabel => 'Your Email';
+
+  @override
+  String get contactPhoneLabel => 'Phone Number (Optional)';
+
+  @override
+  String get contactCategoryLabel => 'Category';
+
+  @override
+  String get contactSubjectLabel => 'Subject';
+
+  @override
+  String get contactMessageLabel => 'Message';
+
+  @override
+  String get submitMessageAction => 'Send Message';
+
+  @override
+  String get feedbackTitle => 'Send Feedback';
+
+  @override
+  String get feedbackRatingLabel => 'Rating';
+
+  @override
+  String get submitFeedbackAction => 'Submit Feedback';
+
+  @override
+  String get licenseActive => 'Active Lifetime License';
 }

@@ -220,6 +220,10 @@ class SyncService extends StateNotifier<SyncState> {
 
   Future<void> syncPending() async {
     if (!mounted) return;
+    final session = _ref.read(sessionProvider);
+    if (!session.isLoggedIn || session.isSuspendedLocked || session.isTrialOrLicenseExpired) {
+      return;
+    }
     final companyId = _companyId;
     // TENANT ISOLATION: never process another account's queue.
     if (companyId == null) return;
@@ -552,6 +556,11 @@ class SyncService extends StateNotifier<SyncState> {
             whereArgs: [opId],
           );
         } on ApiException catch (e) {
+          // Account restriction or revoked session: preserve queue item as pending without incrementing retry_count and stop syncing immediately.
+          if (e.isAccountSuspended || e.isTrialExpired || e.isSessionRevoked) {
+            break;
+          }
+
           // If server reports duplicate or 404 on delete, treat as idempotent success
           final isDuplicateSalary = e.statusCode == 409 ||
               e.code == 'DUPLICATE_SALARY_PAYMENT' ||
@@ -642,6 +651,10 @@ class SyncService extends StateNotifier<SyncState> {
   /// Downloads existing backend data into local SQLite so app is immediately
   /// usable offline after first login.
   Future<void> pullInitialData() async {
+    final session = _ref.read(sessionProvider);
+    if (!session.isLoggedIn || session.isSuspendedLocked || session.isTrialOrLicenseExpired) {
+      return;
+    }
     final status = _ref.read(connectionStatusProvider);
     if (status != ConnectionStatus.online) return;
 

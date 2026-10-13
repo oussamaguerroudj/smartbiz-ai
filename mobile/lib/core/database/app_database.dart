@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'database_initializer.dart';
@@ -610,4 +611,66 @@ class AppDatabase {
       await txn.delete('restaurant_payments');
     });
   }
+
+  /// Persists durable per-company account access state (e.g., suspended,
+  /// expired_trial, active) in SQLite `sync_metadata` so offline restarts
+  /// cannot bypass server-confirmed restrictions, while preserving all
+  /// business data and sync queue entries for [companyId].
+  Future<void> saveAccountAccessState(
+    String companyId,
+    Map<String, dynamic> state,
+  ) async {
+    if (companyId.isEmpty) return;
+    try {
+      final db = await database;
+      final now = DateTime.now().toUtc().toIso8601String();
+      await db.insert(
+        'sync_metadata',
+        {
+          'key': 'account_access_state:$companyId',
+          'value': jsonEncode(state),
+          'updated_at': now,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (_) {}
+  }
+
+  /// Reads the durable per-company account access state from SQLite.
+  Future<Map<String, dynamic>?> getAccountAccessState(String companyId) async {
+    if (companyId.isEmpty) return null;
+    try {
+      final db = await database;
+      final rows = await db.query(
+        'sync_metadata',
+        where: 'key = ?',
+        whereArgs: ['account_access_state:$companyId'],
+        limit: 1,
+      );
+      if (rows.isEmpty) return null;
+      final raw = rows.first['value'] as String?;
+      if (raw == null || raw.isEmpty) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Clears the durable restriction record for [companyId] when the server
+  /// confirms the account has been reactivated or upgraded.
+  Future<void> clearAccountAccessState(String companyId) async {
+    if (companyId.isEmpty) return;
+    try {
+      final db = await database;
+      await db.delete(
+        'sync_metadata',
+        where: 'key = ?',
+        whereArgs: ['account_access_state:$companyId'],
+      );
+    } catch (_) {}
+  }
 }
+

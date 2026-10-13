@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_colors.dart';
@@ -168,18 +169,21 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                         ),
                       ),
                       const Spacer(),
-                      ValueListenableBuilder(
-                        valueListenable: _controller,
-                        builder: (context, state, child) {
-                          final torchOn = state.torchState == TorchState.on;
-                          return _RoundIconButton(
-                            icon: torchOn
-                                ? Icons.flash_on_rounded
-                                : Icons.flash_off_rounded,
-                            onPressed: () => _controller.toggleTorch(),
-                          );
-                        },
-                      ),
+                      if (!kIsWeb)
+                        ValueListenableBuilder(
+                          valueListenable: _controller,
+                          builder: (context, state, child) {
+                            final torchOn = state.torchState == TorchState.on;
+                            return _RoundIconButton(
+                              icon: torchOn
+                                  ? Icons.flash_on_rounded
+                                  : Icons.flash_off_rounded,
+                              onPressed: () => _controller.toggleTorch(),
+                            );
+                          },
+                        )
+                      else
+                        const SizedBox.shrink(),
                     ],
                   ),
                 ),

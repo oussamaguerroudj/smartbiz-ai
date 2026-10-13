@@ -2519,4 +2519,118 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get clearDataRetrySuccess =>
       'Réinitialisation des données synchronisée avec succès';
+
+  @override
+  String get welcomeTitle => 'Bienvenue sur Modiri AI';
+
+  @override
+  String get welcomeSubtitle =>
+      'Système intelligent de gestion et de croissance d\'entreprise';
+
+  @override
+  String get welcomeLogin => 'Se connecter';
+
+  @override
+  String get welcomeRegister => 'Créer un compte';
+
+  @override
+  String get welcomeContact => 'Contactez-nous';
+
+  @override
+  String get welcomeFeedback => 'Commentaires';
+
+  @override
+  String get planSelectTitle => 'Bienvenue sur Modiri AI';
+
+  @override
+  String get planSelectSubtitle =>
+      'Choisissez comment vous souhaitez continuer.';
+
+  @override
+  String get freeTrialTitle => 'Essai gratuit';
+
+  @override
+  String get freeTrialDesc => 'Essai gratuit de 15 jours maximum';
+
+  @override
+  String get continueWithFreePlan => 'Continuer avec l\'offre gratuite';
+
+  @override
+  String get upgradeToLifetime => 'Passer à la licence à vie';
+
+  @override
+  String get lifetimeLicenseTitle => 'Licence Modiri AI à vie';
+
+  @override
+  String get lifetimeLicenseSubtitle => '15 000 DZD — paiement unique';
+
+  @override
+  String get payWithChargily => 'Paiement électronique (Chargily Pay)';
+
+  @override
+  String get payWithCcp => 'Paiement manuel par CCP';
+
+  @override
+  String get ccpAccountHolder => 'Titulaire du compte : Oussama Guerroudj';
+
+  @override
+  String get ccpAccountNumber => 'Compte CCP : 00799999002915122873';
+
+  @override
+  String get ccpLocation => 'Adresse : حي بشيري العيد، وادي السلام، غليزان';
+
+  @override
+  String get contactOnWhatsApp => 'Nous contacter sur WhatsApp';
+
+  @override
+  String get uploadReceiptAction => 'Téléverser le reçu de paiement';
+
+  @override
+  String get receiptUnderReview =>
+      'Justificatif en cours de vérification — la licence n\'est pas encore activée.';
+
+  @override
+  String trialExpiringNotice(int days) {
+    return 'Votre essai expire dans $days jour(s). Passez à la licence à vie.';
+  }
+
+  @override
+  String get trialExpiredNotice =>
+      'Votre essai gratuit a expiré. Passez à la licence pour continuer.';
+
+  @override
+  String get contactUsTitle => 'Contactez-nous';
+
+  @override
+  String get contactNameLabel => 'Votre nom';
+
+  @override
+  String get contactEmailLabel => 'Votre email';
+
+  @override
+  String get contactPhoneLabel => 'Numéro de téléphone (optionnel)';
+
+  @override
+  String get contactCategoryLabel => 'Catégorie';
+
+  @override
+  String get contactSubjectLabel => 'Sujet';
+
+  @override
+  String get contactMessageLabel => 'Message';
+
+  @override
+  String get submitMessageAction => 'Envoyer le message';
+
+  @override
+  String get feedbackTitle => 'Envoyer des commentaires';
+
+  @override
+  String get feedbackRatingLabel => 'Évaluation';
+
+  @override
+  String get submitFeedbackAction => 'Envoyer';
+
+  @override
+  String get licenseActive => 'Licence à vie active';
 }

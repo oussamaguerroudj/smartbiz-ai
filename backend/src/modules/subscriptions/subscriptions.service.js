@@ -66,6 +66,8 @@ function evaluateEntitlement(company) {
     expiresAt,
     isSuspended,
     suspensionReason: company.suspension_reason || null,
+    suspendedAt: company.suspended_at || null,
+    onboardingCompleted: company.onboarding_completed === true,
     approvalStatus: company.account_approval_status || 'approved',
     trialStartsAt: company.trial_starts_at || null,
     trialEndsAt: company.trial_ends_at || null,
@@ -78,9 +80,9 @@ async function getEntitlementStatus(companyId) {
   processTrialReminders().catch(() => {});
 
   const res = await query(
-    `SELECT id, name, entitlement_type, trial_starts_at, trial_ends_at,
+    `SELECT id, name, onboarding_completed, entitlement_type, trial_starts_at, trial_ends_at,
             license_expires_at, entitlement_granted_at, account_approval_status,
-            is_suspended, suspension_reason
+            is_suspended, suspension_reason, suspended_at
      FROM companies
      WHERE id = $1`,
     [companyId],
@@ -119,13 +121,14 @@ async function getEntitlementStatus(companyId) {
 
 /**
  * Activates the 15-day free trial on the server.
- * Idempotent: repeated taps will not extend the expiration date or create multiple trials.
+ * Idempotent while active: repeated taps will not extend the expiration date or create multiple trials.
+ * Rejects with 403 TRIAL_EXPIRED if the trial was already used and has expired.
  */
 async function selectFreeTrial(companyId, userId) {
   return withTransaction(async (client) => {
     const res = await client.query(
-      `SELECT id, entitlement_type, trial_starts_at, trial_ends_at,
-              license_expires_at, account_approval_status, is_suspended, suspension_reason
+      `SELECT id, onboarding_completed, entitlement_type, trial_starts_at, trial_ends_at,
+              license_expires_at, account_approval_status, is_suspended, suspension_reason, suspended_at
        FROM companies
        WHERE id = $1
        FOR UPDATE`,
@@ -139,7 +142,7 @@ async function selectFreeTrial(companyId, userId) {
 
     if (company.is_suspended) {
       throw ApiError.forbidden(
-        'Account is suspended. Please contact support.',
+        company.suspension_reason || 'Account is suspended. Please contact support.',
         'ACCOUNT_SUSPENDED',
       );
     }
@@ -150,7 +153,14 @@ async function selectFreeTrial(companyId, userId) {
 
     // If trial was already started, do not restart or extend it!
     if (company.trial_starts_at) {
-      return evaluateEntitlement(company);
+      const evalState = evaluateEntitlement(company);
+      if (evalState.status === 'expired_trial' || evalState.status === 'expired_temporary') {
+        throw ApiError.forbidden(
+          'Your 15-day free trial has already ended. Please activate a lifetime license to continue.',
+          'TRIAL_EXPIRED',
+        );
+      }
+      return evalState;
     }
 
     const trialDays = subscriptionConfig.product.trialDurationDays || 15;

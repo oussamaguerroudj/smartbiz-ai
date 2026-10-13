@@ -1,7 +1,7 @@
 name: modiri_ai
 description: Modiri AI — AI-powered small business management app.
 publish_to: 'none'
-version: 0.1.1+7
+version: 0.1.2+8
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -17,6 +17,7 @@ dependencies:
   google_fonts: ^6.2.1
   video_player: ^2.9.2
   intl: 0.20.2
+  url_launcher: ^6.3.0
   # Real barcode camera scanning (Sales/Stock "scan barcode" buttons) —
   # actively maintained, works on Android + iOS without extra native
   # setup beyond the camera permission strings already required.

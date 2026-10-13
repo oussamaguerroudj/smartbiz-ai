@@ -22,6 +22,8 @@ import '../../../sales/presentation/screens/create_sale_screen.dart';
 import '../../data/dashboard_repository.dart';
 import '../widgets/dashboard_pages_section.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../subscriptions/data/subscriptions_repository.dart';
+import '../../../subscriptions/presentation/screens/purchase_screen.dart';
 
 /// Dashboard — Spec Ch. 9. Real API-backed (Phase 5 wiring): every KPI
 /// comes straight from GET /dashboard, verified end-to-end.
@@ -108,7 +110,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-
+                    const _EntitlementUpgradeBanner(),
                     FadeSlideIn(
                       delay: const Duration(milliseconds: 60),
                       child: _SalesTrendCard(
@@ -943,6 +945,96 @@ class _InventoryValueCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EntitlementUpgradeBanner extends ConsumerWidget {
+  const _EntitlementUpgradeBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entitlementAsync = ref.watch(entitlementProvider);
+    final entitlement = entitlementAsync.valueOrNull;
+
+    if (entitlement == null || entitlement.entitlementType == 'lifetime') {
+      return const SizedBox.shrink();
+    }
+
+    final isExpired = entitlement.status == 'expired' || (entitlement.daysRemaining != null && entitlement.daysRemaining! <= 0);
+    final l10n = AppLocalizations.of(context)!;
+
+    final bgColor = isExpired ? AppColors.danger.withValues(alpha: 0.12) : AppColors.primary.withValues(alpha: 0.08);
+    final borderColor = isExpired ? AppColors.danger.withValues(alpha: 0.4) : AppColors.primary.withValues(alpha: 0.25);
+    final iconColor = isExpired ? AppColors.danger : AppColors.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: bgColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+          side: BorderSide(color: borderColor),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PurchaseScreen()),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Row(
+              children: [
+                Icon(
+                  isExpired ? Icons.warning_amber_rounded : Icons.workspace_premium_rounded,
+                  color: iconColor,
+                  size: 28,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isExpired ? l10n.trialExpiredNotice : l10n.freeTrialTitle,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: isExpired ? AppColors.danger : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isExpired ? l10n.upgradeToLifetime : l10n.trialExpiringNotice(entitlement.daysRemaining ?? 0),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PurchaseScreen()),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: isExpired ? AppColors.danger : AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: Text(
+                    l10n.upgradeToLifetime,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

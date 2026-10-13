@@ -18,11 +18,15 @@ function errorMiddleware(err, req, res, next) { // eslint-disable-line no-unused
       // eslint-disable-next-line no-console
       console.warn(`[API-ERROR] path=${fullPath} status=${err.statusCode} code=${err.code} message=${err.message}`);
     }
-    return res.status(err.statusCode).json({
+    const payload = {
       error: true,
       message: err.message,
       code: err.code,
-    });
+    };
+    if (err.details && typeof err.details === 'object') {
+      payload.details = err.details;
+    }
+    return res.status(err.statusCode).json(payload);
   }
 
   /*

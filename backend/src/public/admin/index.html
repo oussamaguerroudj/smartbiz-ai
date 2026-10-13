@@ -395,29 +395,37 @@
       </div>
     </div>
 
-    <!-- Tab 4: Support Messages Inbox -->
+    <!-- Tab 4: Support Messages & Suspension Appeals Inbox -->
     <div id="tabContent-support" style="display: none;">
       <div class="card">
         <div class="toolbar">
-          <h3 style="font-size: 16px;">صندوق رسائل الدعم الفني</h3>
-          <select id="supportFilterSelect" class="select-input" onchange="loadSupport()">
-            <option value="all">جميع الرسائل (All)</option>
-            <option value="new" selected>جديدة (New)</option>
-            <option value="in_progress">قيد المعالجة (In Progress)</option>
-            <option value="answered">تم الرد (Answered)</option>
-            <option value="closed">مغلقة (Closed)</option>
-          </select>
+          <h3 style="font-size: 16px;">صندوق رسائل الدعم وطلبات المراجعة (Support & Appeals)</h3>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <select id="supportCategorySelect" class="select-input" onchange="loadSupport()">
+              <option value="all">جميع التصنيفات (All Categories)</option>
+              <option value="suspension_appeal">🚨 طلبات مراجعة التوقيف (Suspension Appeals)</option>
+              <option value="payment_license">💳 الدفع والترخيص (Payment & License)</option>
+              <option value="general">📩 استفسارات عامة (General)</option>
+            </select>
+            <select id="supportFilterSelect" class="select-input" onchange="loadSupport()">
+              <option value="all">جميع الحالات (All Statuses)</option>
+              <option value="new" selected>جديدة (New)</option>
+              <option value="in_progress">قيد المعالجة (In Progress)</option>
+              <option value="answered">تم الرد (Answered)</option>
+              <option value="closed">مغلقة (Closed)</option>
+            </select>
+          </div>
         </div>
         <div class="table-container">
           <table>
             <thead>
               <tr>
                 <th>رقم التذكرة</th>
-                <th>المرسل</th>
-                <th>التصنيف</th>
-                <th>الرسالة</th>
+                <th>المرسل والمؤسسة</th>
+                <th>التصنيف وحالة الحساب</th>
+                <th>رسالة المستخدم / رد الإدارة</th>
                 <th>الحالة</th>
-                <th>إجراء</th>
+                <th>إجراء الإدارة</th>
               </tr>
             </thead>
             <tbody id="supportTableBody">
@@ -592,6 +600,8 @@
           { title: 'رخص مؤقتة نشطة', val: m.temporaryLicenses, sub: 'ممنوحة إدارياً', color: '#8b5cf6' },
           { title: 'وصل CCP قيد المراجعة', val: m.manualPaymentsUnderReview, sub: 'تحتاج تأكيد فوري', color: '#ec4899' },
           { title: 'رسائل دعم بحاجة للرد', val: m.unansweredSupportMessages, sub: 'تذاكر جديدة', color: '#06b6d4' },
+          { title: 'حسابات موقوفة حالياً', val: m.suspendedAccounts || 0, sub: 'قفل فوري نشط', color: '#ef4444' },
+          { title: 'طلبات مراجعة التوقيف', val: m.openAppeals || 0, sub: 'بانتظار قرار الإدارة', color: '#f59e0b' },
         ];
 
         document.getElementById('kpiContainer').innerHTML = kpis.map(k => `
@@ -629,9 +639,10 @@
           let expiry = u.entitlementType === 'lifetime' ? 'دائم (Permanent)' : (u.licenseExpiresAt || u.trialEndsAt ? new Date(u.licenseExpiresAt || u.trialEndsAt).toLocaleDateString() : '-');
 
           let statusBadge = u.isSuspended
-            ? `<span class="badge badge-danger">موقوف</span>`
+            ? `<span class="badge badge-danger">موقوف</span>${u.suspensionReason ? `<div style="font-size:11px;color:#f87171;margin-top:4px;max-width:180px;">${u.suspensionReason}</div>` : ''}`
             : (u.accountApprovalStatus === 'pending' ? `<span class="badge badge-warning">بانتظار الموافقة</span>` : `<span class="badge badge-success">نشط</span>`);
 
+          const safeName = String(u.name || '').replace(/'/g, "\\'");
           return `
             <tr>
               <td>
@@ -644,11 +655,11 @@
               <td>${statusBadge}</td>
               <td>
                 <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                  <button class="btn btn-outline btn-sm" onclick="openGrantLifetimeModal('${u.companyId}', '${u.name}')">منح مدى الحياة</button>
-                  <button class="btn btn-outline btn-sm" onclick="openGrantTempModal('${u.companyId}', '${u.name}')">منح مؤقت</button>
-                  <button class="btn btn-outline btn-sm" onclick="openExtendModal('${u.companyId}', '${u.name}')">تمديد</button>
-                  <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="toggleSuspend('${u.companyId}', ${u.isSuspended})">
-                    ${u.isSuspended ? 'إلغاء التوقيف' : 'توقيف'}
+                  <button class="btn btn-outline btn-sm" onclick="openGrantLifetimeModal('${u.companyId}', '${safeName}')">منح مدى الحياة</button>
+                  <button class="btn btn-outline btn-sm" onclick="openGrantTempModal('${u.companyId}', '${safeName}')">منح مؤقت</button>
+                  <button class="btn btn-outline btn-sm" onclick="openExtendModal('${u.companyId}', '${safeName}')">تمديد</button>
+                  <button class="btn btn-outline btn-sm" style="color: ${u.isSuspended ? '#34d399' : 'var(--danger)'};" onclick="openSuspendModal('${u.companyId}', '${safeName}', ${u.isSuspended})">
+                    ${u.isSuspended ? 'إعادة تفعيل الحساب' : 'توقيف الحساب'}
                   </button>
                 </div>
               </td>
@@ -697,41 +708,120 @@
 
     async function loadSupport() {
       const status = document.getElementById('supportFilterSelect').value;
+      const categoryEl = document.getElementById('supportCategorySelect');
+      const category = categoryEl ? categoryEl.value : 'all';
       try {
-        const res = await fetch(`/api/admin/support?status=${status}`, { headers: getHeaders() });
+        const res = await fetch(`/api/admin/support?status=${encodeURIComponent(status)}&category=${encodeURIComponent(category)}`, { headers: getHeaders() });
         const json = await res.json();
         const messages = json.data;
 
-        document.getElementById('supportTableBody').innerHTML = messages.map(m => `
+        document.getElementById('supportTableBody').innerHTML = messages.map(m => {
+          const isAppeal = m.category === 'suspension_appeal';
+          const catBadge = isAppeal
+            ? `<span class="badge badge-danger">🚨 طلب مراجعة التوقيف (Appeal)</span>`
+            : `<span class="badge badge-muted">${m.category}</span>`;
+
+          const suspInfo = m.company_is_suspended
+            ? `<div style="margin-top:4px;font-size:11px;color:#f87171;">حالة الحساب: <strong>موقوف</strong>${m.company_suspension_reason ? ` — (${m.company_suspension_reason})` : ''}</div>`
+            : (m.company_id ? `<div style="margin-top:4px;font-size:11px;color:#34d399;">حالة الحساب: نشط</div>` : '');
+
+          const publicReplyHtml = m.public_reply
+            ? `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(16,185,129,0.12);border-right:3px solid #10b981;font-size:11px;color:#a7f3d0;"><strong>رد الإدارة الموجه للمستخدم:</strong> ${m.public_reply}</div>`
+            : '';
+
+          const adminNotesHtml = m.admin_notes
+            ? `<div style="margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(245,158,11,0.12);border-right:3px solid #f59e0b;font-size:11px;color:#fde68a;"><strong>🔒 ملاحظة داخلية (سرية للإدارة):</strong> ${m.admin_notes}</div>`
+            : '';
+
+          const safeCompName = String(m.company_name || m.name || '').replace(/'/g, "\\'");
+          const safePublicReply = String(m.public_reply || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const safeAdminNotes = String(m.admin_notes || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+          return `
           <tr>
-            <td><code>${m.ticket_number}</code></td>
             <td>
-              <div>${m.name}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">${m.email} ${m.phone ? '• ' + m.phone : ''}</div>
+              <code>${m.ticket_number}</code>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${new Date(m.created_at).toLocaleString()}</div>
             </td>
-            <td><span class="badge badge-muted">${m.category}</span></td>
-            <td><div style="max-width: 320px; white-space: pre-wrap; font-size: 12px;">${m.message}</div></td>
-            <td><span class="badge ${m.status === 'new' ? 'badge-warning' : 'badge-success'}">${m.status}</span></td>
             <td>
-              <select class="select-input" onchange="updateSupportStatus('${m.id}', this.value)" style="font-size: 11px; padding: 4px;">
-                <option value="new" ${m.status==='new'?'selected':''}>جديدة</option>
-                <option value="in_progress" ${m.status==='in_progress'?'selected':''}>قيد المعالجة</option>
-                <option value="answered" ${m.status==='answered'?'selected':''}>تم الرد</option>
-                <option value="closed" ${m.status==='closed'?'selected':''}>مغلقة</option>
-              </select>
+              <div style="font-weight:700;">${m.name}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">${m.email} ${m.phone ? '• ' + m.phone : ''}</div>
+              ${m.company_name ? `<div style="font-size:11px;color:#cbd5e1;">المؤسسة: ${m.company_name}</div>` : ''}
+            </td>
+            <td>
+              ${catBadge}
+              ${suspInfo}
+            </td>
+            <td>
+              ${m.subject ? `<div style="font-weight:600;font-size:12px;margin-bottom:4px;">${m.subject}</div>` : ''}
+              <div style="max-width: 340px; white-space: pre-wrap; font-size: 12px;">${m.message}</div>
+              ${publicReplyHtml}
+              ${adminNotesHtml}
+            </td>
+            <td><span class="badge ${m.status === 'new' ? 'badge-warning' : (m.status === 'in_progress' ? 'badge-primary' : 'badge-success')}">${m.status}</span></td>
+            <td>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <select class="select-input" onchange="updateSupportStatus('${m.id}', this.value)" style="font-size: 11px; padding: 4px;">
+                  <option value="new" ${m.status==='new'?'selected':''}>جديدة (New)</option>
+                  <option value="in_progress" ${m.status==='in_progress'?'selected':''}>قيد المراجعة (In Progress)</option>
+                  <option value="answered" ${m.status==='answered'?'selected':''}>تم الرد (Answered)</option>
+                  <option value="closed" ${m.status==='closed'?'selected':''}>مغلقة (Closed)</option>
+                </select>
+                <button class="btn btn-outline btn-sm" onclick="openSupportReplyModal('${m.id}', '${m.status}', '${safePublicReply}', '${safeAdminNotes}')">الرد / تدوين ملاحظات</button>
+                ${m.company_id && m.company_is_suspended ? `
+                  <button class="btn btn-success btn-sm" onclick="openSuspendModal('${m.company_id}', '${safeCompName}', true)">إعادة تفعيل الحساب ✓</button>
+                ` : ''}
+              </div>
             </td>
           </tr>
-        `).join('');
+        `}).join('');
       } catch (e) { console.error(e); }
     }
 
-    async function updateSupportStatus(id, status) {
+    async function updateSupportStatus(id, status, publicReply, adminNotes) {
+      const payload = { status };
+      if (publicReply !== undefined) payload.publicReply = publicReply;
+      if (adminNotes !== undefined) payload.adminNotes = adminNotes;
+
       await fetch(`/api/admin/support/${id}/status`, {
         method: 'PUT',
         headers: getHeaders(),
-        body: JSON.stringify({ status })
+        body: JSON.stringify(payload)
       });
       loadSupport();
+    }
+
+    function openSupportReplyModal(messageId, currentStatus, currentPublicReply, currentAdminNotes) {
+      openModal('الرد على التذكرة وملاحظات المراجعة', `
+        <form onsubmit="submitSupportReply(event, '${messageId}')">
+          <div class="form-group">
+            <label>تحديث الحالة</label>
+            <select id="replySupportStatus" class="form-control">
+              <option value="in_progress" ${currentStatus === 'in_progress' ? 'selected' : ''}>قيد المراجعة (In Progress)</option>
+              <option value="answered" ${currentStatus === 'answered' || currentStatus === 'new' ? 'selected' : ''}>تم الرد (Answered)</option>
+              <option value="closed" ${currentStatus === 'closed' ? 'selected' : ''}>مغلقة (Closed)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="color:#34d399;font-weight:600;">رد الإدارة الموجه للمستخدم (يظهر لصاحب الحساب في التطبيق)</label>
+            <textarea id="replyPublicReply" class="form-control" rows="3" placeholder="اكتب رد الإدارة أو التوجيهات التي ستصل للمستخدم...">${currentPublicReply || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label style="color:#fbbf24;font-weight:600;">🔒 ملاحظات إدارية داخلية (سرية للإدارة فقط — لا تظهر للمستخدم أبداً)</label>
+            <textarea id="replyAdminNotes" class="form-control" rows="3" placeholder="اكتب ملاحظاتك الداخلية السرية، أسباب التعليق، أو توجيهات لفريق الإدارة...">${currentAdminNotes || ''}</textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">حفظ الرد وتحديث الحالة</button>
+        </form>
+      `);
+    }
+
+    async function submitSupportReply(e, messageId) {
+      e.preventDefault();
+      const status = document.getElementById('replySupportStatus').value;
+      const publicReply = document.getElementById('replyPublicReply').value;
+      const adminNotes = document.getElementById('replyAdminNotes').value;
+      await updateSupportStatus(messageId, status, publicReply, adminNotes);
+      closeModal();
     }
 
     async function loadFeedback() {
@@ -888,17 +978,54 @@
       else alert('Failed to extend license');
     }
 
-    async function toggleSuspend(companyId, currentSuspended) {
-      const reason = prompt(currentSuspended ? 'سبب إلغاء التوقيف:' : 'سبب توقيف الحساب:');
-      if (reason === null) return;
+    function openSuspendModal(companyId, name, currentSuspended) {
+      if (!currentSuspended) {
+        openModal(`توقيف الحساب فوراً: ${name}`, `
+          <form onsubmit="submitSuspendAction(event, '${companyId}', true)">
+            <div class="form-group">
+              <label>رسالة التوقيف الموجهة للمستخدم (ستظهر للمستخدم مباشرة على شاشة القفل)</label>
+              <textarea id="suspendMessage" class="form-control" rows="3" required minlength="3" placeholder="مثال: تم إيقاف حسابك مؤقتاً بسبب مخالفة شروط الاستخدام أو عدم تأكيد الدفع. يرجى تقديم طلب مراجعة."></textarea>
+            </div>
+            <div style="font-size:12px;color:#f87171;margin-bottom:14px;">
+              ⚠️ سيؤدي هذا الإجراء إلى إخراج المستخدم فوراً من التطبيق وقفل الوصول مع الاحتفاظ ببياناته المحلية بأمان.
+            </div>
+            <button type="submit" class="btn btn-danger" style="width: 100%;">تأكيد توقيف الحساب فوراً</button>
+          </form>
+        `);
+      } else {
+        openModal(`إعادة تفعيل الحساب: ${name}`, `
+          <form onsubmit="submitSuspendAction(event, '${companyId}', false)">
+            <div class="form-group">
+              <label>ملاحظة إعادة التفعيل (اختياري)</label>
+              <textarea id="suspendMessage" class="form-control" rows="3" placeholder="مثال: تمت مراجعة الطلب وإعادة تفعيل الحساب بنجاح.">تمت مراجعة الحساب وإعادة تفعيله من قبل الإدارة.</textarea>
+            </div>
+            <button type="submit" class="btn btn-success" style="width: 100%;">تأكيد إعادة تفعيل الحساب</button>
+          </form>
+        `);
+      }
+    }
 
+    async function submitSuspendAction(e, companyId, targetSuspend) {
+      e.preventDefault();
+      const message = document.getElementById('suspendMessage').value;
       const res = await fetch(`/api/admin/users/${companyId}/suspend`, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ isSuspended: !currentSuspended, reason })
+        body: JSON.stringify({
+          isSuspended: targetSuspend,
+          reason: message,
+          message: message
+        })
       });
-      if (res.ok) loadUsers();
-      else alert('Action failed');
+      if (res.ok) {
+        closeModal();
+        if (activeTab === 'users') loadUsers();
+        if (activeTab === 'support') loadSupport();
+        if (activeTab === 'overview') loadOverview();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Action failed');
+      }
     }
 
     async function decidePayment(id, decision) {

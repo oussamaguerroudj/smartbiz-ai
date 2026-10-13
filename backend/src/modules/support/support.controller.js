@@ -54,7 +54,28 @@ const feedback = asyncHandler(async (req, res) => {
   return res.json({ data: result });
 });
 
+const submitAppeal = asyncHandler(async (req, res) => {
+  const { message, subject, contactPhone } = req.body || {};
+  const result = await supportService.submitSuspensionAppeal({
+    appealContext: req.appealContext,
+    message,
+    subject,
+    contactPhone,
+  });
+  return res.status(201).json({ data: result });
+});
+
+const appealStatus = asyncHandler(async (req, res) => {
+  const result = await supportService.getAppealStatus({
+    appealContext: req.appealContext,
+  });
+  return res.json({ data: result });
+});
+
 module.exports = {
   contact,
   feedback,
+  submitAppeal,
+  appealStatus,
 };
+

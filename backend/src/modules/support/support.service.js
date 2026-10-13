@@ -118,7 +118,168 @@ async function submitFeedback({
   };
 }
 
+/**
+ * Submits a suspension appeal bound strictly to the server-verified
+ * `appealContext` (`userId`, `companyId`, `name`, `email`).
+ * Never trusts client-supplied tenant/user identifiers.
+ */
+async function submitSuspensionAppeal({
+  appealContext,
+  message,
+  subject = null,
+  contactPhone = null,
+}) {
+  if (!appealContext || !appealContext.userId || !appealContext.companyId) {
+    throw ApiError.unauthorized(
+      'Authenticated appeal context is required.',
+      'APPEAL_AUTH_REQUIRED',
+    );
+  }
+
+  if (!appealContext.isSuspended) {
+    throw ApiError.badRequest(
+      'This account is not currently suspended.',
+      'ACCOUNT_NOT_SUSPENDED',
+    );
+  }
+
+  const cleanMessage = sanitizeText(message);
+  if (!cleanMessage || cleanMessage.length < 10) {
+    throw ApiError.badRequest(
+      'Appeal explanation must be at least 10 characters.',
+      'VALIDATION_ERROR',
+    );
+  }
+
+  if (cleanMessage.length > 2000) {
+    throw ApiError.badRequest(
+      'Appeal explanation cannot exceed 2000 characters.',
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const defaultSubject = `Account Suspension Appeal — ${appealContext.companyName || appealContext.email}`;
+  const cleanSubject = subject
+    ? sanitizeText(subject).slice(0, 255) || defaultSubject
+    : defaultSubject;
+  const cleanPhone = contactPhone
+    ? sanitizeText(contactPhone).slice(0, 60)
+    : appealContext.phone || null;
+
+  // Prevent flooding open appeal tickets for the same company
+  const openRes = await query(
+    `SELECT COUNT(*)::int AS open_count
+     FROM support_messages
+     WHERE company_id = $1
+       AND category = 'suspension_appeal'
+       AND status IN ('new', 'in_progress')`,
+    [appealContext.companyId],
+  );
+
+  const openCount = openRes.rows[0]?.open_count || 0;
+  if (openCount >= 3) {
+    throw ApiError.tooManyRequests(
+      'You already have pending appeals under review. Please wait for the administrator to review your existing request.',
+      'TOO_MANY_OPEN_APPEALS',
+    );
+  }
+
+  const ticketNumber = `APL-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+
+  const res = await query(
+    `INSERT INTO support_messages (
+       ticket_number, user_id, company_id, name, email, phone,
+       category, subject, message, status
+     ) VALUES ($1, $2, $3, $4, $5, $6, 'suspension_appeal', $7, $8, 'new')
+     RETURNING id, ticket_number, subject, message, status, created_at`,
+    [
+      ticketNumber,
+      appealContext.userId,
+      appealContext.companyId,
+      appealContext.name || 'Modiri User',
+      appealContext.email,
+      cleanPhone,
+      cleanSubject,
+      cleanMessage,
+    ],
+  );
+
+  const row = res.rows[0];
+  return {
+    appealId: row.id,
+    ticketNumber: row.ticket_number,
+    ticketId: row.ticket_number,
+    status: row.status,
+    createdAt: row.created_at,
+    message: 'Your appeal has been submitted to the administrator for review.',
+    messageAr: 'تم إرسال طلب المراجعة إلى الإدارة بنجاح وسيتم دراسته قريباً.',
+    messageFr: 'Votre recours a été transmis à l’administrateur pour examen.',
+  };
+}
+
+/**
+ * Returns the live suspension status and appeal history for the authenticated
+ * appeal context.
+ */
+async function getAppealStatus({ appealContext }) {
+  if (!appealContext || !appealContext.userId || !appealContext.companyId) {
+    throw ApiError.unauthorized(
+      'Authenticated appeal context is required.',
+      'APPEAL_AUTH_REQUIRED',
+    );
+  }
+
+  // Defensively check if public_reply column exists; if not, query NULL
+  const colRes = await query(`
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'support_messages' AND column_name = 'public_reply'
+  `);
+  const hasPublicReply = colRes.rows && colRes.rows.length > 0;
+
+  const res = await query(
+    `SELECT id, ticket_number, subject, message, status,
+            ${hasPublicReply ? 'public_reply' : 'NULL AS public_reply'},
+            created_at, updated_at
+     FROM support_messages
+     WHERE company_id = $1
+       AND category = 'suspension_appeal'
+     ORDER BY created_at DESC
+     LIMIT 10`,
+    [appealContext.companyId],
+  );
+
+  return {
+    companyId: appealContext.companyId,
+    companyName: appealContext.companyName,
+    isSuspended: appealContext.isSuspended,
+    suspensionReason: appealContext.suspensionReason,
+    suspendedAt: appealContext.suspendedAt,
+    company: {
+      id: appealContext.companyId,
+      name: appealContext.companyName,
+      isSuspended: appealContext.isSuspended,
+      suspensionReason: appealContext.suspensionReason,
+      suspendedAt: appealContext.suspendedAt,
+    },
+    appeals: res.rows.map((r) => ({
+      id: r.id,
+      ticketNumber: r.ticket_number,
+      ticketId: r.ticket_number,
+      subject: r.subject,
+      message: r.message,
+      status: r.status,
+      publicReply: r.public_reply || null,
+      public_reply: r.public_reply || null,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    })),
+  };
+}
+
 module.exports = {
   submitContactMessage,
   submitFeedback,
+  submitSuspensionAppeal,
+  getAppealStatus,
 };
+

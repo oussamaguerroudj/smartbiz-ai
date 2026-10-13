@@ -53,7 +53,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (ref.read(sessionProvider).isLoggedIn) {
+      final session = ref.read(sessionProvider);
+      if (session.isLoggedIn || session.isSuspendedLocked) {
         widget.onLoginSuccess();
       }
     });
@@ -93,7 +94,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) widget.onLoginSuccess();
     } on ApiException catch (e) {
       if (mounted) {
-        if (e.code == 'EMAIL_NOT_VERIFIED') {
+        if (e.isAccountSuspended) {
+          widget.onLoginSuccess();
+        } else if (e.code == 'EMAIL_NOT_VERIFIED') {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
           widget.onGoToVerify(_emailController.text.trim());
         } else if (e.code == 'INVALID_CREDENTIALS' || e.statusCode == 400 || e.statusCode == 401) {

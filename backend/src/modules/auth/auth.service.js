@@ -5,6 +5,7 @@ const env = require('../../config/env');
 const ApiError = require('../../utils/ApiError');
 const { sendMail } = require('../../utils/email');
 const { generateCode, hashCode, verifyCodeHash } = require('../../utils/otp');
+const { buildSuspendedDetails } = require('../../middlewares/auth.middleware');
 
 const BCRYPT_ROUNDS = 10;
 // Verification codes are intentionally very short-lived: 1 minute. After
@@ -79,6 +80,7 @@ function toPublicUser(row) {
     accountApprovalStatus: row.account_approval_status || 'approved',
     isSuspended: row.is_suspended === true,
     suspensionReason: row.suspension_reason || null,
+    suspendedAt: row.suspended_at || null,
   };
 }
 
@@ -178,7 +180,7 @@ async function login({ email, password }) {
   const result = await query(
     `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed,
             c.entitlement_type, c.trial_starts_at, c.trial_ends_at, c.license_expires_at,
-            c.account_approval_status, c.is_suspended, c.suspension_reason
+            c.account_approval_status, c.is_suspended, c.suspension_reason, c.suspended_at
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
      WHERE lower(trim(u.email)) = $1 AND u.deleted_at IS NULL`,
@@ -237,6 +239,16 @@ async function login({ email, password }) {
     );
   }
 
+  // Do NOT issue normal accessToken or refreshToken if the account is suspended!
+  if (user.is_suspended === true && user.role !== 'super_admin') {
+    const suspendedDetails = buildSuspendedDetails(user);
+    throw ApiError.forbidden(
+      suspendedDetails.suspensionReason,
+      'ACCOUNT_SUSPENDED',
+      suspendedDetails,
+    );
+  }
+
   const tokens = signTokens(user);
 
   return {
@@ -253,6 +265,7 @@ async function login({ email, password }) {
       accountApprovalStatus: user.account_approval_status || 'approved',
       isSuspended: user.is_suspended === true,
       suspensionReason: user.suspension_reason || null,
+      suspendedAt: user.suspended_at || null,
     },
     ...tokens,
   };
@@ -276,7 +289,7 @@ async function refresh({ refreshToken }) {
   const result = await query(
     `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed,
             c.entitlement_type, c.trial_starts_at, c.trial_ends_at, c.license_expires_at,
-            c.account_approval_status, c.is_suspended, c.suspension_reason
+            c.account_approval_status, c.is_suspended, c.suspension_reason, c.suspended_at
      FROM users u
      LEFT JOIN companies c ON c.id = u.company_id
      WHERE u.id = $1 AND u.deleted_at IS NULL`,
@@ -286,13 +299,23 @@ async function refresh({ refreshToken }) {
   const user = result.rows[0];
 
   if (!user) {
-    throw ApiError.unauthorized('User no longer exists');
+    throw ApiError.unauthorized('User no longer exists', 'SESSION_REVOKED');
   }
 
   if (!user.email_verified) {
     throw ApiError.forbidden(
       'Please verify your email before refreshing your session.',
       'EMAIL_NOT_VERIFIED',
+    );
+  }
+
+  // Reject refresh token if the account has been suspended!
+  if (user.is_suspended === true && user.role !== 'super_admin') {
+    const suspendedDetails = buildSuspendedDetails(user);
+    throw ApiError.forbidden(
+      suspendedDetails.suspensionReason,
+      'ACCOUNT_SUSPENDED',
+      suspendedDetails,
     );
   }
 
@@ -312,6 +335,7 @@ async function refresh({ refreshToken }) {
       accountApprovalStatus: user.account_approval_status || 'approved',
       isSuspended: user.is_suspended === true,
       suspensionReason: user.suspension_reason || null,
+      suspendedAt: user.suspended_at || null,
     },
     ...tokens,
   };

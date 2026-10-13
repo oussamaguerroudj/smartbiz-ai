@@ -13,6 +13,7 @@ import 'session.dart';
 enum RefreshResult {
   refreshed,
   invalidToken,
+  suspended,
   networkUnavailable,
 }
 
@@ -108,8 +109,10 @@ class ApiClient {
     } catch (_) {}
   }
 
-  Map<String, String> get _headers {
-    final token = _ref.read(sessionProvider).accessToken;
+  Map<String, String> get _headers => _headersWithToken(null);
+
+  Map<String, String> _headersWithToken(String? overrideToken) {
+    final token = overrideToken ?? _ref.read(sessionProvider).accessToken;
 
     return {
       'Content-Type': 'application/json',
@@ -139,6 +142,33 @@ class ApiClient {
     debugPrint('======================');
   }
 
+  Future<void> _enforceAccountStatusFromResponse(http.Response response) async {
+    if (response.statusCode != 403 && response.statusCode != 401) return;
+    try {
+      if (response.body.isEmpty) return;
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return;
+      final code = decoded['code']?.toString();
+      final message = decoded['message']?.toString();
+      final details = decoded['details'] is Map
+          ? Map<String, dynamic>.from(decoded['details'] as Map)
+          : null;
+
+      if (code == 'ACCOUNT_SUSPENDED') {
+        await _ref.read(sessionProvider.notifier).lockSuspendedAccount(
+              reason: message,
+              details: details,
+            );
+      } else if (code == 'TRIAL_EXPIRED') {
+        await _ref.read(sessionProvider.notifier).lockExpiredTrialAccount(
+              details: details,
+            );
+      } else if (code == 'SESSION_REVOKED') {
+        await _ref.read(sessionProvider.notifier).clear();
+      }
+    } catch (_) {}
+  }
+
   dynamic _decode(
     http.Response response, {
     String? method,
@@ -159,18 +189,28 @@ class ApiClient {
       return body;
     }
 
+    final code = body is Map ? body['code']?.toString() : null;
+    final details = (body is Map && body['details'] is Map)
+        ? Map<String, dynamic>.from(body['details'] as Map)
+        : null;
+
     final rawMessage = (body is Map && body['message'] != null)
         ? body['message'].toString()
         : 'Request failed (${response.statusCode})';
 
-    final displayMessage = kReleaseMode
+    final isCleanRestrictionCode = code == 'ACCOUNT_SUSPENDED' ||
+        code == 'TRIAL_EXPIRED' ||
+        code == 'SESSION_REVOKED';
+
+    final displayMessage = (kReleaseMode || isCleanRestrictionCode)
         ? rawMessage
         : '$rawMessage\n\nMETHOD: ${method ?? 'UNKNOWN'}\nFULL URL: ${uri ?? '$baseUrl$path'}\nPATH: ${path ?? 'UNKNOWN'}\nSTATUS: ${response.statusCode}\nRESPONSE: ${response.body}';
 
     throw ApiException(
       statusCode: response.statusCode,
       message: displayMessage,
-      code: body is Map ? body['code']?.toString() : null,
+      code: code,
+      details: details,
       method: method,
       url: uri?.toString() ?? '$baseUrl$path',
       path: path,
@@ -182,6 +222,7 @@ class ApiClient {
     Future<http.Response> Function() request, {
     Duration? timeout,
     bool isRetryAfterRefresh = false,
+    bool skipAuthRefresh = false,
   }) async {
     http.Response response;
 
@@ -212,17 +253,16 @@ class ApiClient {
       );
     }
 
-    // FIX (reported bug): a merely-expired access token (30 min TTL  - 
-    // see backend env.js) used to surface as a raw 401 on whatever
-    // screen the user happened to be on, with nothing renewing the
-    // session  -  indistinguishable from being logged out. Now: on the
-    // FIRST 401 for a given request, try the refresh token once; if
-    // that succeeds, transparently retry the exact same request with
-    // the new access token. Only if refresh itself fails (refresh
-    // token also expired/revoked, or there wasn't one) does the
-    // session actually get cleared  -  that's the one case update where
-    // logging the user out is actually correct.
-    if (response.statusCode == 401 && !isRetryAfterRefresh) {
+    // Intercept ACCOUNT_SUSPENDED, TRIAL_EXPIRED, and SESSION_REVOKED immediately
+    if (response.statusCode == 403 || response.statusCode == 401) {
+      await _enforceAccountStatusFromResponse(response);
+      // If the account was just locked as suspended, do not attempt refresh
+      if (_ref.read(sessionProvider).isSuspendedLocked) {
+        return response;
+      }
+    }
+
+    if (response.statusCode == 401 && !isRetryAfterRefresh && !skipAuthRefresh) {
       final refreshResult = await _tryRefreshSession();
 
       if (refreshResult == RefreshResult.refreshed) {
@@ -230,10 +270,9 @@ class ApiClient {
       }
 
       if (refreshResult == RefreshResult.invalidToken) {
-        // Explicitly rejected by server (401/403) or missing refresh token: clear session
         await _ref.read(sessionProvider.notifier).clear();
       }
-      // If networkUnavailable, do NOT clear session! The user remains authenticated in offline mode.
+      // If suspended or networkUnavailable, do NOT clear session!
     }
 
     return response;
@@ -241,7 +280,7 @@ class ApiClient {
 
   /// Directly hits /auth/refresh with http (not through this class's
   /// own get/post helpers) to avoid recursing back into _request.
-  /// Distinguishes between network/timeout failure and explicit server rejection.
+  /// Distinguishes between network/timeout failure, suspension, and token rejection.
   Future<RefreshResult> _tryRefreshSession() async {
     final refreshToken = _ref.read(sessionProvider).refreshToken;
 
@@ -258,7 +297,15 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 401 || response.statusCode == 403) {
+      if (response.statusCode == 403) {
+        await _enforceAccountStatusFromResponse(response);
+        if (_ref.read(sessionProvider).isSuspendedLocked) {
+          return RefreshResult.suspended;
+        }
+        return RefreshResult.invalidToken;
+      }
+
+      if (response.statusCode == 401) {
         return RefreshResult.invalidToken;
       }
 
@@ -284,13 +331,22 @@ class ApiClient {
     String path, {
     Map<String, String>? query,
   }) async {
+    return getWithToken(path, query: query);
+  }
+
+  Future<dynamic> getWithToken(
+    String path, {
+    Map<String, String>? query,
+    String? overrideToken,
+  }) async {
     final uri = _uri(path, query);
     _logDebugRequest('GET', path, uri);
     final response = await _request(
       () => http.get(
         uri,
-        headers: _headers,
+        headers: _headersWithToken(overrideToken),
       ),
+      skipAuthRefresh: overrideToken != null,
     );
 
     return _decode(response, method: 'GET', path: path, uri: uri);
@@ -344,21 +400,38 @@ class ApiClient {
     Duration? timeout,
     http.Client? client,
   }) async {
+    return postWithToken(
+      path,
+      body: body,
+      timeout: timeout,
+      client: client,
+    );
+  }
+
+  Future<dynamic> postWithToken(
+    String path, {
+    Object? body,
+    Duration? timeout,
+    http.Client? client,
+    String? overrideToken,
+  }) async {
     final uri = _uri(path);
     _logDebugRequest('POST', path, uri);
+    final headers = _headersWithToken(overrideToken);
     final response = await _request(
       () => client != null
           ? client.post(
               uri,
-              headers: _headers,
+              headers: headers,
               body: body != null ? jsonEncode(body) : null,
             )
           : http.post(
               uri,
-              headers: _headers,
+              headers: headers,
               body: body != null ? jsonEncode(body) : null,
             ),
       timeout: timeout,
+      skipAuthRefresh: overrideToken != null,
     );
 
     return _decode(response, method: 'POST', path: path, uri: uri);
