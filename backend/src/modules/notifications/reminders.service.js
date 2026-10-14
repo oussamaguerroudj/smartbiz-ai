@@ -103,7 +103,7 @@ async function processTrialReminders() {
       });
 
       // Dispatch push notification to registered devices
-      await pushService.sendPushNotification({
+      const pushResult = await pushService.sendPushNotification({
         userId: row.user_id,
         companyId: row.id,
         title,
@@ -133,6 +133,11 @@ async function processTrialReminders() {
             email: row.email,
             inAppDelivered: true,
             emailDelivery: emailStatus,
+            pushDelivery: pushResult ? {
+              sent: pushResult.sent || 0,
+              failed: pushResult.failed || 0,
+              reason: pushResult.reason || (pushResult.sent > 0 ? 'delivered' : 'failed'),
+            } : 'unknown',
           }),
         ],
       );
@@ -184,7 +189,7 @@ async function processTrialReminders() {
       });
 
       // Dispatch push notification to registered devices
-      await pushService.sendPushNotification({
+      const pushResult = await pushService.sendPushNotification({
         userId: row.user_id,
         companyId: row.id,
         title,
@@ -212,6 +217,11 @@ async function processTrialReminders() {
             email: row.email,
             inAppDelivered: true,
             emailDelivery: emailStatus,
+            pushDelivery: pushResult ? {
+              sent: pushResult.sent || 0,
+              failed: pushResult.failed || 0,
+              reason: pushResult.reason || (pushResult.sent > 0 ? 'delivered' : 'failed'),
+            } : 'unknown',
           }),
         ],
       );
@@ -262,7 +272,7 @@ async function processTrialReminders() {
       });
 
       // Dispatch push notification to registered devices
-      await pushService.sendPushNotification({
+      const pushResult = await pushService.sendPushNotification({
         userId: row.user_id,
         companyId: row.id,
         title,
@@ -290,6 +300,11 @@ async function processTrialReminders() {
             email: row.email,
             inAppDelivered: true,
             emailDelivery: emailStatus,
+            pushDelivery: pushResult ? {
+              sent: pushResult.sent || 0,
+              failed: pushResult.failed || 0,
+              reason: pushResult.reason || (pushResult.sent > 0 ? 'delivered' : 'failed'),
+            } : 'unknown',
           }),
         ],
       );

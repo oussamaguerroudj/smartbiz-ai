@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../reports/data/reports_repository.dart' show invalidateAllReports;
 import '../../dashboard/data/dashboard_repository.dart' show dashboardRepositoryProvider;
@@ -242,6 +243,7 @@ class AuthRepository {
   ///   - A's rows reappear because company_id = A matches again
   ///   - A's offline work and sync queue are fully preserved
   Future<void> logout() async {
+    await _ref.read(notificationServiceProvider).unregisterOnLogout();
     await _ref.read(sessionProvider.notifier).clear();
     _ref.invalidate(companyInfoProvider);
     // DO NOT call AppDatabase.instance.clearAllData() here.
@@ -253,6 +255,8 @@ class AuthRepository {
     _ref.invalidate(companyInfoProvider);
     // Background pull all company data into local SQLite so app is instantly ready offline!
     unawaited(_ref.read(syncServiceProvider.notifier).pullInitialData());
+    // Register FCM device token with newly authenticated session
+    unawaited(_ref.read(notificationServiceProvider).initialize());
   }
 }
 

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'l10n/app_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/database/app_database.dart';
 import 'core/network/session.dart';
@@ -42,6 +44,19 @@ Future<void> main() async {
   // drawn already reflects the real session and language settings.
   await container.read(sessionProvider.notifier).restore();
   await container.read(localeProvider.notifier).ready;
+
+  // Initialize native Firebase before notification service registration
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('[Firebase] Native Firebase initialized successfully');
+    } catch (e) {
+      debugPrint('[Firebase] Native Firebase initialization skipped or failed: $e');
+    }
+  }
+
   await container.read(notificationServiceProvider).initialize();
 
   runApp(

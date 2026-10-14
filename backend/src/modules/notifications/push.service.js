@@ -1,4 +1,14 @@
 const { query } = require('../../config/db');
+const firebaseConfig = require('../../config/firebase');
+
+/**
+ * Safely masks device tokens for secure logging. Never logs complete tokens.
+ */
+function maskToken(token) {
+  if (!token || typeof token !== 'string') return '<empty>';
+  if (token.length <= 10) return '***';
+  return `${token.substring(0, 6)}...${token.substring(token.length - 4)}`;
+}
 
 /**
  * Registers or refreshes a push notification device token for a user.
@@ -45,43 +55,126 @@ async function unregisterDeviceToken({ userId, token }) {
 
 /**
  * Sends a push notification to registered devices for a user or entire company.
+ * Strictly respects tenant isolation.
+ * Automatically cleans up invalid or expired tokens returned by FCM.
+ * Returns delivery metrics without breaking caller transactions.
  */
 async function sendPushNotification({ userId, companyId, title, body, data = {} }) {
   try {
     let tokensRes;
-    if (userId) {
+    if (userId && companyId) {
       tokensRes = await query(
-        `SELECT id, token, platform FROM device_tokens WHERE user_id = $1`,
+        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE user_id = $1 AND company_id = $2`,
+        [userId, companyId],
+      );
+    } else if (userId) {
+      tokensRes = await query(
+        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE user_id = $1`,
         [userId],
       );
     } else if (companyId) {
       tokensRes = await query(
-        `SELECT id, token, platform FROM device_tokens WHERE company_id = $1`,
+        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE company_id = $1`,
         [companyId],
       );
     } else {
-      return { sent: 0, reason: 'missing_recipient' };
+      return { sent: 0, failed: 0, reason: 'missing_recipient' };
     }
 
-    const tokens = tokensRes.rows;
-    if (tokens.length === 0) {
-      return { sent: 0, reason: 'no_registered_devices' };
+    const tokenRows = tokensRes.rows;
+    if (tokenRows.length === 0) {
+      return { sent: 0, failed: 0, reason: 'no_registered_devices' };
+    }
+
+    // Convert all data payload properties to strings as strictly mandated by FCM v1
+    const sanitizedData = {};
+    for (const [k, v] of Object.entries(data || {})) {
+      sanitizedData[k] = typeof v === 'string' ? v : JSON.stringify(v);
+    }
+
+    const messaging = firebaseConfig.getMessaging();
+    if (!messaging || !firebaseConfig.isFirebaseConfigured()) {
+      // In environment without external FCM credentials, record dispatch log safely (tokens masked)
+      // eslint-disable-next-line no-console
+      console.log(`[PUSH] Skipped remote FCM (no credentials configured). Would dispatch to ${tokenRows.length} device(s) [User: ${userId || 'N/A'}, Company: ${companyId || 'N/A'}]`);
+      return {
+        sent: 0,
+        failed: 0,
+        simulated: tokenRows.length,
+        reason: 'unconfigured_credentials',
+      };
+    }
+
+    const tokens = tokenRows.map((r) => r.token);
+    const multicastPayload = {
+      tokens,
+      notification: {
+        title,
+        body,
+      },
+      data: sanitizedData,
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'modiri_notifications',
+          sound: 'default',
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+          },
+        },
+      },
+    };
+
+    const response = await messaging.sendEachForMulticast(multicastPayload);
+
+    let invalidTokensRemoved = 0;
+    if (response.failureCount > 0 && Array.isArray(response.responses)) {
+      for (let i = 0; i < response.responses.length; i++) {
+        const resp = response.responses[i];
+        if (!resp.success && resp.error) {
+          const errCode = resp.error.code;
+          const failedRow = tokenRows[i];
+          if (
+            errCode === 'messaging/invalid-registration-token' ||
+            errCode === 'messaging/registration-token-not-registered'
+          ) {
+            // Delete only this specific dead token row for this user
+            try {
+              await query(
+                `DELETE FROM device_tokens WHERE id = $1 AND user_id = $2`,
+                [failedRow.id, failedRow.user_id],
+              );
+              invalidTokensRemoved++;
+              // eslint-disable-next-line no-console
+              console.log(`[PUSH] Pruned expired/invalid token ${maskToken(failedRow.token)} for user ${failedRow.user_id}`);
+            } catch (pruneErr) {
+              // eslint-disable-next-line no-console
+              console.warn('[PUSH] Failed to prune invalid token:', pruneErr.message);
+            }
+          } else {
+            // eslint-disable-next-line no-console
+            console.warn(`[PUSH] FCM dispatch failure for device ${maskToken(failedRow.token)}:`, errCode);
+          }
+        }
+      }
     }
 
     // eslint-disable-next-line no-console
-    console.log(`[PUSH NOTIFICATION] Sending to ${tokens.length} device(s) [User: ${userId || 'N/A'}, Company: ${companyId || 'N/A'}]: "${title}"`);
+    console.log(`[PUSH] Dispatched push: ${response.successCount} sent, ${response.failureCount} failed (${invalidTokensRemoved} pruned) [User: ${userId || 'N/A'}, Company: ${companyId || 'N/A'}]`);
 
-    // In environment without external FCM credentials, record dispatch log safely
     return {
-      sent: tokens.length,
-      title,
-      body,
-      timestamp: new Date().toISOString(),
+      sent: response.successCount,
+      failed: response.failureCount,
+      pruned: invalidTokensRemoved,
     };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PUSH NOTIFICATION] Error dispatching push:', err.message);
-    return { sent: 0, error: err.message };
+    console.error('[PUSH] Unexpected error dispatching push:', err.message);
+    return { sent: 0, failed: 0, error: err.message };
   }
 }
 
@@ -89,4 +182,5 @@ module.exports = {
   registerDeviceToken,
   unregisterDeviceToken,
   sendPushNotification,
+  maskToken,
 };

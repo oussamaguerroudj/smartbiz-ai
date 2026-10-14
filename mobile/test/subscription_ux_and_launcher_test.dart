@@ -10,7 +10,7 @@ import 'package:modiri_ai/l10n/app_localizations.dart';
 void main() {
   group('SubscriptionScreen and ExternalLauncher Test Suite', () {
     testWidgets('SubscriptionScreen renders Lifetime active state correctly', (tester) async {
-      final lifetimeState = EntitlementState(
+      const lifetimeState = EntitlementState(
         hasAccess: true,
         status: 'lifetime_active',
         entitlementType: 'lifetime',
@@ -47,7 +47,7 @@ void main() {
     });
 
     testWidgets('SubscriptionScreen renders Free Trial countdown state correctly', (tester) async {
-      final trialState = EntitlementState(
+      const trialState = EntitlementState(
         hasAccess: true,
         status: 'trial_active',
         entitlementType: 'trial',
