@@ -1,0 +1,55 @@
+name: Scheduled Trial Reminders & Expiration Processor
+
+on:
+  schedule:
+    # Runs every 2 hours (at minute 15 of every even hour) to smoothly evaluate 48h, 24h, and expired trials
+    - cron: '15 */2 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions Console for operational testing
+
+concurrency:
+  group: trial-reminders-cron
+  cancel-in-progress: false
+
+jobs:
+  trigger-reminders:
+    name: Dispatch Trial Reminders Trigger
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger Remote Processor
+        env:
+          SCHEDULER_URL: ${{ secrets.MODIRI_SCHEDULER_URL }}
+          SCHEDULER_SECRET: ${{ secrets.MODIRI_SCHEDULER_SECRET }}
+        run: |
+          if [ -z "$SCHEDULER_URL" ] || [ -z "$SCHEDULER_SECRET" ]; then
+            echo "::error::Required secrets MODIRI_SCHEDULER_URL or MODIRI_SCHEDULER_SECRET are not configured in GitHub Repository Secrets."
+            exit 1
+          fi
+
+          # Strip trailing slash and any redundant /api suffix from URL
+          CLEAN_URL="${SCHEDULER_URL%/}"
+          BASE_URL="${CLEAN_URL%/api}"
+
+          echo "Triggering trial reminder processor on $BASE_URL/api/subscriptions/cron/process-reminders..."
+
+          # Render Free can take up to 30s to spin up on cold start; use max-time 45s and retry twice
+          HTTP_RESPONSE=$(curl -s -S -X POST "$BASE_URL/api/subscriptions/cron/process-reminders" \
+            -H "Content-Type: application/json" \
+            -H "x-scheduler-secret: $SCHEDULER_SECRET" \
+            --max-time 45 \
+            --retry 2 \
+            --retry-delay 5 \
+            -w "\nHTTP_STATUS:%{http_code}")
+
+          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -e '$d')
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n1 | cut -d':' -f2)
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "::error::Scheduler endpoint returned non-200 HTTP status code: $HTTP_STATUS"
+            echo "Response: $HTTP_BODY"
+            exit 1
+          fi
+
+          echo "Trial reminder processor executed successfully."
+          echo "Summary: $HTTP_BODY"
