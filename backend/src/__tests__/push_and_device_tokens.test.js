@@ -194,19 +194,21 @@ describe('Push Notifications and Device Tokens Suite', () => {
         expect(payload.tokens.length).toBe(2);
         // Verify payload format complies with FCM v1 string data requirement
         expect(typeof payload.notification.title).toBe('string');
+        const responses = payload.tokens.map((tok) =>
+          tok === 'fcm_dead_expired_token_999'
+            ? {
+                success: false,
+                error: {
+                  code: 'messaging/registration-token-not-registered',
+                  message: 'Requested entity was not found.',
+                },
+              }
+            : { success: true },
+        );
         return {
           successCount: 1,
           failureCount: 1,
-          responses: [
-            { success: true },
-            {
-              success: false,
-              error: {
-                code: 'messaging/registration-token-not-registered',
-                message: 'Requested entity was not found.',
-              },
-            },
-          ],
+          responses,
         };
       },
     });

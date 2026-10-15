@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../config/db');
+const { query, withTransaction } = require('../../config/db');
 const asyncHandler = require('../../utils/asyncHandler');
 const ApiError = require('../../utils/ApiError');
 const { authMiddleware } = require('../../middlewares/auth.middleware');
@@ -48,34 +48,71 @@ async function create(
     address,
   },
 ) {
-  if (id) {
-    const existing = await query(
-      'SELECT id, company_id FROM suppliers WHERE id = $1',
-      [id],
-    );
-    if (existing.rows.length > 0) {
-      if (existing.rows[0].company_id !== companyId) {
-        throw ApiError.conflict('Supplier with this ID already exists', 'CONFLICT');
-      }
-      return findById(companyId, id);
+  const runner = typeof withTransaction === 'function'
+    ? withTransaction
+    : async (cb) => cb({ query });
+
+  return runner(async (client) => {
+    try {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(('x' || substr(md5($1 || ':supplier:' || LOWER(TRIM($2))), 1, 16))::bit(64)::bigint)",
+        [companyId, name],
+      );
+    } catch (_) {
+      // Non-pg or mock fallback
     }
-  }
 
-  const result = await query(
-    `INSERT INTO suppliers
-       (id, company_id, name, phone, address)
-     VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5)
-     RETURNING *`,
-    [
-      id || null,
-      companyId,
-      name,
-      phone || null,
-      address || null,
-    ],
-  );
+    if (id) {
+      const existing = await client.query(
+        'SELECT id, company_id FROM suppliers WHERE id = $1',
+        [id],
+      );
+      if (existing.rows && existing.rows.length > 0) {
+        if (existing.rows[0].company_id !== companyId) {
+          throw ApiError.conflict('Supplier with this ID already exists', 'CONFLICT');
+        }
+        return findById(companyId, id, client);
+      }
+    }
 
-  return result.rows[0];
+    // Idempotency: Prevent duplicate supplier with identical name within the same company
+    const existingByName = await client.query(
+      `SELECT id, company_id, name, phone, address
+       FROM suppliers
+       WHERE company_id = $1 AND LOWER(TRIM(name)) = LOWER(TRIM($2)) AND deleted_at IS NULL`,
+      [companyId, name],
+    );
+    if (existingByName.rows && existingByName.rows.length > 0) {
+      const existingSup = existingByName.rows[0];
+      if ((phone && !existingSup.phone) || (address && !existingSup.address)) {
+        await client.query(
+          `UPDATE suppliers
+           SET phone = COALESCE($3, phone),
+               address = COALESCE($4, address),
+               updated_at = now()
+           WHERE id = $1 AND company_id = $2`,
+          [existingSup.id, companyId, phone || null, address || null],
+        );
+      }
+      return findById(companyId, existingSup.id, client);
+    }
+
+    const result = await client.query(
+      `INSERT INTO suppliers
+         (id, company_id, name, phone, address)
+       VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5)
+       RETURNING *`,
+      [
+        id || null,
+        companyId,
+        name,
+        phone || null,
+        address || null,
+      ],
+    );
+
+    return result.rows[0];
+  });
 }
 
 async function update(
@@ -107,8 +144,9 @@ async function update(
   return result.rows[0] || null;
 }
 
-async function findById(companyId, id) {
-  const supplierResult = await query(
+async function findById(companyId, id, client = null) {
+  const dbQuery = client ? client.query.bind(client) : query;
+  const supplierResult = await dbQuery(
     `SELECT s.*,
             COUNT(p.id)::int AS products_supplied
      FROM suppliers s
@@ -123,12 +161,12 @@ async function findById(companyId, id) {
     [companyId, id],
   );
 
-  const supplier = supplierResult.rows[0];
+  const supplier = supplierResult ? supplierResult.rows[0] : null;
   if (!supplier) {
     throw ApiError.notFound('Supplier not found');
   }
 
-  const productsResult = await query(
+  const productsResult = await dbQuery(
     `SELECT id, name, category, barcode, purchase_price, selling_price, quantity, expiration_date
      FROM products
      WHERE company_id = $1

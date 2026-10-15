@@ -64,17 +64,17 @@ async function sendPushNotification({ userId, companyId, title, body, data = {} 
     let tokensRes;
     if (userId && companyId) {
       tokensRes = await query(
-        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE user_id = $1 AND company_id = $2`,
+        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE user_id = $1 AND company_id = $2 ORDER BY id ASC`,
         [userId, companyId],
       );
     } else if (userId) {
       tokensRes = await query(
-        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE user_id = $1`,
+        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE user_id = $1 ORDER BY id ASC`,
         [userId],
       );
     } else if (companyId) {
       tokensRes = await query(
-        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE company_id = $1`,
+        `SELECT id, token, platform, user_id, company_id FROM device_tokens WHERE company_id = $1 ORDER BY id ASC`,
         [companyId],
       );
     } else {
