@@ -47,7 +47,29 @@ app.use(
 
 app.get(['/', '/download'], (req, res) => res.sendFile(landingHtmlPath));
 app.get('/health', (req, res) => res.json({ status: 'ok', env: env.nodeEnv }));
-app.get('/api/health', (req, res) => res.json({ status: 'ok', env: env.nodeEnv }));
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'ok';
+  let dbError = null;
+  let dbCode = null;
+  try {
+    const { pool } = require('./config/db');
+    await pool.query('SELECT 1');
+  } catch (err) {
+    dbStatus = 'error';
+    dbError = err.message || String(err);
+    dbCode = err.code || null;
+  }
+  return res.json({
+    status: 'ok',
+    env: env.nodeEnv,
+    commit: process.env.RENDER_GIT_COMMIT || '02f52e2',
+    db: {
+      status: dbStatus,
+      code: dbCode,
+      message: dbError,
+    },
+  });
+});
 
 app.use('/admin', express.static(adminPublicDir));
 app.get(['/admin', '/admin/*'], (req, res) => {
