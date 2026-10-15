@@ -54,6 +54,113 @@ async function deriveUnpaidInvoices(companyId) {
   }));
 }
 
+async function deriveExpiringSoon(companyId) {
+  try {
+    const result = await query(
+      `SELECT id, name, quantity, expiration_date
+       FROM products
+       WHERE company_id = $1
+         AND deleted_at IS NULL
+         AND expiration_date IS NOT NULL
+         AND expiration_date > CURRENT_DATE
+         AND expiration_date <= CURRENT_DATE + INTERVAL '30 days'
+         AND quantity > 0
+       ORDER BY expiration_date ASC
+       LIMIT 20`,
+      [companyId],
+    );
+
+    return result.rows.map((product) => {
+      const expDate = new Date(product.expiration_date).toISOString().substring(0, 10);
+      return {
+        type: 'expiring_soon',
+        title: `Expiring soon: ${product.name}`,
+        body: `Expires on ${expDate} (${product.quantity} in stock)`,
+        referenceId: product.id,
+      };
+    });
+  } catch (_) {
+    return [];
+  }
+}
+
+async function deriveExpiredStock(companyId) {
+  try {
+    const result = await query(
+      `SELECT id, name, quantity, expiration_date
+       FROM products
+       WHERE company_id = $1
+         AND deleted_at IS NULL
+         AND expiration_date IS NOT NULL
+         AND expiration_date <= CURRENT_DATE
+         AND quantity > 0
+       ORDER BY expiration_date ASC
+       LIMIT 20`,
+      [companyId],
+    );
+
+    return result.rows.map((product) => {
+      const expDate = new Date(product.expiration_date).toISOString().substring(0, 10);
+      return {
+        type: 'expired_stock',
+        title: `Expired product: ${product.name}`,
+        body: `Expired on ${expDate} (${product.quantity} in stock)`,
+        referenceId: product.id,
+      };
+    });
+  } catch (_) {
+    return [];
+  }
+}
+
+async function deriveCustomerDebts(companyId) {
+  try {
+    const result = await query(
+      `SELECT id, name, balance_due
+       FROM customers
+       WHERE company_id = $1
+         AND deleted_at IS NULL
+         AND balance_due > 0
+       ORDER BY balance_due DESC
+       LIMIT 20`,
+      [companyId],
+    );
+
+    return result.rows.map((cust) => ({
+      type: 'debt_reminder',
+      title: `Debt reminder: ${cust.name}`,
+      body: `${Number(cust.balance_due).toFixed(0)} DZD outstanding balance`,
+      referenceId: cust.id,
+    }));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function deriveTrialExpiring(companyId) {
+  try {
+    const result = await query(
+      `SELECT id, entitlement_status, trial_ends_at
+       FROM companies
+       WHERE id = $1
+         AND entitlement_status = 'trial'
+         AND trial_ends_at IS NOT NULL
+         AND trial_ends_at <= CURRENT_DATE + INTERVAL '3 days'
+         AND trial_ends_at > CURRENT_DATE - INTERVAL '1 day'`,
+      [companyId],
+    );
+
+    return result.rows.map((c) => ({
+      type: 'trial_expiring',
+      title: 'Trial period ending soon',
+      body: `Your free trial expires on ${new Date(c.trial_ends_at).toISOString().substring(0, 10)}. Upgrade to lifetime license for 15,000 DZD.`,
+      referenceId: c.id,
+    }));
+  } catch (_) {
+    return [];
+  }
+}
+
 async function storedNotifications(companyId, userId) {
   const result = await query(
     `SELECT *
@@ -75,10 +182,18 @@ const list = asyncHandler(async (req, res) => {
   const [
     lowStock,
     unpaidInvoices,
+    expiringSoon,
+    expiredStock,
+    customerDebts,
+    trialExpiring,
     stored,
   ] = await Promise.all([
     deriveLowStock(companyId),
     deriveUnpaidInvoices(companyId),
+    deriveExpiringSoon(companyId),
+    deriveExpiredStock(companyId),
+    deriveCustomerDebts(companyId),
+    deriveTrialExpiring(companyId),
     storedNotifications(companyId, userId),
   ]);
 
@@ -86,6 +201,10 @@ const list = asyncHandler(async (req, res) => {
     data: [
       ...lowStock,
       ...unpaidInvoices,
+      ...expiringSoon,
+      ...expiredStock,
+      ...customerDebts,
+      ...trialExpiring,
       ...stored,
     ],
   });
