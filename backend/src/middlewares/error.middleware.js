@@ -90,6 +90,7 @@ function errorMiddleware(err, req, res, next) { // eslint-disable-line no-unused
       error: true,
       message: 'Internal server error',
       code: 'INTERNAL_ERROR',
+      debugCode: err?.code || err?.name || null,
     });
   }
 

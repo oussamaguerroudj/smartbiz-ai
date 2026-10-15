@@ -52,11 +52,18 @@ app.get('/api/health', async (req, res) => {
   let dbError = null;
   let dbCode = null;
   let executedMigrations = [];
+  let tableChecks = null;
   try {
     const { pool } = require('./config/db');
     await pool.query('SELECT 1');
     const migRes = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
     executedMigrations = migRes.rows.map((r) => r.version);
+    tableChecks = {
+      users: (await pool.query('SELECT COUNT(*) FROM users')).rows[0].count,
+      pending: (await pool.query('SELECT COUNT(*) FROM pending_registrations')).rows[0].count,
+      support: (await pool.query('SELECT COUNT(*) FROM support_messages')).rows[0].count,
+      orders: (await pool.query('SELECT COUNT(*) FROM payment_orders')).rows[0].count,
+    };
   } catch (err) {
     dbStatus = 'error';
     dbError = err.message || String(err);
@@ -72,6 +79,7 @@ app.get('/api/health', async (req, res) => {
       message: dbError,
       migrationsCount: executedMigrations.length,
       lastMigration: executedMigrations[executedMigrations.length - 1] || null,
+      tables: tableChecks,
     },
   });
 });
