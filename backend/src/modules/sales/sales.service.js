@@ -246,6 +246,21 @@ async function createSale(
       paymentStatus === 'unpaid' ? 'unpaid' : 'paid',
     );
 
+    // If sale is unpaid (credit sale), record debt on customer ledger
+    if (customerId && paymentStatus === 'unpaid' && total > 0) {
+      const custUp = await client.query(
+        'UPDATE customers SET balance_due = balance_due + $1 WHERE id = $2 AND company_id = $3 RETURNING balance_due',
+        [total, customerId, companyId],
+      );
+      const balanceAfter = custUp.rows[0]?.balance_due ?? total;
+      await client.query(
+        `INSERT INTO customer_transactions
+         (company_id, customer_id, type, reference_id, amount, balance_after, description, created_at)
+         VALUES ($1, $2, 'credit_purchase', $3, $4, $5, $6, now())`,
+        [companyId, customerId, sale.id, total, balanceAfter, `Sale ${invoiceNumber}`],
+      );
+    }
+
     return {
       sale,
       items: savedItems,

@@ -300,6 +300,49 @@ async function getSummary(companyId) {
   return repo.summary(companyId);
 }
 
+async function getCustomerCreditStatement(companyId, customerId) {
+  const custRes = await query(
+    `SELECT * FROM customers WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL`,
+    [companyId, customerId],
+  );
+  const customer = custRes.rows[0];
+  if (!customer) {
+    throw ApiError.notFound('Customer not found');
+  }
+
+  const transactions = await repo.findCustomerTransactions(companyId, customerId);
+  const chronoTxs = [...transactions].reverse();
+
+  let totalCredit = 0;
+  let totalPaid = 0;
+  for (const t of chronoTxs) {
+    const amt = Number(t.amount);
+    if (amt > 0) {
+      totalCredit += amt;
+    } else {
+      totalPaid += Math.abs(amt);
+    }
+  }
+
+  return {
+    customer,
+    statement: {
+      totalCredit: round2(totalCredit),
+      totalPaid: round2(totalPaid),
+      currentBalance: Number(customer.balance_due),
+      transactions: chronoTxs,
+    },
+  };
+}
+
+async function streamCustomerCreditStatementPdf(res, companyId, customerId) {
+  const { customer, statement } = await getCustomerCreditStatement(companyId, customerId);
+  const compRes = await query('SELECT name, phone, address FROM companies WHERE id = $1', [companyId]);
+  const company = compRes.rows[0] || {};
+  const pdfService = require('../../utils/pdf.service');
+  pdfService.streamCustomerCreditStatementPdf(res, { company, customer, statement });
+}
+
 module.exports = {
   createCreditPurchase,
   recordPayment,
@@ -307,4 +350,6 @@ module.exports = {
   getCreditPurchase,
   getCustomerTransactions,
   getSummary,
+  getCustomerCreditStatement,
+  streamCustomerCreditStatementPdf,
 };

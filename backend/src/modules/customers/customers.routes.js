@@ -255,6 +255,24 @@ const deleteHandler = asyncHandler(async (req, res) => {
   });
 });
 
+const creditService = require('../credit/credit.service');
+
+const statementHandler = asyncHandler(async (req, res) => {
+  const statement = await creditService.getCustomerCreditStatement(
+    req.user.companyId,
+    req.params.id,
+  );
+  res.json({ data: statement });
+});
+
+const statementPdfHandler = asyncHandler(async (req, res) => {
+  await creditService.streamCustomerCreditStatementPdf(
+    res,
+    req.user.companyId,
+    req.params.id,
+  );
+});
+
 // Routes
 const router = express.Router();
 
@@ -262,6 +280,8 @@ router.use(authMiddleware);
 
 router.get('/', list);
 router.post('/', createHandler);
+router.get('/:id/statement', statementHandler);
+router.get('/:id/statement/pdf', statementPdfHandler);
 router.put('/:id', updateHandler);
 router.delete('/:id', deleteHandler);
 

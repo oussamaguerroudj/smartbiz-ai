@@ -7,6 +7,7 @@ import '../../../../core/network/session.dart';
 import '../../../../core/widgets/barcode_scanner_screen.dart';
 import '../../../products/data/products_repository.dart';
 import '../../../products/domain/product.dart';
+import '../../domain/sale.dart';
 import '../../data/sales_repository.dart';
 import '../../data/cart_manager.dart';
 import '../../domain/cart_session.dart';
@@ -64,7 +65,71 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _openCustomerPicker() async {
+  Future<Customer?> _showInlineCustomerDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog<Customer?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.addCustomer),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: l10n.fullName,
+                  prefixIcon: const Icon(Icons.person_outline),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return l10n.fullName;
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: l10n.phoneLabel,
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                final nav = Navigator.of(ctx);
+                final newCust = await ref.read(customersRepositoryProvider.notifier).addCustomer(
+                      nameCtrl.text.trim(),
+                      phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                    );
+                nav.pop(newCust);
+              }
+            },
+            child: Text(l10n.saveCustomer),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Customer?> _openCustomerPicker() async {
     final customers = ref.read(customersRepositoryProvider).valueOrNull ?? [];
     final l10n = AppLocalizations.of(context)!;
 
@@ -74,11 +139,25 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
       builder: (context) => SafeArea(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.55,
+            maxHeight: MediaQuery.of(context).size.height * 0.65,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_1, color: AppColors.primary),
+                title: Text(
+                  '+ ${l10n.addCustomer}',
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                ),
+                onTap: () async {
+                  final created = await _showInlineCustomerDialog();
+                  if (created != null && context.mounted) {
+                    Navigator.of(context).pop(created);
+                  }
+                },
+              ),
+              const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.person_off_outlined),
                 title: Text(l10n.walkInCustomer),
@@ -111,13 +190,14 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted) return null;
     if (selected != null) {
       await ref.read(multiCartProvider.notifier).updateCustomer(
             customerId: selected.id,
             customerName: selected.name,
           );
     }
+    return selected;
   }
 
   void _openProductPicker() async {
@@ -135,12 +215,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
     _addProduct(selected);
   }
 
-  Future<void> _scanBarcode() async {
-    final code = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
-    );
-    if (code == null || !mounted) return;
-
+  Future<void> _handleBarcodeScan(String code) async {
     final l10n = AppLocalizations.of(context)!;
     final product = await ref.read(productsRepositoryProvider.notifier).findByBarcode(code);
     if (!mounted) return;
@@ -154,6 +229,14 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
     if (added && mounted) {
       _showSnack(l10n.scannedProductAddedToCart(product.name));
     }
+  }
+
+  Future<void> _scanBarcode() async {
+    final code = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+    );
+    if (code == null || !mounted) return;
+    await _handleBarcodeScan(code);
   }
 
   Future<bool> _addProduct(Product product) async {
@@ -181,12 +264,34 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
       return;
     }
 
+    final paymentSelection = await showModalBottomSheet<_PaymentOption?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _PaymentMethodSheet(
+        cartTotal: activeCart.total,
+        customerName: activeCart.customerName,
+      ),
+    );
+    if (paymentSelection == null || !mounted) return;
+
+    var currentCustomerId = activeCart.customerId;
+    if (paymentSelection.status != PaymentStatus.paid && currentCustomerId == null) {
+      _showSnack(l10n.selectCustomerFirst);
+      final chosen = await _openCustomerPicker();
+      if (chosen == null || !mounted) return;
+      currentCustomerId = chosen.id;
+    }
+
     setState(() => _isSubmitting = true);
     final manager = ref.read(multiCartProvider.notifier);
     final salesRepo = ref.read(salesRepositoryProvider.notifier);
 
     try {
-      await manager.checkoutActiveCart(salesRepo);
+      await manager.checkoutActiveCart(
+        salesRepo,
+        paymentStatus: paymentSelection.status,
+        amountPaidNow: paymentSelection.amountPaidNow,
+      );
       if (mounted) {
         Navigator.of(context).pop();
       }
@@ -707,6 +812,213 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
                     );
                   },
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentOption {
+  final PaymentStatus status;
+  final double? amountPaidNow;
+  const _PaymentOption({required this.status, this.amountPaidNow});
+}
+
+class _PaymentMethodSheet extends StatefulWidget {
+  const _PaymentMethodSheet({
+    required this.cartTotal,
+    this.customerName,
+  });
+
+  final double cartTotal;
+  final String? customerName;
+
+  @override
+  State<_PaymentMethodSheet> createState() => _PaymentMethodSheetState();
+}
+
+class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
+  String _selectedMethod = 'paid';
+  final _amountPaidController = TextEditingController();
+
+  @override
+  void dispose() {
+    _amountPaidController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final total = widget.cartTotal;
+    final partialPaid = double.tryParse(_amountPaidController.text) ?? 0.0;
+    final remainingCredit = (total - partialPaid).clamp(0.0, total);
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          top: AppSpacing.md,
+          bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Règlement de la vente',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  Text(
+                    '${total.toStringAsFixed(0)} DZD',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                  ),
+                ],
+              ),
+              if (widget.customerName != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Client: ${widget.customerName}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondaryLight,
+                      ),
+                ),
+              ],
+              const Divider(height: 24),
+              InkWell(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                onTap: () => setState(() => _selectedMethod = 'paid'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _selectedMethod == 'paid' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                        color: _selectedMethod == 'paid' ? AppColors.primary : Colors.grey,
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.check_circle_outline, color: AppColors.success),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.statusPaid, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Paiement comptant reçu en totalité', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                onTap: () => setState(() => _selectedMethod = 'credit'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _selectedMethod == 'credit' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                        color: _selectedMethod == 'credit' ? AppColors.primary : Colors.grey,
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.credit_card_outlined, color: AppColors.warning),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.statusUnpaid, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Vente à crédit — totalité en dette client', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                onTap: () => setState(() => _selectedMethod = 'partial'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _selectedMethod == 'partial' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                        color: _selectedMethod == 'partial' ? AppColors.primary : Colors.grey,
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.payments_outlined, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Paiement partiel', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Acompte payé maintenant, reste en dette', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_selectedMethod == 'partial') ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _amountPaidController,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: l10n.amountToPayNowLabel,
+                    suffixText: 'DZD',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${l10n.remainingCreditLabel}: ${remainingCredit.toStringAsFixed(0)} DZD',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  if (_selectedMethod == 'paid') {
+                    Navigator.of(context).pop(const _PaymentOption(status: PaymentStatus.paid));
+                  } else if (_selectedMethod == 'credit') {
+                    Navigator.of(context).pop(const _PaymentOption(status: PaymentStatus.unpaid, amountPaidNow: 0.0));
+                  } else {
+                    if (partialPaid <= 0 || partialPaid >= total) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.amountExceedsTotal)),
+                      );
+                      return;
+                    }
+                    Navigator.of(context).pop(_PaymentOption(status: PaymentStatus.partial, amountPaidNow: partialPaid));
+                  }
+                },
+                child: Text(l10n.confirmSaleButton),
               ),
             ],
           ),

@@ -44,6 +44,22 @@ const summary = asyncHandler(async (req, res) => {
   res.json({ data: await service.getSummary(req.user.companyId) });
 });
 
+const customerStatement = asyncHandler(async (req, res) => {
+  const statement = await service.getCustomerCreditStatement(
+    req.user.companyId,
+    req.params.customerId || req.params.id,
+  );
+  res.json({ data: statement });
+});
+
+const customerStatementPdf = asyncHandler(async (req, res) => {
+  await service.streamCustomerCreditStatementPdf(
+    res,
+    req.user.companyId,
+    req.params.customerId || req.params.id,
+  );
+});
+
 module.exports = {
   createPurchase,
   listPurchases,
@@ -51,4 +67,6 @@ module.exports = {
   recordPayment,
   customerTransactions,
   summary,
+  customerStatement,
+  customerStatementPdf,
 };

@@ -12,6 +12,8 @@ router.get('/purchases', controller.listPurchases);
 router.get('/purchases/:id', controller.getPurchase);
 router.post('/payments', validateRecordPayment, controller.recordPayment);
 router.get('/customers/:customerId/transactions', controller.customerTransactions);
+router.get('/customers/:customerId/statement', controller.customerStatement);
+router.get('/customers/:customerId/statement/pdf', controller.customerStatementPdf);
 router.get('/summary', controller.summary);
 
 module.exports = router;

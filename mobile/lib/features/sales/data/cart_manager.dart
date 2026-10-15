@@ -380,7 +380,11 @@ class CartManager extends StateNotifier<MultiCartState> {
   }
 
   /// Completes sale for active cart, marks it COMPLETED in SQLite, and transitions to next/new cart.
-  Future<Map<String, dynamic>> checkoutActiveCart(SalesRepository salesRepo) async {
+  Future<Map<String, dynamic>> checkoutActiveCart(
+    SalesRepository salesRepo, {
+    PaymentStatus paymentStatus = PaymentStatus.paid,
+    double? amountPaidNow,
+  }) async {
     final cart = state.activeCart;
     final companyId = _companyId;
     if (cart == null || companyId == null) throw Exception('No active cart');
@@ -398,8 +402,9 @@ class CartManager extends StateNotifier<MultiCartState> {
     final result = await salesRepo.createSale(
       items: itemsInput,
       discount: cart.discount,
-      paymentStatus: PaymentStatus.paid,
+      paymentStatus: paymentStatus,
       customerId: cart.customerId,
+      amountPaidNow: amountPaidNow,
     );
 
     // Mark cart session completed in SQLite

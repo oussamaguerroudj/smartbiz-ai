@@ -237,16 +237,15 @@ function streamRestaurantInvoicePdf(res, { company, invoice }) {
   doc.end();
 }
 
-function streamStandardInvoicePdf(res, { company, invoice }) {
-  const { doc, fontRegular, fontBold } = createPdfDoc();
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoice_number, 'invoice')}.pdf"`);
-  doc.pipe(res);
-
+function renderStandardInvoiceDoc(doc, { company, invoice }, fontRegular, fontBold) {
   drawHeader(doc, company, fontRegular, fontBold);
 
-  doc.fontSize(14).font(fontBold).text('Facture / Invoice');
+  const isPaid = (invoice.status || '').toLowerCase() === 'paid';
+  const statusLabel = isPaid ? 'FACTURE ACQUITTÉE / RECEIPT (PAID)' : 'FACTURE NON ACQUITTÉE / PROFORMA INVOICE';
+  const statusColor = isPaid ? '#2e7d32' : '#c62828';
+
+  doc.fontSize(14).font(fontBold).fillColor(statusColor).text(statusLabel);
+  doc.fillColor('#000');
   doc.fontSize(10).font(fontRegular);
   doc.text(`${invoice.invoice_number || ''}    ${formatDate(invoice.created_at || invoice.sold_at || new Date())}`);
   if (invoice.customer_name) {
@@ -292,9 +291,30 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
   }
   line('Total', money(invoice.total), true);
   doc.moveDown(0.5);
-  doc.font(fontBold).text(`Status: ${invoice.status || 'paid'}`, summaryX, doc.y);
+  doc.font(fontBold).fillColor(statusColor).text(`Statut: ${isPaid ? 'ACQUITTÉE (PAID)' : 'NON ACQUITTÉE (UNPAID / PROFORMA)'}`, summaryX, doc.y);
+  doc.fillColor('#000');
 
   doc.end();
+}
+
+function streamStandardInvoicePdf(res, { company, invoice }) {
+  const { doc, fontRegular, fontBold } = createPdfDoc();
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(invoice.invoice_number, 'invoice')}.pdf"`);
+  doc.pipe(res);
+  renderStandardInvoiceDoc(doc, { company, invoice }, fontRegular, fontBold);
+}
+
+function generateStandardInvoicePdfBuffer({ company, invoice }) {
+  return new Promise((resolve, reject) => {
+    const { doc, fontRegular, fontBold } = createPdfDoc();
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    renderStandardInvoiceDoc(doc, { company, invoice }, fontRegular, fontBold);
+  });
 }
 
 /**
@@ -398,12 +418,239 @@ function generateKitchenTicketPdfBuffer({ company, order, items }) {
   });
 }
 
+/**
+ * Supplier Account Statement (Relevé Fournisseur).
+ * Displays AP ledger, purchases, payments, and running balance.
+ */
+function renderSupplierStatementDoc(doc, { company, supplier, statement }, fontRegular, fontBold) {
+  drawHeader(doc, company, fontRegular, fontBold);
+
+  doc.fontSize(14).font(fontBold).text('RELEVÉ DE COMPTE FOURNISSEUR / SUPPLIER STATEMENT');
+  doc.fontSize(10).font(fontRegular);
+  doc.text(`Date d'émission: ${formatDate(new Date())}`);
+  doc.moveDown(0.5);
+
+  doc.font(fontBold).fontSize(11).text(`Fournisseur: ${formatPdfText(supplier.name)}`);
+  doc.font(fontRegular).fontSize(10);
+  if (supplier.phone) doc.text(`Téléphone: ${supplier.phone}`);
+  if (supplier.address) doc.text(`Adresse: ${formatPdfText(supplier.address)}`);
+  doc.moveDown(1);
+
+  // 3 KPI Boxes
+  const kpiTop = doc.y;
+  const boxWidth = 150;
+  const boxHeight = 50;
+
+  doc.rect(50, kpiTop, boxWidth, boxHeight).fillColor('#f5f5f5').fill().strokeColor('#ddd').stroke();
+  doc.fillColor('#555').font(fontRegular).fontSize(9).text('TOTAL FACTURÉ / ACHATS', 55, kpiTop + 8, { width: boxWidth - 10 });
+  doc.fillColor('#000').font(fontBold).fontSize(12).text(money(statement.totalPurchases || 0), 55, kpiTop + 24, { width: boxWidth - 10 });
+
+  doc.rect(210, kpiTop, boxWidth, boxHeight).fillColor('#f5f5f5').fill().strokeColor('#ddd').stroke();
+  doc.fillColor('#555').font(fontRegular).fontSize(9).text('TOTAL RÉGLÉ / PAYÉ', 215, kpiTop + 8, { width: boxWidth - 10 });
+  doc.fillColor('#2e7d32').font(fontBold).fontSize(12).text(money(statement.totalPaid || 0), 215, kpiTop + 24, { width: boxWidth - 10 });
+
+  const balanceDue = Number(statement.balanceDue || 0);
+  const balColor = balanceDue > 0 ? '#c62828' : '#2e7d32';
+  doc.rect(370, kpiTop, boxWidth, boxHeight).fillColor('#f5f5f5').fill().strokeColor('#ddd').stroke();
+  doc.fillColor('#555').font(fontRegular).fontSize(9).text('SOLDE RESTANT DÛ', 375, kpiTop + 8, { width: boxWidth - 10 });
+  doc.fillColor(balColor).font(fontBold).fontSize(12).text(money(balanceDue), 375, kpiTop + 24, { width: boxWidth - 10 });
+  doc.fillColor('#000');
+
+  doc.y = kpiTop + boxHeight + 20;
+
+  // Transactions Ledger Table
+  doc.font(fontBold).fontSize(10);
+  const tableTop = doc.y;
+  doc.text('Date', 50, tableTop, { width: 70 });
+  doc.text('Opération / Réf', 125, tableTop, { width: 155 });
+  doc.text('Débit (+Achats)', 285, tableTop, { width: 85, align: 'right' });
+  doc.text('Crédit (-Paiements)', 375, tableTop, { width: 85, align: 'right' });
+  doc.text('Solde Dû', 465, tableTop, { width: 80, align: 'right' });
+
+  doc.moveDown(0.3);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#bbb').stroke();
+  doc.moveDown(0.3);
+
+  const transactions = statement.transactions || [];
+  doc.font(fontRegular).fontSize(9);
+  for (const tx of transactions) {
+    if (doc.y > 750) {
+      doc.addPage();
+      drawHeader(doc, company, fontRegular, fontBold);
+      doc.font(fontBold).fontSize(10);
+      const nextTableTop = doc.y;
+      doc.text('Date', 50, nextTableTop, { width: 70 });
+      doc.text('Opération / Réf', 125, nextTableTop, { width: 155 });
+      doc.text('Débit (+Achats)', 285, nextTableTop, { width: 85, align: 'right' });
+      doc.text('Crédit (-Paiements)', 375, nextTableTop, { width: 85, align: 'right' });
+      doc.text('Solde Dû', 465, nextTableTop, { width: 80, align: 'right' });
+      doc.moveDown(0.3);
+      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#bbb').stroke();
+      doc.moveDown(0.3);
+      doc.font(fontRegular).fontSize(9);
+    }
+
+    const rowY = doc.y;
+    doc.text(formatDate(tx.date), 50, rowY, { width: 70 });
+    doc.text(formatPdfText(tx.description || tx.reference || tx.type), 125, rowY, { width: 155 });
+    doc.text(tx.debit ? money(tx.debit) : '-', 285, rowY, { width: 85, align: 'right' });
+    doc.text(tx.credit ? money(tx.credit) : '-', 375, rowY, { width: 85, align: 'right' });
+    doc.text(money(tx.balanceAfter), 465, rowY, { width: 80, align: 'right' });
+    doc.moveDown(0.5);
+  }
+
+  doc.moveDown(2);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ddd').stroke();
+  doc.moveDown(0.5);
+  doc.fontSize(8).font(fontRegular).fillColor('#666').text('Ce relevé retrace l\'ensemble des mouvements enregistrés avec ce fournisseur. Pour toute réclamation, veuillez contacter le service comptabilité.', { align: 'center' });
+  doc.fillColor('#000');
+  doc.end();
+}
+
+function streamSupplierStatementPdf(res, { company, supplier, statement }) {
+  const { doc, fontRegular, fontBold } = createPdfDoc();
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(`supplier-statement-${supplier.name || supplier.id}`)}.pdf"`);
+  doc.pipe(res);
+  renderSupplierStatementDoc(doc, { company, supplier, statement }, fontRegular, fontBold);
+}
+
+function generateSupplierStatementPdfBuffer({ company, supplier, statement }) {
+  return new Promise((resolve, reject) => {
+    const { doc, fontRegular, fontBold } = createPdfDoc();
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    renderSupplierStatementDoc(doc, { company, supplier, statement }, fontRegular, fontBold);
+  });
+}
+
+/**
+ * Customer Credit Statement (Relevé Crédit Client).
+ * Displays customer credit purchases, repayments, and running debt balance.
+ */
+function renderCustomerCreditStatementDoc(doc, { company, customer, statement }, fontRegular, fontBold) {
+  drawHeader(doc, company, fontRegular, fontBold);
+
+  doc.fontSize(14).font(fontBold).text('RELEVÉ DE CRÉDIT CLIENT / CUSTOMER CREDIT STATEMENT');
+  doc.fontSize(10).font(fontRegular);
+  doc.text(`Date d'émission: ${formatDate(new Date())}`);
+  doc.moveDown(0.5);
+
+  doc.font(fontBold).fontSize(11).text(`Client: ${formatPdfText(customer.name)}`);
+  doc.font(fontRegular).fontSize(10);
+  if (customer.phone) doc.text(`Téléphone: ${customer.phone}`);
+  if (customer.address) doc.text(`Adresse: ${formatPdfText(customer.address)}`);
+  doc.moveDown(1);
+
+  // 3 KPI Boxes
+  const kpiTop = doc.y;
+  const boxWidth = 150;
+  const boxHeight = 50;
+
+  doc.rect(50, kpiTop, boxWidth, boxHeight).fillColor('#f5f5f5').fill().strokeColor('#ddd').stroke();
+  doc.fillColor('#555').font(fontRegular).fontSize(9).text('TOTAL CRÉDIT ACCORDÉ', 55, kpiTop + 8, { width: boxWidth - 10 });
+  doc.fillColor('#000').font(fontBold).fontSize(12).text(money(statement.totalCredit || 0), 55, kpiTop + 24, { width: boxWidth - 10 });
+
+  doc.rect(210, kpiTop, boxWidth, boxHeight).fillColor('#f5f5f5').fill().strokeColor('#ddd').stroke();
+  doc.fillColor('#555').font(fontRegular).fontSize(9).text('TOTAL RÈGLEMENTS REÇUS', 215, kpiTop + 8, { width: boxWidth - 10 });
+  doc.fillColor('#2e7d32').font(fontBold).fontSize(12).text(money(statement.totalPaid || 0), 215, kpiTop + 24, { width: boxWidth - 10 });
+
+  const balanceDue = Number(statement.currentBalance || 0);
+  const balColor = balanceDue > 0 ? '#c62828' : '#2e7d32';
+  doc.rect(370, kpiTop, boxWidth, boxHeight).fillColor('#f5f5f5').fill().strokeColor('#ddd').stroke();
+  doc.fillColor('#555').font(fontRegular).fontSize(9).text('SOLDE DÛ ACTUEL', 375, kpiTop + 8, { width: boxWidth - 10 });
+  doc.fillColor(balColor).font(fontBold).fontSize(12).text(money(balanceDue), 375, kpiTop + 24, { width: boxWidth - 10 });
+  doc.fillColor('#000');
+
+  doc.y = kpiTop + boxHeight + 20;
+
+  // Transactions Table
+  doc.font(fontBold).fontSize(10);
+  const tableTop = doc.y;
+  doc.text('Date', 50, tableTop, { width: 70 });
+  doc.text('Opération / Description', 125, tableTop, { width: 155 });
+  doc.text('Débit (+Dette)', 285, tableTop, { width: 85, align: 'right' });
+  doc.text('Crédit (-Paiement)', 375, tableTop, { width: 85, align: 'right' });
+  doc.text('Solde Dû', 465, tableTop, { width: 80, align: 'right' });
+
+  doc.moveDown(0.3);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#bbb').stroke();
+  doc.moveDown(0.3);
+
+  const transactions = statement.transactions || [];
+  doc.font(fontRegular).fontSize(9);
+  for (const tx of transactions) {
+    if (doc.y > 750) {
+      doc.addPage();
+      drawHeader(doc, company, fontRegular, fontBold);
+      doc.font(fontBold).fontSize(10);
+      const nextTableTop = doc.y;
+      doc.text('Date', 50, nextTableTop, { width: 70 });
+      doc.text('Opération / Description', 125, nextTableTop, { width: 155 });
+      doc.text('Débit (+Dette)', 285, nextTableTop, { width: 85, align: 'right' });
+      doc.text('Crédit (-Paiement)', 375, nextTableTop, { width: 85, align: 'right' });
+      doc.text('Solde Dû', 465, nextTableTop, { width: 80, align: 'right' });
+      doc.moveDown(0.3);
+      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#bbb').stroke();
+      doc.moveDown(0.3);
+      doc.font(fontRegular).fontSize(9);
+    }
+
+    const rowY = doc.y;
+    doc.text(formatDate(tx.created_at || tx.date), 50, rowY, { width: 70 });
+    doc.text(formatPdfText(tx.description || tx.type), 125, rowY, { width: 155 });
+    const isCredit = Number(tx.amount) < 0;
+    const debitVal = !isCredit ? Math.abs(Number(tx.amount)) : null;
+    const creditVal = isCredit ? Math.abs(Number(tx.amount)) : null;
+
+    doc.text(debitVal ? money(debitVal) : '-', 285, rowY, { width: 85, align: 'right' });
+    doc.text(creditVal ? money(creditVal) : '-', 375, rowY, { width: 85, align: 'right' });
+    doc.text(money(tx.balance_after || tx.balanceAfter || 0), 465, rowY, { width: 80, align: 'right' });
+    doc.moveDown(0.5);
+  }
+
+  doc.moveDown(2);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ddd').stroke();
+  doc.moveDown(0.5);
+  doc.fontSize(8).font(fontRegular).fillColor('#666').text('Relevé de compte client certifié exact par l\'établissement émetteur.', { align: 'center' });
+  doc.fillColor('#000');
+  doc.end();
+}
+
+function streamCustomerCreditStatementPdf(res, { company, customer, statement }) {
+  const { doc, fontRegular, fontBold } = createPdfDoc();
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(`credit-statement-${customer.name || customer.id}`)}.pdf"`);
+  doc.pipe(res);
+  renderCustomerCreditStatementDoc(doc, { company, customer, statement }, fontRegular, fontBold);
+}
+
+function generateCustomerCreditStatementPdfBuffer({ company, customer, statement }) {
+  return new Promise((resolve, reject) => {
+    const { doc, fontRegular, fontBold } = createPdfDoc();
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    renderCustomerCreditStatementDoc(doc, { company, customer, statement }, fontRegular, fontBold);
+  });
+}
+
 module.exports = {
   streamPrescriptionPdf,
   streamClinicInvoicePdf,
   streamRestaurantInvoicePdf,
   streamStandardInvoicePdf,
+  generateStandardInvoicePdfBuffer,
   streamKitchenTicketPdf,
   generateKitchenTicketPdfBuffer,
+  streamSupplierStatementPdf,
+  generateSupplierStatementPdfBuffer,
+  streamCustomerCreditStatementPdf,
+  generateCustomerCreditStatementPdfBuffer,
   formatPdfText,
 };

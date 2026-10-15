@@ -17,6 +17,7 @@ import '../../pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart'
 import '../../restaurant/data/restaurant_repository.dart' show restaurantDashboardProvider;
 import '../../clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
 import '../../reports/data/reports_repository.dart' show invalidateAllReports;
+import '../../customers/data/customers_repository.dart' show customersRepositoryProvider;
 import '../domain/sale.dart';
 
 class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
@@ -174,6 +175,7 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
     double discount = 0,
     PaymentStatus paymentStatus = PaymentStatus.paid,
     String? customerId,
+    double? amountPaidNow,
   }) async {
     final companyId = _companyId;
     if (companyId == null) {
@@ -313,7 +315,45 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
         'created_at': nowIso,
       });
 
-      // 5. Enqueue in Sync Queue (tagged with company_id)
+      // 5. If sale is unpaid or partial, record debt on customer ledger
+      if (customerId != null && paymentStatus != PaymentStatus.paid) {
+        final paidAmount = (paymentStatus == PaymentStatus.unpaid)
+            ? 0.0
+            : (amountPaidNow ?? total).clamp(0.0, total);
+        final debtAmount = (total - paidAmount).clamp(0.0, double.infinity);
+
+        if (debtAmount > 0) {
+          final custRows = await txn.query(
+            'customers',
+            where: 'id = ? AND (company_id = ? OR company_id IS NULL)',
+            whereArgs: [customerId, companyId],
+          );
+          final currentBalance = custRows.isNotEmpty
+              ? ((custRows.first['balance_due'] as num?)?.toDouble() ?? 0.0)
+              : 0.0;
+          final newBalance = currentBalance + debtAmount;
+
+          await txn.update(
+            'customers',
+            {'balance_due': newBalance},
+            where: 'id = ? AND (company_id = ? OR company_id IS NULL)',
+            whereArgs: [customerId, companyId],
+          );
+
+          await txn.insert('customer_transactions', {
+            'id': const Uuid().v4(),
+            'client_id': clientTxId,
+            'customer_id': customerId,
+            'type': 'credit_sale',
+            'amount': debtAmount,
+            'balance_after': newBalance,
+            'description': 'Sale $invoiceNumber',
+            'created_at': nowIso,
+          });
+        }
+      }
+
+      // 6. Enqueue in Sync Queue (tagged with company_id)
       await txn.insert('sync_queue', {
         'id': const Uuid().v4(),
         'company_id': companyId,
@@ -359,6 +399,7 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
     await load();
     await _ref.read(productsRepositoryProvider.notifier).load();
     await _ref.read(invoicesRepositoryProvider.notifier).load();
+    await _ref.read(customersRepositoryProvider.notifier).load();
     await _ref.read(dashboardRepositoryProvider.notifier).load();
     _invalidateAllDashboards();
     invalidateAllReports(_ref);

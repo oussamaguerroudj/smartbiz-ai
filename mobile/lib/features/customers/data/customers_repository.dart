@@ -151,9 +151,9 @@ class CustomersRepository extends StateNotifier<AsyncValue<List<Customer>>> {
     await batch.commit(noResult: true);
   }
 
-  Future<void> addCustomer(String name, String? phone, {String? address}) async {
+  Future<Customer?> addCustomer(String name, String? phone, {String? address}) async {
     final companyId = _companyId;
-    if (companyId == null) return;
+    if (companyId == null) return null;
 
     final newId = const Uuid().v4();
     final clientId = const Uuid().v4();
@@ -188,6 +188,8 @@ class CustomersRepository extends StateNotifier<AsyncValue<List<Customer>>> {
             if (address != null && address.isNotEmpty) 'address': address,
           },
         );
+
+    return Customer(id: newId, name: name, phone: phone, address: address, balanceDue: 0.0);
   }
 
   Future<void> updateCustomer(String id, String name, String? phone, {String? address}) async {
