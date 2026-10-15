@@ -19,20 +19,109 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Modiri AI — AI-powered small business management app.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
   <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Modiri AI">
+  <meta name="format-detection" content="telephone=no">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+
+  <!-- Theme color -->
+  <meta name="theme-color" content="#3D55F5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0A0D24" media="(prefers-color-scheme: dark)">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>Modiri AI</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #0A0D24;
+      overflow: hidden;
+      touch-action: pan-x pan-y;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+      -webkit-user-select: none;
+      overscroll-behavior: none;
+    }
+
+    #app-loading-splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #0A0D24;
+      z-index: 999999;
+      transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .splash-logo {
+      width: 88px;
+      height: 88px;
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(61, 85, 245, 0.3);
+      animation: pulse-logo 2s infinite ease-in-out;
+    }
+
+    .splash-spinner {
+      margin-top: 28px;
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(255, 255, 255, 0.12);
+      border-top-color: #3D55F5;
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse-logo {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+  </style>
 </head>
 <body>
+  <div id="app-loading-splash">
+    <img src="icons/Icon-192.png" alt="Modiri AI" class="splash-logo" />
+    <div class="splash-spinner"></div>
+  </div>
+
+  <script>
+    (function() {
+      function dismissSplash() {
+        var splash = document.getElementById('app-loading-splash');
+        if (splash) {
+          splash.style.opacity = '0';
+          setTimeout(function() {
+            if (splash.parentNode) splash.parentNode.removeChild(splash);
+          }, 400);
+        }
+      }
+
+      window.addEventListener('flutter-first-frame', dismissSplash, { once: true });
+      // Fallback timeout in case event is missed
+      setTimeout(dismissSplash, 6000);
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

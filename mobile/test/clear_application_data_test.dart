@@ -184,6 +184,11 @@ Future<Database> _createFullTestDb() async {
             size TEXT,
             color TEXT,
             brand TEXT,
+            dosage TEXT,
+            form TEXT,
+            active_ingredient TEXT,
+            batch_number TEXT,
+            supplier_id TEXT,
             created_at TEXT,
             updated_at TEXT,
             synced INTEGER DEFAULT 0

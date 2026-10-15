@@ -1,12 +1,15 @@
 {
     "name": "Modiri AI",
     "short_name": "Modiri AI",
+    "id": "/modiri-ai",
+    "scope": "/",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#000000",
-    "theme_color": "#000000",
+    "background_color": "#0A0D24",
+    "theme_color": "#3D55F5",
     "description": "Modiri AI — AI-powered small business management app.",
     "orientation": "portrait-primary",
+    "categories": ["business", "finance", "productivity"],
     "prefer_related_applications": false,
     "icons": [
         {

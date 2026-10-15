@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -42,6 +43,9 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
       });
 
       controller.addListener(_videoListener);
+      if (kIsWeb) {
+        await controller.setVolume(0);
+      }
       await controller.play();
     } catch (e) {
       debugPrint('Failed to play splash video: $e');

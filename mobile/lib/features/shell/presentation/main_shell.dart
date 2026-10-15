@@ -409,11 +409,6 @@ class _MoreMenu extends ConsumerWidget {
         Icons.settings_outlined,
         (_) => const SettingsScreen(),
       ),
-      _MoreMenuItemData(
-        l10n.allPagesTitle,
-        Icons.grid_view_rounded,
-        (_) => const AllPagesScreen(),
-      ),
     ];
 
     return [

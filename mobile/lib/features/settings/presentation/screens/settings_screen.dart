@@ -54,11 +54,12 @@ class SettingsScreen extends ConsumerWidget {
       }
     }
 
-    return Scaffold(
+      return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
         children: [
+          _SettingsSectionHeader(title: l10n.moreSectionSystem),
           _SettingsTile(
             icon: Icons.workspace_premium_rounded,
             title: l10n.lifetimeLicenseTitle,
@@ -70,6 +71,8 @@ class SettingsScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: AppSpacing.sm),
+          _SettingsSectionHeader(title: l10n.businessProfileTitle),
           _SettingsTile(
             icon: Icons.storefront_outlined,
             title: l10n.businessProfileTitle,
@@ -90,6 +93,8 @@ class SettingsScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: AppSpacing.sm),
+          _SettingsSectionHeader(title: l10n.themeTitle),
           _SettingsTile(
             icon: Icons.dark_mode_outlined,
             title: l10n.themeTitle,
@@ -106,6 +111,8 @@ class SettingsScreen extends ConsumerWidget {
               locale ?? Localizations.localeOf(context),
             ),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          _SettingsSectionHeader(title: l10n.contactUsTitle),
           _SettingsTile(
             icon: Icons.support_agent_rounded,
             title: l10n.contactUsTitle,
@@ -126,6 +133,8 @@ class SettingsScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: AppSpacing.sm),
+          _SettingsSectionHeader(title: l10n.clearDataTitle),
           _SettingsTile(
             icon: Icons.delete_forever_rounded,
             title: l10n.clearDataTitle,
@@ -241,6 +250,33 @@ class SettingsScreen extends ConsumerWidget {
                   .toList(),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSectionHeader extends StatelessWidget {
+  const _SettingsSectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: AppSpacing.xs,
+        right: AppSpacing.xs,
+        top: AppSpacing.xs,
+        bottom: 4,
+      ),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );

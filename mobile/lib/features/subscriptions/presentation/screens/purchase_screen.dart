@@ -177,28 +177,25 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
       body: SafeArea(
         child: Column(
           children: [
-            // Product Highlight Card
+            // Product Highlight Card — Modiri AI Design System
             Container(
               margin: const EdgeInsets.all(AppSpacing.md),
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                boxShadow: AppSpacing.cardElevation,
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.2),
+                      color: AppColors.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.verified_rounded, color: AppColors.primary, size: 32),
+                    child: const Icon(Icons.workspace_premium_rounded, color: AppColors.primary, size: 32),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -207,20 +204,40 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
                       children: [
                         Text(
                           l10n.lifetimeLicenseTitle,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          l10n.lifetimeLicenseSubtitle,
-                          style: const TextStyle(
-                            color: Color(0xFF38BDF8),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            const Text(
+                              '15,000 DZD',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                l10n.lifetimeLicenseSubtitle,
+                                style: const TextStyle(
+                                  color: AppColors.success,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -248,6 +265,24 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
     );
   }
 
+  String _payChargilyLabel(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (lang == 'ar') return 'دفع 15,000 دج عبر شارجيلي';
+    if (lang == 'fr') return 'Payer 15 000 DZD avec Chargily';
+    return 'Pay 15,000 DZD with Chargily';
+  }
+
+  String _chargilyExplanation(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (lang == 'ar') {
+      return 'تفعيل فوري وآلي للرخصة مدى الحياة عبر بطاقة الذهبية أو CIB من خلال منصة الدفع الإلكتروني الرسمية والآمنة Chargily Pay.';
+    }
+    if (lang == 'fr') {
+      return 'Activation instantanée et automatique de la licence à vie par carte Edahabia ou CIB via la plateforme officielle Chargily Pay.';
+    }
+    return 'Instant automatic activation with EDAHABIA or CIB cards via Chargily Pay official payment gateway.';
+  }
+
   Widget _buildChargilyTab(BuildContext context, AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -263,10 +298,10 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Instant automatic activation with EDAHABIA or CIB cards via Chargily Pay official payment gateway.\n\nتفعيل فوري وآلي للرخصة عبر بطاقة الذهبية أو CIB من خلال منصة شارجيلي الرسمية الآمنة.',
+            Text(
+              _chargilyExplanation(context),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.4),
             ),
             const SizedBox(height: AppSpacing.xl),
             ElevatedButton.icon(
@@ -284,12 +319,43 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
                       height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                     )
-                  : const Text('Pay 15,000 DZD with Chargily | دفع 15,000 دج', style: TextStyle(fontWeight: FontWeight.bold)),
+                  : Text(
+                      _payChargilyLabel(context),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _priceLabel(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (lang == 'ar') return 'السعر';
+    if (lang == 'fr') return 'Prix';
+    return 'Price';
+  }
+
+  String _uploadProofTitle(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (lang == 'ar') return 'إرسال وصل الدفع (Reçu)';
+    if (lang == 'fr') return 'Preuve de paiement (Reçu)';
+    return 'Upload Proof of Payment (Receipt)';
+  }
+
+  String _uploadProofSubtitle(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (lang == 'ar') return 'الصيغ المدعومة: JPG، PNG، PDF (الحد الأقصى 5 ميغابايت)';
+    if (lang == 'fr') return 'Formats acceptés : JPG, PNG, PDF (Max 5 Mo)';
+    return 'Supported formats: JPG, PNG, PDF (Max 5 MB)';
+  }
+
+  String _submitReceiptLabel(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (lang == 'ar') return 'تأكيد إرسال الوصل للتحقق';
+    if (lang == 'fr') return 'Envoyer le reçu pour vérification';
+    return 'Submit Receipt for Verification';
   }
 
   Widget _buildManualCcpTab(BuildContext context, AppLocalizations l10n) {
@@ -319,7 +385,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
                   _DetailItem(icon: Icons.person_rounded, title: l10n.ccpAccountHolder, value: ccpHolder),
                   _DetailItem(icon: Icons.account_balance_rounded, title: l10n.ccpAccountNumber, value: ccpNumber),
                   _DetailItem(icon: Icons.location_on_rounded, title: l10n.ccpLocation, value: ccpLocation),
-                  const _DetailItem(icon: Icons.sell_rounded, title: 'Price / السعر', value: '15,000 DZD (15,000 دج)'),
+                  _DetailItem(icon: Icons.sell_rounded, title: _priceLabel(context), value: '15,000 DZD'),
                 ],
               ),
             ),
@@ -340,14 +406,14 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
             const SizedBox(height: AppSpacing.lg),
 
             // Receipt Upload Section
-            const Text(
-              'Upload Proof of Payment (Receipt) | إرسال وصل الدفع',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            Text(
+              _uploadProofTitle(context),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: AppSpacing.xs),
-            const Text(
-              'Supported formats: JPG, PNG, PDF (Max 5 MB)',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              _uploadProofSubtitle(context),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: AppSpacing.sm),
 
@@ -391,7 +457,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
               onPressed: _isLoadingCcp ? null : _submitReceipt,
               child: _isLoadingCcp
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Submit Receipt for Verification | تأكيد إرسال الوصل', style: TextStyle(fontWeight: FontWeight.bold)),
+                  : Text(_submitReceiptLabel(context), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
 
             if (_uploadStatusMessage != null) ...[

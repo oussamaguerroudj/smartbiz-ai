@@ -32,6 +32,8 @@ final String email;
 final VoidCallback onVerified;
 final VoidCallback onGoToLogin;
 
+static String normalizeDigits(String input) => _VerifyAccountScreenState.normalizeDigits(input);
+
 @override
 ConsumerState<VerifyAccountScreen> createState() =>
 _VerifyAccountScreenState();
@@ -220,6 +222,55 @@ try {
 
 }
 
+  static String normalizeDigits(String input) {
+    const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+    const easternArabicIndic = '۰۱۲۳۴۵۶۷۸۹';
+    final sb = StringBuffer();
+    for (final char in input.characters) {
+      final idxAr = arabicIndic.indexOf(char);
+      if (idxAr != -1) {
+        sb.write(idxAr);
+        continue;
+      }
+      final idxFa = easternArabicIndic.indexOf(char);
+      if (idxFa != -1) {
+        sb.write(idxFa);
+        continue;
+      }
+      if (char.codeUnitAt(0) >= 48 && char.codeUnitAt(0) <= 57) {
+        sb.write(char);
+      }
+    }
+    return sb.toString();
+  }
+
+  void _onPasteCode(String pastedText, int startIndex) {
+    final digits = normalizeDigits(pastedText);
+    if (digits.isEmpty) return;
+
+    // Distribute digits into controllers starting from index 0 if it's a 6-digit code, or from startIndex
+    final start = digits.length >= 6 ? 0 : startIndex;
+    for (int i = 0; i < 6 && (i - start) < digits.length; i++) {
+      if (i >= start) {
+        final char = digits[i - start];
+        _digitControllers[i].text = char;
+      }
+    }
+
+    setState(() {});
+
+    final filledCount = _digitControllers.where((c) => c.text.isNotEmpty).length;
+    if (filledCount == 6) {
+      _digitNodes[5].requestFocus();
+      _submit();
+    } else {
+      final nextEmpty = _digitControllers.indexWhere((c) => c.text.isEmpty);
+      if (nextEmpty >= 0 && nextEmpty < 6) {
+        _digitNodes[nextEmpty].requestFocus();
+      }
+    }
+  }
+
   Widget _buildDigitBox(int index) {
     final colorScheme = Theme.of(context).colorScheme;
     final hasValue = _digitControllers[index].text.isNotEmpty;
@@ -230,6 +281,7 @@ try {
       child: TextField(
         controller: _digitControllers[index],
         focusNode: _digitNodes[index],
+        textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
         textAlignVertical: TextAlignVertical.center,
         keyboardType: TextInputType.number,
@@ -237,14 +289,6 @@ try {
             index == 5 ? TextInputAction.done : TextInputAction.next,
         maxLength: 1,
         autofocus: index == 0,
-        // FIX (reported bug): the digit typed here rendered huge and
-        // hard to read. The box had a fixed height but the default
-        // TextField internals (counter row + default vertical padding)
-        // needed more vertical space than that, so the field clipped —
-        // only the top sliver of the glyph was visible, which read as
-        // "giant and invisible". isDense + zero content padding +
-        // textAlignVertical.center makes the whole digit fit and sit
-        // dead-center in the box instead of being cropped.
         style: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
@@ -253,7 +297,7 @@ try {
         ),
         cursorColor: colorScheme.primary,
         inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
+          _DigitNormalizingInputFormatter(),
         ],
         decoration: InputDecoration(
           counterText: '',
@@ -278,6 +322,11 @@ try {
         ),
         onChanged: (value) {
           setState(() {});
+
+          if (value.length > 1) {
+            _onPasteCode(value, index);
+            return;
+          }
 
           if (value.isNotEmpty && index < 5) {
             _digitNodes[index + 1].requestFocus();
@@ -360,12 +409,15 @@ return Scaffold(
                   const SizedBox(
                     height: AppSpacing.xs,
                   ),
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                    children: List.generate(
-                      6,
-                      _buildDigitBox,
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: List.generate(
+                        6,
+                        _buildDigitBox,
+                      ),
                     ),
                   ),
                   const SizedBox(
@@ -443,4 +495,18 @@ return Scaffold(
 );
 
 }
+}
+
+class _DigitNormalizingInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final normalized = _VerifyAccountScreenState.normalizeDigits(newValue.text);
+    return TextEditingValue(
+      text: normalized,
+      selection: TextSelection.collapsed(offset: normalized.length),
+    );
+  }
 }
