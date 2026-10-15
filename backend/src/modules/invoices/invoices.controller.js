@@ -17,4 +17,10 @@ const streamPdf = asyncHandler(async (req, res) => {
   await service.streamInvoicePdf(res, req.user.companyId, req.params.id);
 });
 
-module.exports = { list, getOne, markPaid, pdfPlaceholder: streamPdf, streamPdf };
+const emailInvoice = asyncHandler(async (req, res) => {
+  const { email } = req.body || {};
+  const result = await service.emailInvoice(req.user.companyId, req.params.id, email);
+  res.json({ data: result });
+});
+
+module.exports = { list, getOne, markPaid, pdfPlaceholder: streamPdf, streamPdf, emailInvoice };

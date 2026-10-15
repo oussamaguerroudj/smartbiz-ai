@@ -191,6 +191,11 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
     }
   }
 
+  Future<void> emailInvoice(String id, String email) async {
+    final client = _ref.read(apiClientProvider);
+    await client.post('/invoices/$id/email', body: {'email': email});
+  }
+
   Future<Uint8List> _generateOfflinePdf(String id) async {
     final invoice = await fetchDetails(id);
     final pdf = pw.Document();

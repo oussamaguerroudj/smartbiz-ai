@@ -11,7 +11,7 @@ function getRecipientDomain(email) {
  *
  * This bypasses outbound SMTP port restrictions (e.g. Render Free tier blocking ports 25, 465, 587).
  */
-async function sendMail({ to, subject, html, text }) {
+async function sendMail({ to, subject, html, text, attachments }) {
   const apiKey = env.brevo.apiKey;
   const fromEmail = env.brevo.fromEmail;
   const fromName = env.brevo.fromName;
@@ -65,6 +65,10 @@ async function sendMail({ to, subject, html, text }) {
 
   if (text && typeof text === 'string' && text.trim().length > 0) {
     payload.textContent = text.trim();
+  }
+
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    payload.attachment = attachments;
   }
 
   const controller = new AbortController();
