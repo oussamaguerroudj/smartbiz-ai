@@ -93,25 +93,33 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     final db = await AppDatabase.instance.database;
     final batch = db.batch();
     for (final p in products) {
+      final row = <String, dynamic>{
+        'id': p.id,
+        'company_id': companyId,
+        'name': p.name,
+        'category': p.category,
+        'purchase_price': p.purchasePrice,
+        'selling_price': p.sellingPrice,
+        'quantity': p.quantity,
+        'minimum_stock': p.minimumStock,
+        'barcode': p.barcode,
+        'expiration_date': p.expirationDate?.toIso8601String().substring(0, 10),
+        'image_url': p.imageUrl,
+        'size': p.size,
+        'color': p.color,
+        'brand': p.brand,
+        'dosage': p.dosage,
+        'form': p.form,
+        'active_ingredient': p.activeIngredient,
+        'batch_number': p.batchNumber,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (p.supplierId != null) {
+        row['supplier_id'] = p.supplierId;
+      }
       batch.insert(
         'products',
-        {
-          'id': p.id,
-          'company_id': companyId,
-          'name': p.name,
-          'category': p.category,
-          'purchase_price': p.purchasePrice,
-          'selling_price': p.sellingPrice,
-          'quantity': p.quantity,
-          'minimum_stock': p.minimumStock,
-          'barcode': p.barcode,
-          'expiration_date': p.expirationDate?.toIso8601String().substring(0, 10),
-          'image_url': p.imageUrl,
-          'size': p.size,
-          'color': p.color,
-          'brand': p.brand,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
+        row,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
@@ -130,6 +138,10 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     String? size,
     String? color,
     String? brand,
+    String? dosage,
+    String? form,
+    String? activeIngredient,
+    String? batchNumber,
   }) async {
     final companyId = _companyId;
     if (companyId == null) return;
@@ -152,6 +164,10 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
       'size': size,
       'color': color,
       'brand': brand,
+      'dosage': dosage,
+      'form': form,
+      'active_ingredient': activeIngredient,
+      'batch_number': batchNumber,
       'updated_at': DateTime.now().toIso8601String(),
     });
 
@@ -177,6 +193,10 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
         if (size != null && size.isNotEmpty) 'size': size,
         if (color != null && color.isNotEmpty) 'color': color,
         if (brand != null && brand.isNotEmpty) 'brand': brand,
+        if (dosage != null && dosage.isNotEmpty) 'dosage': dosage,
+        if (form != null && form.isNotEmpty) 'form': form,
+        if (activeIngredient != null && activeIngredient.isNotEmpty) 'activeIngredient': activeIngredient,
+        if (batchNumber != null && batchNumber.isNotEmpty) 'batchNumber': batchNumber,
       });
       if (res is Map && res['data'] is Map && res['data']['id'] != null) {
         final serverId = res['data']['id'].toString();
@@ -206,6 +226,10 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
           if (size != null) 'size': size,
           if (color != null) 'color': color,
           if (brand != null) 'brand': brand,
+          if (dosage != null) 'dosage': dosage,
+          if (form != null) 'form': form,
+          if (activeIngredient != null) 'activeIngredient': activeIngredient,
+          if (batchNumber != null) 'batchNumber': batchNumber,
         },
       );
     }
@@ -249,6 +273,10 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     String? color,
     String? brand,
     String? imageUrl,
+    String? dosage,
+    String? form,
+    String? activeIngredient,
+    String? batchNumber,
   }) async {
     final companyId = _companyId;
     if (companyId == null) return;
@@ -267,6 +295,10 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
     if (color != null) updates['color'] = color;
     if (brand != null) updates['brand'] = brand;
     if (imageUrl != null) updates['image_url'] = imageUrl;
+    if (dosage != null) updates['dosage'] = dosage;
+    if (form != null) updates['form'] = form;
+    if (activeIngredient != null) updates['active_ingredient'] = activeIngredient;
+    if (batchNumber != null) updates['batch_number'] = batchNumber;
 
     if (updates.isNotEmpty) {
       // Scoped by company_id — cannot accidentally update another company's product
@@ -295,6 +327,10 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
         if (color != null) 'color': color,
         if (brand != null) 'brand': brand,
         if (imageUrl != null) 'imageUrl': imageUrl,
+        if (dosage != null) 'dosage': dosage,
+        if (form != null) 'form': form,
+        if (activeIngredient != null) 'activeIngredient': activeIngredient,
+        if (batchNumber != null) 'batchNumber': batchNumber,
       });
     } catch (_) {}
   }

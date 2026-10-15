@@ -34,7 +34,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _sizeController = TextEditingController();
   final _colorController = TextEditingController();
   final _brandController = TextEditingController();
-  // Pharmacy (Ch. 15) — only rendered/sent for pharmacy accounts.
+  // Pharmacy (Ch. 15) & Batch attributes
+  final _dosageController = TextEditingController();
+  final _formController = TextEditingController();
+  final _activeIngredientController = TextEditingController();
+  final _batchNumberController = TextEditingController();
   DateTime? _expirationDate;
 
   @override
@@ -48,6 +52,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     _sizeController.dispose();
     _colorController.dispose();
     _brandController.dispose();
+    _dosageController.dispose();
+    _formController.dispose();
+    _activeIngredientController.dispose();
+    _batchNumberController.dispose();
     super.dispose();
   }
 
@@ -112,7 +120,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             barcode: _barcodeController.text.trim().isEmpty
                 ? null
                 : _barcodeController.text.trim(),
-            expirationDate: businessType == 'pharmacy' ? _expirationDate : null,
+            expirationDate: _expirationDate,
             size: businessType == 'clothing' && _sizeController.text.trim().isNotEmpty
                 ? _sizeController.text.trim()
                 : null,
@@ -122,6 +130,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             brand: businessType == 'clothing' && _brandController.text.trim().isNotEmpty
                 ? _brandController.text.trim()
                 : null,
+            dosage: _dosageController.text.trim().isNotEmpty ? _dosageController.text.trim() : null,
+            form: _formController.text.trim().isNotEmpty ? _formController.text.trim() : null,
+            activeIngredient: _activeIngredientController.text.trim().isNotEmpty ? _activeIngredientController.text.trim() : null,
+            batchNumber: _batchNumberController.text.trim().isNotEmpty ? _batchNumberController.text.trim() : null,
           );
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {
@@ -225,6 +237,46 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                   },
                 ),
                 if (isPharmacy) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    label: Localizations.localeOf(context).languageCode == 'ar'
+                        ? 'المادة الفعالة'
+                        : 'Principe actif / Active Ingredient',
+                    hint: 'ex: Paracétamol, Amoxicilline',
+                    controller: _activeIngredientController,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppTextField(
+                          label: Localizations.localeOf(context).languageCode == 'ar'
+                              ? 'الجرعة'
+                              : 'Dosage',
+                          hint: 'ex: 500mg, 1g',
+                          controller: _dosageController,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: AppTextField(
+                          label: Localizations.localeOf(context).languageCode == 'ar'
+                              ? 'الشكل الصيدلاني'
+                              : 'Forme',
+                          hint: 'ex: Comprimé, Sirop',
+                          controller: _formController,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    label: Localizations.localeOf(context).languageCode == 'ar'
+                        ? 'رقم الحصة (الدفعة)'
+                        : 'Numéro de lot / Batch number',
+                    hint: 'ex: LOT-2026-A1',
+                    controller: _batchNumberController,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(l10n.expirationDateLabel, style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: 4),

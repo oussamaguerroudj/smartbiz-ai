@@ -58,8 +58,8 @@ async function create(companyId, data) {
   }
   const result = await query(
     `INSERT INTO products
-       (id, company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id, size, color, brand)
-     VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       (id, company_id, name, category, barcode, purchase_price, selling_price, quantity, minimum_stock, expiration_date, supplier_id, size, color, brand, dosage, form, active_ingredient, batch_number)
+     VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
      RETURNING *`,
     [
       data.id || null,
@@ -78,6 +78,11 @@ async function create(companyId, data) {
       data.size || null,
       data.color || null,
       data.brand || null,
+      // Ch. 19 (Pharmacy) & Batch attributes (migration 037)
+      data.dosage || null,
+      data.form || null,
+      data.activeIngredient || data.active_ingredient || null,
+      data.batchNumber || data.batch_number || null,
     ],
   );
   return result.rows[0];
@@ -98,7 +103,11 @@ async function update(companyId, id, data) {
        size = COALESCE($11, size),
        color = COALESCE($12, color),
        brand = COALESCE($13, brand),
-       image_url = COALESCE($14, image_url)
+       image_url = COALESCE($14, image_url),
+       dosage = COALESCE($15, dosage),
+       form = COALESCE($16, form),
+       active_ingredient = COALESCE($17, active_ingredient),
+       batch_number = COALESCE($18, batch_number)
      WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL
      RETURNING *`,
     [
@@ -116,6 +125,10 @@ async function update(companyId, id, data) {
       data.color,
       data.brand,
       data.imageUrl,
+      data.dosage,
+      data.form,
+      data.activeIngredient !== undefined ? data.activeIngredient : data.active_ingredient,
+      data.batchNumber !== undefined ? data.batchNumber : data.batch_number,
     ],
   );
   return result.rows[0] || null;

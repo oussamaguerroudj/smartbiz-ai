@@ -160,7 +160,14 @@ class _ProductDetailsView extends ConsumerWidget {
               ),
             ),
           ),
-          if (product.expirationDate != null || product.size != null || product.color != null || product.brand != null) ...[
+          if (product.expirationDate != null ||
+              product.size != null ||
+              product.color != null ||
+              product.brand != null ||
+              product.activeIngredient != null ||
+              product.dosage != null ||
+              product.form != null ||
+              product.batchNumber != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Card(
               child: Padding(
@@ -168,12 +175,44 @@ class _ProductDetailsView extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (product.activeIngredient != null && product.activeIngredient!.isNotEmpty) ...[
+                      Text(
+                        '${Localizations.localeOf(context).languageCode == 'ar' ? 'المادة الفعالة' : 'Principe actif'}: ${product.activeIngredient}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (product.dosage != null && product.dosage!.isNotEmpty) ...[
+                      Text(
+                        '${Localizations.localeOf(context).languageCode == 'ar' ? 'الجرعة' : 'Dosage'}: ${product.dosage}',
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (product.form != null && product.form!.isNotEmpty) ...[
+                      Text(
+                        '${Localizations.localeOf(context).languageCode == 'ar' ? 'الشكل الصيدلاني' : 'Forme'}: ${product.form}',
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (product.batchNumber != null && product.batchNumber!.isNotEmpty) ...[
+                      Text(
+                        '${Localizations.localeOf(context).languageCode == 'ar' ? 'رقم الحصة' : 'N° Lot / Batch'}: ${product.batchNumber}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
                     if (product.expirationDate != null) ...[
                       Text(l10n.expirationDateLabel, style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 4),
                       Text(
                         '${product.expirationDate!.year.toString().padLeft(4, '0')}-'
                         '${product.expirationDate!.month.toString().padLeft(2, '0')}-${product.expirationDate!.day.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          color: product.expirationDate!.isBefore(DateTime.now())
+                              ? AppColors.danger
+                              : AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       if (product.size != null || product.color != null || product.brand != null)
                         const SizedBox(height: AppSpacing.xs),

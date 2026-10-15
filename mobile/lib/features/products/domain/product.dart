@@ -19,6 +19,12 @@ class Product {
     this.size,
     this.color,
     this.brand,
+    // Pharmacy & Batch attributes
+    this.activeIngredient,
+    this.dosage,
+    this.form,
+    this.batchNumber,
+    this.supplierId,
   });
 
   final String id;
@@ -34,6 +40,11 @@ class Product {
   final String? size;
   final String? color;
   final String? brand;
+  final String? activeIngredient;
+  final String? dosage;
+  final String? form;
+  final String? batchNumber;
+  final String? supplierId;
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
         id: json['id'] as String,
@@ -51,6 +62,11 @@ class Product {
         size: json['size'] as String?,
         color: json['color'] as String?,
         brand: json['brand'] as String?,
+        activeIngredient: (json['active_ingredient'] ?? json['activeIngredient']) as String?,
+        dosage: json['dosage'] as String?,
+        form: json['form'] as String?,
+        batchNumber: (json['batch_number'] ?? json['batchNumber'] ?? json['batch']) as String?,
+        supplierId: (json['supplier_id'] ?? json['supplierId']) as String?,
       );
 
   bool get isOutOfStock => quantity <= 0;

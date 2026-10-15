@@ -43,6 +43,10 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   late final _sizeController = TextEditingController(text: widget.product.size ?? '');
   late final _colorController = TextEditingController(text: widget.product.color ?? '');
   late final _brandController = TextEditingController(text: widget.product.brand ?? '');
+  late final _dosageController = TextEditingController(text: widget.product.dosage ?? '');
+  late final _formController = TextEditingController(text: widget.product.form ?? '');
+  late final _activeIngredientController = TextEditingController(text: widget.product.activeIngredient ?? '');
+  late final _batchNumberController = TextEditingController(text: widget.product.batchNumber ?? '');
   late DateTime? _expirationDate = widget.product.expirationDate;
 
   static String _trimNum(double n) =>
@@ -59,6 +63,10 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
     _sizeController.dispose();
     _colorController.dispose();
     _brandController.dispose();
+    _dosageController.dispose();
+    _formController.dispose();
+    _activeIngredientController.dispose();
+    _batchNumberController.dispose();
     super.dispose();
   }
 
@@ -120,10 +128,14 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
             sellingPrice: double.parse(_sellingPriceController.text),
             quantity: int.parse(_quantityController.text),
             barcode: _barcodeController.text.trim(),
-            expirationDate: businessType == 'pharmacy' ? _expirationDate : null,
+            expirationDate: _expirationDate,
             size: businessType == 'clothing' ? _sizeController.text.trim() : null,
             color: businessType == 'clothing' ? _colorController.text.trim() : null,
             brand: businessType == 'clothing' ? _brandController.text.trim() : null,
+            dosage: _dosageController.text.trim(),
+            form: _formController.text.trim(),
+            activeIngredient: _activeIngredientController.text.trim(),
+            batchNumber: _batchNumberController.text.trim(),
           );
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -231,6 +243,46 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                   },
                 ),
                 if (isPharmacy) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    label: Localizations.localeOf(context).languageCode == 'ar'
+                        ? 'المادة الفعالة'
+                        : 'Principe actif / Active Ingredient',
+                    hint: 'ex: Paracétamol, Amoxicilline',
+                    controller: _activeIngredientController,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppTextField(
+                          label: Localizations.localeOf(context).languageCode == 'ar'
+                              ? 'الجرعة'
+                              : 'Dosage',
+                          hint: 'ex: 500mg, 1g',
+                          controller: _dosageController,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: AppTextField(
+                          label: Localizations.localeOf(context).languageCode == 'ar'
+                              ? 'الشكل الصيدلاني'
+                              : 'Forme',
+                          hint: 'ex: Comprimé, Sirop',
+                          controller: _formController,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    label: Localizations.localeOf(context).languageCode == 'ar'
+                        ? 'رقم الحصة (الدفعة)'
+                        : 'Numéro de lot / Batch number',
+                    hint: 'ex: LOT-2026-A1',
+                    controller: _batchNumberController,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(l10n.expirationDateLabel, style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: 4),
