@@ -2,6 +2,7 @@ const express = require('express');
 const asyncHandler = require('../../utils/asyncHandler');
 const { authMiddleware } = require('../../middlewares/auth.middleware');
 const { calculateFinancials } = require('../financial/financial.service');
+const { getSlowMovingProducts } = require('./reports.service');
 
 /**
  * Reports — All figures are calculated via the central financial calculation
@@ -13,11 +14,18 @@ const getReport = asyncHandler(async (req, res) => {
   return res.json({ data });
 });
 
+const getSlowMoving = asyncHandler(async (req, res) => {
+  const data = await getSlowMovingProducts(req.user.companyId, req.query);
+  return res.json({ data });
+});
+
 const router = express.Router();
 
 router.use(authMiddleware);
 
 router.get('/', getReport);
 router.get('/summary', getReport);
+router.get('/slow-moving', getSlowMoving);
 
 module.exports = router;
+

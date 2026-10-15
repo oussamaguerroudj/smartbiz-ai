@@ -417,3 +417,46 @@ class ReportData {
     );
   }
 }
+
+class SlowMovingProductItem {
+  final String id;
+  final String name;
+  final String? category;
+  final String? barcode;
+  final int currentStock;
+  final double purchasePrice;
+  final double sellingPrice;
+  final int unitsSold;
+  final bool insufficientHistory;
+  final int daysInInventory;
+  final double stockValuation;
+
+  SlowMovingProductItem({
+    required this.id,
+    required this.name,
+    this.category,
+    this.barcode,
+    required this.currentStock,
+    required this.purchasePrice,
+    required this.sellingPrice,
+    required this.unitsSold,
+    required this.insufficientHistory,
+    required this.daysInInventory,
+    required this.stockValuation,
+  });
+
+  factory SlowMovingProductItem.fromJson(Map<String, dynamic> json) => SlowMovingProductItem(
+        id: (json['id'] ?? '').toString(),
+        name: (json['name'] ?? 'Product').toString(),
+        category: json['category'] as String?,
+        barcode: json['barcode'] as String?,
+        currentStock: (json['currentStock'] as num?)?.toInt() ?? (json['current_stock'] as num?)?.toInt() ?? 0,
+        purchasePrice: (json['purchasePrice'] as num?)?.toDouble() ?? (json['purchase_price'] as num?)?.toDouble() ?? 0.0,
+        sellingPrice: (json['sellingPrice'] as num?)?.toDouble() ?? (json['selling_price'] as num?)?.toDouble() ?? 0.0,
+        unitsSold: (json['unitsSold'] as num?)?.toInt() ?? (json['units_sold'] as num?)?.toInt() ?? 0,
+        insufficientHistory: json['insufficientHistory'] == true || json['insufficient_history'] == true,
+        daysInInventory: (json['daysInInventory'] as num?)?.toInt() ?? (json['days_in_inventory'] as num?)?.toInt() ?? 0,
+        stockValuation: (json['stockValuation'] as num?)?.toDouble() ?? (json['stock_valuation'] as num?)?.toDouble() ?? 0.0,
+      );
+}
+

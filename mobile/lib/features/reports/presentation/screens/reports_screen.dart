@@ -11,6 +11,7 @@ import '../../../../core/widgets/pill_tabs.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/reports_repository.dart';
 import '../../domain/report.dart';
+import 'slow_moving_screen.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -234,6 +235,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       appBar: AppBar(
         title: Text(l10n.reportsTitle),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.inventory_2_outlined),
+            tooltip: 'Rotation lente',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SlowMovingScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(filteredReportProvider(filter).future),

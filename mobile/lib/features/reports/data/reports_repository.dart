@@ -461,7 +461,130 @@ class ReportsRepository {
       inventoryValue: base.inventoryValue,
     );
   }
+
+  Future<List<SlowMovingProductItem>> getSlowMovingProducts({
+    int days = 30,
+    int threshold = 2,
+    bool includeInsufficient = false,
+  }) async {
+    final companyId = _companyId;
+    final conn = _ref.read(connectionStatusProvider);
+
+    // 1. Try server endpoint first if online
+    if (conn == ConnectionStatus.online) {
+      try {
+        final client = _ref.read(apiClientProvider);
+        final res = await client.get('/reports/slow-moving', query: {
+          'days': '$days',
+          'threshold': '$threshold',
+          'includeInsufficient': '$includeInsufficient',
+        });
+        if (res is Map && res['data'] is Map && res['data']['items'] is List) {
+          final items = (res['data']['items'] as List)
+              .map((e) => SlowMovingProductItem.fromJson(e as Map<String, dynamic>))
+              .toList();
+          return items;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Fallback to local SQLite evaluation
+    final db = await AppDatabase.instance.database;
+    final cutoff = DateTime.now().subtract(Duration(days: days)).toIso8601String();
+
+    const sql = '''
+      SELECT
+        p.id,
+        p.name,
+        p.category,
+        p.barcode,
+        p.quantity AS current_stock,
+        p.purchase_price,
+        p.selling_price,
+        p.created_at,
+        COALESCE(sales_agg.units_sold, 0) AS units_sold
+      FROM products p
+      LEFT JOIN (
+        SELECT si.product_id, SUM(si.quantity) AS units_sold
+        FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        WHERE s.company_id = ? AND s.sold_at >= ?
+        GROUP BY si.product_id
+      ) sales_agg ON sales_agg.product_id = p.id
+      WHERE p.company_id = ?
+        AND (? = 1 OR (p.created_at IS NOT NULL AND p.created_at <= ?))
+        AND COALESCE(sales_agg.units_sold, 0) <= ?
+      ORDER BY units_sold ASC, current_stock DESC, p.name ASC
+    ''';
+
+    final rows = await db.rawQuery(sql, [
+      companyId,
+      cutoff,
+      companyId,
+      includeInsufficient ? 1 : 0,
+      cutoff,
+      threshold,
+    ]);
+
+    final now = DateTime.now();
+    return rows.map((r) {
+      final createdAtStr = r['created_at'] as String?;
+      final createdAt = createdAtStr != null ? DateTime.tryParse(createdAtStr) : null;
+      final daysInInv = createdAt != null ? now.difference(createdAt).inDays : 0;
+      final isInsufficient = createdAt != null && createdAt.isAfter(DateTime.now().subtract(Duration(days: days)));
+      final currentStock = (r['current_stock'] as num?)?.toInt() ?? 0;
+      final purchasePrice = (r['purchase_price'] as num?)?.toDouble() ?? 0.0;
+
+      return SlowMovingProductItem(
+        id: (r['id'] ?? '').toString(),
+        name: (r['name'] ?? 'Product').toString(),
+        category: r['category'] as String?,
+        barcode: r['barcode'] as String?,
+        currentStock: currentStock,
+        purchasePrice: purchasePrice,
+        sellingPrice: (r['selling_price'] as num?)?.toDouble() ?? 0.0,
+        unitsSold: (r['units_sold'] as num?)?.toInt() ?? 0,
+        insufficientHistory: isInsufficient,
+        daysInInventory: daysInInv,
+        stockValuation: currentStock * purchasePrice,
+      );
+    }).toList();
+  }
 }
+
+class SlowMovingFilter {
+  final int days;
+  final int threshold;
+  final bool includeInsufficient;
+
+  const SlowMovingFilter({
+    this.days = 30,
+    this.threshold = 2,
+    this.includeInsufficient = false,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SlowMovingFilter &&
+          runtimeType == other.runtimeType &&
+          days == other.days &&
+          threshold == other.threshold &&
+          includeInsufficient == other.includeInsufficient;
+
+  @override
+  int get hashCode => days.hashCode ^ threshold.hashCode ^ includeInsufficient.hashCode;
+}
+
+final slowMovingReportProvider =
+    FutureProvider.autoDispose.family<List<SlowMovingProductItem>, SlowMovingFilter>((ref, filter) async {
+  final repository = ref.watch(reportsRepositoryProvider);
+  return repository.getSlowMovingProducts(
+    days: filter.days,
+    threshold: filter.threshold,
+    includeInsufficient: filter.includeInsufficient,
+  );
+});
 
 final reportsRepositoryProvider = Provider<ReportsRepository>((ref) {
   ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
@@ -490,4 +613,6 @@ void invalidateAllReports(Ref ref) {
   ref.invalidate(reportsRepositoryProvider);
   ref.invalidate(reportProvider);
   ref.invalidate(filteredReportProvider);
+  ref.invalidate(slowMovingReportProvider);
 }
+

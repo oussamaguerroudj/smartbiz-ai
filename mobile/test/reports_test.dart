@@ -250,6 +250,54 @@ void main() {
       expect(report.expenses, 200.0);
       expect(report.netProfit, 300.0);
     });
+
+    test('SlowMovingProductItem parses JSON and computes total tied-up capital', () {
+      final json = {
+        'id': 'prod-001',
+        'name': 'Old Mouse Pad',
+        'barcode': '6131234567890',
+        'current_stock': 25,
+        'purchase_price': 400.0,
+        'selling_price': 600.0,
+        'units_sold': 0,
+        'insufficient_history': false,
+        'days_in_inventory': 90,
+        'stock_valuation': 10000.0,
+      };
+
+      final item = SlowMovingProductItem.fromJson(json);
+      expect(item.id, 'prod-001');
+      expect(item.name, 'Old Mouse Pad');
+      expect(item.barcode, '6131234567890');
+      expect(item.currentStock, 25);
+      expect(item.purchasePrice, 400.0);
+      expect(item.sellingPrice, 600.0);
+      expect(item.unitsSold, 0);
+      expect(item.insufficientHistory, false);
+      expect(item.daysInInventory, 90);
+      expect(item.stockValuation, 10000.0);
+    });
+
+    test('SlowMovingProductItem correctly handles units sold and days in inventory', () {
+      final json = {
+        'id': 'prod-002',
+        'name': 'Winter Scarf',
+        'barcode': null,
+        'currentStock': 10,
+        'purchasePrice': 1200.0,
+        'sellingPrice': 1800.0,
+        'unitsSold': 1,
+        'insufficientHistory': false,
+        'daysInInventory': 45,
+        'stockValuation': 12000.0,
+      };
+
+      final item = SlowMovingProductItem.fromJson(json);
+      expect(item.unitsSold, 1);
+      expect(item.daysInInventory, 45);
+      expect(item.stockValuation, 12000.0);
+    });
   });
 }
+
 
