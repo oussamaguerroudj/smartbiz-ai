@@ -146,7 +146,8 @@ const recordPayment = asyncHandler(async (req, res) => {
 });
 
 const refundOrder = asyncHandler(async (req, res) => {
-  const result = await service.refundOrder(req.user.companyId, req.params.id, req.body?.note);
+  const { note } = req.body || {};
+  const result = await service.refundOrder(req.user.companyId, req.params.id, note);
   res.json({ data: result });
 });
 
@@ -157,6 +158,10 @@ const getOrderInvoice = asyncHandler(async (req, res) => {
 
 const getOrderInvoicePdf = asyncHandler(async (req, res) => {
   await service.streamOrderInvoicePdf(res, req.user.companyId, req.params.id);
+});
+
+const getKitchenTicketPdf = asyncHandler(async (req, res) => {
+  await service.streamKitchenTicketPdf(res, req.user.companyId, req.params.id);
 });
 
 // Reservations
@@ -211,6 +216,7 @@ module.exports = {
   refundOrder,
   getOrderInvoice,
   getOrderInvoicePdf,
+  getKitchenTicketPdf,
   createReservation,
   listReservations,
   updateReservationStatus,

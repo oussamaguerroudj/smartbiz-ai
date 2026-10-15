@@ -52,6 +52,7 @@ router.post('/orders/:id/payments', validateRecordPayment, controller.recordPaym
 router.post('/orders/:id/refund', controller.refundOrder);
 router.get('/orders/:id/invoice', controller.getOrderInvoice);
 router.get('/orders/:id/invoice/pdf', controller.getOrderInvoicePdf);
+router.get('/orders/:id/kitchen-ticket/pdf', controller.getKitchenTicketPdf);
 
 router.post('/reservations', validateCreateReservation, controller.createReservation);
 router.get('/reservations', controller.listReservations);

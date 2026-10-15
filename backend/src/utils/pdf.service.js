@@ -297,10 +297,113 @@ function streamStandardInvoicePdf(res, { company, invoice }) {
   doc.end();
 }
 
+/**
+ * Restaurant Kitchen Ticket (KOT / Bon de Commande Cuisine).
+ * Pure operational document without financial totals or pricing.
+ */
+function renderKitchenTicketDoc(doc, { company, order, items }, fontRegular, fontBold) {
+  doc.fontSize(16).font(fontBold).text(formatPdfText(company.name) || 'Restaurant', { align: 'center' });
+  doc.moveDown(0.3);
+  doc.fontSize(14).font(fontBold).fillColor('#c62828').text('*** BON DE CUISINE / KITCHEN TICKET ***', { align: 'center' });
+  doc.fillColor('#000');
+  doc.moveDown(0.5);
+
+  doc.moveTo(doc.page.margins.left, doc.y)
+    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+    .strokeColor('#333')
+    .lineWidth(2)
+    .stroke();
+  doc.lineWidth(1);
+  doc.moveDown(0.5);
+
+  const orderNumStr = `#${order.order_number || (order.id ? String(order.id).slice(0, 8) : '')}`;
+  doc.fontSize(20).font(fontBold).text(`COMMANDE ${orderNumStr}`);
+  doc.fontSize(10).font(fontRegular);
+  doc.text(`Date & Heure: ${new Date(order.created_at || Date.now()).toLocaleString()}`);
+
+  const typeLabel = order.order_type === 'delivery'
+    ? 'LIVRAISON / DELIVERY'
+    : (order.order_type === 'takeaway' ? 'À EMPORTER / TAKEAWAY' : 'SUR PLACE / DINE-IN');
+  doc.font(fontBold).fontSize(12).text(`Type: ${typeLabel}`);
+
+  const tableName = order.tableName || order.table_name;
+  if (tableName) {
+    doc.text(`Table: ${formatPdfText(tableName)}`);
+  }
+  const custName = order.customer_name || order.customerName;
+  if (custName) {
+    doc.text(`Client: ${formatPdfText(custName)}`);
+  }
+  const custPhone = order.customer_phone || order.customerPhone;
+  if (custPhone) {
+    doc.text(`Tél: ${formatPdfText(custPhone)}`);
+  }
+  const deliveryAddr = order.delivery_address || order.deliveryAddress;
+  if (deliveryAddr) {
+    doc.text(`Adresse: ${formatPdfText(deliveryAddr)}`);
+  }
+  if (order.notes) {
+    doc.moveDown(0.5);
+    doc.fontSize(11).font(fontBold).fillColor('#c62828').text(`NOTE / INSTRUCTIONS: ${formatPdfText(order.notes)}`);
+    doc.fillColor('#000');
+  }
+
+  doc.moveDown(1);
+  const tableTop = doc.y;
+  doc.fontSize(12).font(fontBold);
+  doc.text('QTÉ', 50, tableTop, { width: 60 });
+  doc.text('ARTICLE / INGRÉDIENTS / NOTES', 120, tableTop, { width: 400 });
+  doc.moveDown(0.3);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#333').lineWidth(1.5).stroke();
+  doc.lineWidth(1);
+  doc.moveDown(0.5);
+
+  const orderItems = items || order.items || [];
+  for (const it of orderItems) {
+    const rowY = doc.y;
+    doc.font(fontBold).fontSize(14).text(`${it.quantity}x`, 50, rowY, { width: 60 });
+    doc.font(fontBold).fontSize(12).text(formatPdfText(it.itemName || it.item_name || it.name || 'Article'), 120, rowY, { width: 400 });
+    if (it.notes) {
+      doc.font(fontRegular).fontSize(10).fillColor('#666').text(`  -> ${formatPdfText(it.notes)}`, 130, doc.y);
+      doc.fillColor('#000');
+    }
+    doc.moveDown(0.8);
+  }
+
+  doc.moveDown(1.5);
+  doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#888').stroke();
+  doc.moveDown(0.5);
+  doc.fontSize(9).font(fontRegular).fillColor('#666').text('Transmission directe au poste cuisine — Document interne sans valeur financière.', { align: 'center' });
+  doc.fillColor('#000');
+  doc.end();
+}
+
+function streamKitchenTicketPdf(res, { company, order, items }) {
+  const { doc, fontRegular, fontBold } = createPdfDoc();
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename(`kitchen-ticket-${order.order_number || order.id}`)}.pdf"`);
+  doc.pipe(res);
+  renderKitchenTicketDoc(doc, { company, order, items }, fontRegular, fontBold);
+}
+
+function generateKitchenTicketPdfBuffer({ company, order, items }) {
+  return new Promise((resolve, reject) => {
+    const { doc, fontRegular, fontBold } = createPdfDoc();
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    renderKitchenTicketDoc(doc, { company, order, items }, fontRegular, fontBold);
+  });
+}
+
 module.exports = {
   streamPrescriptionPdf,
   streamClinicInvoicePdf,
   streamRestaurantInvoicePdf,
   streamStandardInvoicePdf,
+  streamKitchenTicketPdf,
+  generateKitchenTicketPdfBuffer,
   formatPdfText,
 };

@@ -330,6 +330,18 @@ async function streamOrderInvoicePdf(res, companyId, orderId) {
   pdfService.streamRestaurantInvoicePdf(res, { company, invoice });
 }
 
+async function streamKitchenTicketPdf(res, companyId, orderId) {
+  const [company, order] = await Promise.all([
+    getCompany(companyId),
+    getOrderDetail(companyId, orderId),
+  ]);
+  pdfService.streamKitchenTicketPdf(res, {
+    company,
+    order,
+    items: order.items,
+  });
+}
+
 // ---------------------------------------------------------------------
 // Reservations
 // ---------------------------------------------------------------------
@@ -614,6 +626,7 @@ module.exports = {
   refundOrder,
   getOrderInvoice,
   streamOrderInvoicePdf,
+  streamKitchenTicketPdf,
   createReservation,
   listReservations,
   updateReservationStatus,

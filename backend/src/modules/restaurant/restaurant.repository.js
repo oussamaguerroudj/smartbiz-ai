@@ -437,6 +437,7 @@ async function deductIngredientsForOrder(client, companyId, orderId) {
   }
 }
 
+
 async function ensureInvoiceForRestaurantOrder(client, companyId, order) {
   const existing = await client.query(
     `SELECT id FROM invoices WHERE company_id = $1 AND order_id = $2 LIMIT 1`,
@@ -982,6 +983,7 @@ async function archiveInventoryItem(companyId, itemId) {
  * clinic_visits payments and restaurant_orders payments.
  */
 async function adjustInventoryQuantity(companyId, itemId, { movementType, quantityChange, reference, note, userId }) {
+  const effectiveMovementType = movementType || 'adjustment';
   return withTransaction(async (client) => {
     const itemResult = await client.query(
       `SELECT * FROM restaurant_inventory_items
@@ -1005,7 +1007,7 @@ async function adjustInventoryQuantity(companyId, itemId, { movementType, quanti
       `INSERT INTO restaurant_inventory_movements
          (company_id, item_id, movement_type, quantity_change, reference, note, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [companyId, itemId, movementType, quantityChange, reference || null, note || null, userId || null],
+      [companyId, itemId, effectiveMovementType, quantityChange, reference || null, note || null, userId || null],
     );
 
     return updated.rows[0];
@@ -1078,6 +1080,7 @@ module.exports = {
   findInventoryMovements,
   findMenuItemIngredients,
   setMenuItemIngredients,
+  deductIngredientsForOrder,
   costOfGoodsSoldForRange,
   totalInventoryValue,
   VALID_ORDER_STATUSES,
