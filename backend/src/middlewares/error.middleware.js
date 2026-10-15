@@ -70,6 +70,18 @@ function errorMiddleware(err, req, res, next) { // eslint-disable-line no-unused
   }
 
   /*
+   * Express body-parser malformed JSON payload syntax error.
+   * Return 400 Bad Request instead of internal 500 error.
+   */
+  if (err instanceof SyntaxError && (err.status === 400 || err.statusCode === 400)) {
+    return res.status(400).json({
+      error: true,
+      message: 'Invalid JSON payload format',
+      code: 'INVALID_JSON',
+    });
+  }
+
+  /*
    * Unexpected errors.
    *
    * Development:
