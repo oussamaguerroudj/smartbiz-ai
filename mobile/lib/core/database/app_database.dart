@@ -27,7 +27,7 @@ class AppDatabase {
 
     return openDatabase(
       path,
-      version: 5,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -49,6 +49,11 @@ class AppDatabase {
         size TEXT,
         color TEXT,
         brand TEXT,
+        dosage TEXT,
+        form TEXT,
+        active_ingredient TEXT,
+        batch_number TEXT,
+        supplier_id TEXT,
         image_url TEXT,
         updated_at TEXT
       )
@@ -56,6 +61,7 @@ class AppDatabase {
     await db.execute('CREATE INDEX ix_products_barcode ON products (barcode)');
     await db.execute('CREATE INDEX ix_products_name ON products (name)');
     await db.execute('CREATE INDEX ix_products_company ON products (company_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_products_supplier ON products (supplier_id)');
 
     await db.execute('''
       CREATE TABLE sales (
@@ -180,6 +186,7 @@ class AppDatabase {
 
     await _createV2Tables(db);
     await _createV4Tables(db);
+    await _createV7Tables(db);
   }
 
   Future<void> _createV2Tables(Database db) async {
@@ -456,6 +463,80 @@ class AppDatabase {
       try { await db.execute('ALTER TABLE appointments ADD COLUMN table_name TEXT'); } catch (_) {}
       try { await db.execute('CREATE INDEX IF NOT EXISTS ix_appointments_table ON appointments (table_id)'); } catch (_) {}
     }
+    if (oldVersion < 6) {
+      try { await db.execute('ALTER TABLE products ADD COLUMN dosage TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN form TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN active_ingredient TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN batch_number TEXT'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS ix_products_batch ON products (batch_number)'); } catch (_) {}
+    }
+    if (oldVersion < 7) {
+      await _createV7Tables(db);
+    }
+    if (oldVersion < 8) {
+      try { await db.execute('ALTER TABLE products ADD COLUMN supplier_id TEXT'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS ix_products_supplier ON products (supplier_id)'); } catch (_) {}
+    }
+  }
+
+  Future<void> _createV7Tables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS supplier_purchases (
+        id TEXT PRIMARY KEY,
+        company_id TEXT,
+        supplier_id TEXT NOT NULL,
+        invoice_number TEXT,
+        purchase_date TEXT NOT NULL,
+        total_amount REAL NOT NULL DEFAULT 0,
+        amount_paid REAL NOT NULL DEFAULT 0,
+        outstanding_balance REAL NOT NULL DEFAULT 0,
+        payment_status TEXT NOT NULL DEFAULT 'unpaid',
+        notes TEXT,
+        client_transaction_id TEXT UNIQUE,
+        created_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_purchases_supplier ON supplier_purchases (supplier_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_purchases_company ON supplier_purchases (company_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_purchases_tx ON supplier_purchases (client_transaction_id)');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS supplier_purchase_items (
+        id TEXT PRIMARY KEY,
+        purchase_id TEXT NOT NULL,
+        company_id TEXT,
+        product_id TEXT,
+        product_name TEXT NOT NULL,
+        quantity REAL NOT NULL DEFAULT 1,
+        unit_cost REAL NOT NULL DEFAULT 0,
+        line_total REAL NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (purchase_id) REFERENCES supplier_purchases (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_purchase_items_purchase ON supplier_purchase_items (purchase_id)');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS supplier_payments (
+        id TEXT PRIMARY KEY,
+        company_id TEXT,
+        supplier_id TEXT NOT NULL,
+        purchase_id TEXT,
+        amount REAL NOT NULL DEFAULT 0,
+        payment_date TEXT NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        reference TEXT,
+        notes TEXT,
+        client_id TEXT UNIQUE,
+        created_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_payments_supplier ON supplier_payments (supplier_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_payments_purchase ON supplier_payments (purchase_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_payments_company ON supplier_payments (company_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS ix_supplier_payments_client ON supplier_payments (client_id)');
   }
 
   /// Checks whether there is an uncompleted (pending or failed) CLEAR_DATA operation
@@ -539,7 +620,17 @@ class AppDatabase {
         await txn.delete('products', where: 'company_id = ?', whereArgs: [companyId]);
       } catch (_) {}
 
-      // 8. Suppliers
+      // 8. Suppliers & Supplier Accounts Payable
+      try {
+        await txn.delete('supplier_payments', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
+      try {
+        await txn.rawDelete('''
+          DELETE FROM supplier_purchase_items
+          WHERE purchase_id IN (SELECT id FROM supplier_purchases WHERE company_id = ?)
+        ''', [companyId]);
+        await txn.delete('supplier_purchases', where: 'company_id = ?', whereArgs: [companyId]);
+      } catch (_) {}
       try {
         await txn.delete('suppliers', where: 'company_id = ?', whereArgs: [companyId]);
       } catch (_) {}
@@ -602,6 +693,9 @@ class AppDatabase {
       await txn.delete('credit_items');
       await txn.delete('credit_payments');
       await txn.delete('customer_transactions');
+      await txn.delete('supplier_payments');
+      await txn.delete('supplier_purchase_items');
+      await txn.delete('supplier_purchases');
       await txn.delete('suppliers');
       await txn.delete('cart_session_items');
       await txn.delete('cart_sessions');

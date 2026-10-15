@@ -515,6 +515,41 @@ class SyncService extends StateNotifier<SyncState> {
             await db.update('suppliers', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
           } else if (entityType == 'supplier' && opType == 'DELETE') {
             await client.delete('/suppliers/${op['entity_id']}');
+          } else if (entityType == 'supplier_purchase' && opType == 'CREATE') {
+            final supplierId = payload['supplierId'] ?? payload['supplier_id'];
+            final res = await client.post('/suppliers/$supplierId/purchases', body: {
+              ...payload,
+              'clientTransactionId': clientTxId,
+            });
+            String? serverPurchaseId;
+            if (res is Map && res['data'] is Map && res['data']['purchase'] is Map) {
+              serverPurchaseId = res['data']['purchase']['id']?.toString();
+            }
+            if (serverPurchaseId != null && serverPurchaseId != op['entity_id']) {
+              await db.update('supplier_purchases', {'id': serverPurchaseId, 'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+              await db.update('supplier_purchase_items', {'purchase_id': serverPurchaseId}, where: 'purchase_id = ?', whereArgs: [op['entity_id']]);
+            } else {
+              await db.update('supplier_purchases', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            }
+            // Mark corresponding initial payment as synced if created locally with purchase
+            try {
+              await db.update('supplier_payments', {'synced': 1}, where: 'client_id = ?', whereArgs: ['pay_$clientTxId']);
+            } catch (_) {}
+          } else if (entityType == 'supplier_payment' && opType == 'CREATE') {
+            final supplierId = payload['supplierId'] ?? payload['supplier_id'];
+            final res = await client.post('/suppliers/$supplierId/payments', body: {
+              ...payload,
+              'clientId': clientTxId,
+            });
+            String? serverPaymentId;
+            if (res is Map && res['data'] is Map && res['data']['payment'] is Map) {
+              serverPaymentId = res['data']['payment']['id']?.toString();
+            }
+            if (serverPaymentId != null && serverPaymentId != op['entity_id']) {
+              await db.update('supplier_payments', {'id': serverPaymentId, 'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else {
+              await db.update('supplier_payments', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            }
           } else if (entityType == 'restaurant_order' && opType == 'CREATE') {
             await client.post('/restaurant/orders', body: payload);
             await db.update('restaurant_orders', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
@@ -586,6 +621,15 @@ class SyncService extends StateNotifier<SyncState> {
               await db.update('products', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
             } else if (entityType == 'supplier') {
               await db.update('suppliers', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            } else if (entityType == 'supplier_purchase') {
+              await db.update('supplier_purchases', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+              if (clientTxId.isNotEmpty) {
+                try {
+                  await db.update('supplier_payments', {'synced': 1}, where: 'client_id = ?', whereArgs: ['pay_$clientTxId']);
+                } catch (_) {}
+              }
+            } else if (entityType == 'supplier_payment') {
+              await db.update('supplier_payments', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
             }
             await db.update(
               'sync_queue',

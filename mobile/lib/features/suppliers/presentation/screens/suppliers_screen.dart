@@ -14,19 +14,31 @@ import '../../../../core/network/session.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/app_fab.dart';
 import '../../../../l10n/app_localizations.dart';
+import 'supplier_details_screen.dart';
 
 class Supplier {
-  Supplier({required this.id, required this.name, this.phone, this.productsSupplied = 0});
+  Supplier({
+    required this.id,
+    required this.name,
+    this.phone,
+    this.productsSupplied = 0,
+    this.outstandingBalance = 0.0,
+    this.totalPurchasesAmount = 0.0,
+  });
   final String id;
   final String name;
   final String? phone;
   final int productsSupplied;
+  final double outstandingBalance;
+  final double totalPurchasesAmount;
 
   factory Supplier.fromJson(Map<String, dynamic> json) => Supplier(
         id: json['id'] as String,
         name: json['name'] as String,
         phone: json['phone'] as String?,
         productsSupplied: (json['products_supplied'] as num?)?.toInt() ?? 0,
+        outstandingBalance: (json['outstanding_balance'] as num?)?.toDouble() ?? 0.0,
+        totalPurchasesAmount: (json['total_purchases_amount'] as num?)?.toDouble() ?? 0.0,
       );
 }
 
@@ -88,12 +100,38 @@ class SuppliersRepository extends StateNotifier<AsyncValue<List<Supplier>>> {
       );
     }
 
-    return rows.map((r) => Supplier(
-      id: r['id'] as String,
-      name: r['name'] as String,
-      phone: r['phone'] as String?,
-      productsSupplied: (r['products_supplied'] as num?)?.toInt() ?? 0,
-    )).toList();
+    // Local AP debt aggregates
+    final apMap = <String, Map<String, double>>{};
+    try {
+      final balRows = await db.rawQuery('''
+        SELECT supplier_id,
+               SUM(outstanding_balance) as outstanding_balance,
+               SUM(total_amount) as total_purchases_amount
+        FROM supplier_purchases
+        WHERE company_id = ?
+        GROUP BY supplier_id
+      ''', [companyId]);
+
+      for (final b in balRows) {
+        final sId = b['supplier_id']?.toString() ?? '';
+        apMap[sId] = {
+          'outstanding': (b['outstanding_balance'] as num?)?.toDouble() ?? 0.0,
+          'total': (b['total_purchases_amount'] as num?)?.toDouble() ?? 0.0,
+        };
+      }
+    } catch (_) {}
+
+    return rows.map((r) {
+      final id = r['id'] as String;
+      return Supplier(
+        id: id,
+        name: r['name'] as String,
+        phone: r['phone'] as String?,
+        productsSupplied: (r['products_supplied'] as num?)?.toInt() ?? 0,
+        outstandingBalance: apMap[id]?['outstanding'] ?? 0.0,
+        totalPurchasesAmount: apMap[id]?['total'] ?? 0.0,
+      );
+    }).toList();
   }
 
   Future<void> _upsertToLocal(List<Supplier> suppliers) async {
@@ -258,31 +296,60 @@ class SuppliersScreen extends ConsumerWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
                   itemBuilder: (context, i) {
                     final s = suppliers[i];
-                    return Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                        boxShadow: AppSpacing.cardElevation,
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SupplierDetailsScreen(supplier: s),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                            foregroundColor: AppColors.primary,
-                            child: Text(s.name.isNotEmpty ? s.name.substring(0, 1) : '?'),
-                          ),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                          boxShadow: AppSpacing.cardElevation,
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                              foregroundColor: AppColors.primary,
+                              child: Text(s.name.isNotEmpty ? s.name.substring(0, 1) : '?'),
+                            ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(s.name, style: Theme.of(context).textTheme.titleMedium),
-                                Text(
-                                  l10n.productsSuppliedCount(s.productsSupplied),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                Row(
+                                  children: [
+                                    Text(
+                                      l10n.productsSuppliedCount(s.productsSupplied),
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                          ),
+                                    ),
+                                    if (s.outstandingBalance > 0.005) ...[
+                                      const Text(' · '),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.danger.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Dette: ${s.outstandingBalance.toStringAsFixed(0)} DZD',
+                                          style: const TextStyle(
+                                            color: AppColors.danger,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ),
+                                    ],
+                                  ],
                                 ),
                               ],
                             ),
@@ -358,7 +425,7 @@ class SuppliersScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                    );
+                    ));
                   },
                 ),
               ),

@@ -149,6 +149,18 @@ router.post(
         } else if (entityType === 'supplier' && operationType === 'DELETE') {
           serverResult = await suppliersRoutes.deleteSupplier(companyId, op.entityId || payload.id);
           serverId = serverResult?.id;
+        } else if (entityType === 'supplier_purchase' && (operationType === 'CREATE' || operationType === 'CREATE_SUPPLIER_PURCHASE')) {
+          serverResult = await suppliersRoutes.createSupplierPurchase(companyId, {
+            ...payload,
+            clientTransactionId: clientTransactionId || id,
+          });
+          serverId = serverResult?.purchase?.id;
+        } else if (entityType === 'supplier_payment' && (operationType === 'CREATE' || operationType === 'CREATE_SUPPLIER_PAYMENT')) {
+          serverResult = await suppliersRoutes.recordSupplierPayment(companyId, {
+            ...payload,
+            clientId: clientTransactionId || id,
+          });
+          serverId = serverResult?.payment?.id;
         } else if (entityType === 'restaurant_order' && operationType === 'CREATE') {
           serverResult = await restaurantService.createOrder(companyId, payload);
           serverId = serverResult?.id;

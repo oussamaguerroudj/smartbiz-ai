@@ -176,6 +176,14 @@ async function decrementStock(client, companyId, productId, amount) {
   );
 }
 
+async function incrementStock(client, companyId, productId, amount) {
+  await client.query(
+    `UPDATE products SET quantity = quantity + $3
+     WHERE company_id = $1 AND id = $2`,
+    [companyId, productId, amount],
+  );
+}
+
 module.exports = {
   findAll,
   findById,
@@ -185,4 +193,5 @@ module.exports = {
   softDelete,
   findManyForUpdate,
   decrementStock,
+  incrementStock,
 };
