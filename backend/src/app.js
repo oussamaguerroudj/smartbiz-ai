@@ -51,9 +51,12 @@ app.get('/api/health', async (req, res) => {
   let dbStatus = 'ok';
   let dbError = null;
   let dbCode = null;
+  let executedMigrations = [];
   try {
     const { pool } = require('./config/db');
     await pool.query('SELECT 1');
+    const migRes = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
+    executedMigrations = migRes.rows.map((r) => r.version);
   } catch (err) {
     dbStatus = 'error';
     dbError = err.message || String(err);
@@ -62,11 +65,13 @@ app.get('/api/health', async (req, res) => {
   return res.json({
     status: 'ok',
     env: env.nodeEnv,
-    commit: process.env.RENDER_GIT_COMMIT || '02f52e2',
+    commit: process.env.RENDER_GIT_COMMIT || '990b5a2',
     db: {
       status: dbStatus,
       code: dbCode,
       message: dbError,
+      migrationsCount: executedMigrations.length,
+      lastMigration: executedMigrations[executedMigrations.length - 1] || null,
     },
   });
 });
