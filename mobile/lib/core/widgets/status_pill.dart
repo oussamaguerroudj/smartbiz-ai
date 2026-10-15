@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
-enum PillTone { brand, danger, neutral }
+enum PillTone { brand, success, warning, danger, neutral }
 
 /// Small rounded status label — "Paid" / "Present" / "Scheduled" / "Done" —
 /// matching the badge treatment in the approved redesign. [pulse] adds a
@@ -26,46 +26,83 @@ class StatusPill extends StatefulWidget {
 }
 
 class _StatusPillState extends State<StatusPill> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1800),
-  )..repeat();
+  AnimationController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.pulse) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1800),
+      )..repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant StatusPill oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.pulse && _controller == null) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1800),
+      )..repeat();
+    } else if (!widget.pulse && _controller != null) {
+      _controller?.dispose();
+      _controller = null;
+    }
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
-  (Color bg, Color fg) get _colors {
+  (Color bg, Color fg) _getColors(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     switch (widget.tone) {
       case PillTone.brand:
-        return (AppColors.primary.withValues(alpha: 0.12), AppColors.primaryDark);
+        return isDark
+            ? (AppColors.primary.withValues(alpha: 0.25), AppColors.primaryLight)
+            : (AppColors.primary.withValues(alpha: 0.12), AppColors.primaryDark);
+      case PillTone.success:
+        return isDark
+            ? (AppColors.success.withValues(alpha: 0.22), const Color(0xFF34D399))
+            : (AppColors.success.withValues(alpha: 0.12), const Color(0xFF065F46));
+      case PillTone.warning:
+        return isDark
+            ? (AppColors.warning.withValues(alpha: 0.22), const Color(0xFFFBBF24))
+            : (AppColors.warning.withValues(alpha: 0.14), const Color(0xFF92400E));
       case PillTone.danger:
-        return (AppColors.danger.withValues(alpha: 0.14), const Color(0xFFA8371F));
+        return isDark
+            ? (AppColors.danger.withValues(alpha: 0.25), const Color(0xFFF87171))
+            : (AppColors.danger.withValues(alpha: 0.14), const Color(0xFFA8371F));
       case PillTone.neutral:
-        return (const Color(0xFFEEF0F8), AppColors.textSecondaryLight);
+        return isDark
+            ? (Colors.white.withValues(alpha: 0.1), AppColors.textSecondaryDark)
+            : (const Color(0xFFEEF0F8), AppColors.textSecondaryLight);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = _colors;
+    final (bg, fg) = _getColors(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppSpacing.radiusPill)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.pulse) ...[
+          if (widget.pulse && _controller != null) ...[
             AnimatedBuilder(
-              animation: _controller,
+              animation: _controller!,
               builder: (context, _) {
                 // Reproduces the reference's exact keyframes:
                 // 0%   spread 0,  alpha .45
                 // 70%  spread 5,  alpha 0
                 // 100% spread 0,  alpha 0
-                final t = _controller.value;
+                final t = _controller!.value;
                 double spread;
                 double alpha;
                 if (t <= 0.7) {
@@ -96,9 +133,13 @@ class _StatusPillState extends State<StatusPill> with SingleTickerProviderStateM
             ),
             const SizedBox(width: 5),
           ],
-          Text(
-            widget.label,
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg),
+          Flexible(
+            child: Text(
+              widget.label,
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

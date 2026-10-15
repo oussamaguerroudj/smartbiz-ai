@@ -1303,7 +1303,7 @@ abstract class AppLocalizations {
   /// No description provided for @sellingPriceLabel.
   ///
   /// In en, this message translates to:
-  /// **'Selling price (DZD)'**
+  /// **'Selling Price'**
   String get sellingPriceLabel;
 
   /// No description provided for @sellingBelowPurchaseWarning.
@@ -1903,7 +1903,7 @@ abstract class AppLocalizations {
   /// No description provided for @totalPaidLabel.
   ///
   /// In en, this message translates to:
-  /// **'Paid'**
+  /// **'Total Paid'**
   String get totalPaidLabel;
 
   /// No description provided for @noOutstandingBalanceForCustomer.
@@ -4911,6 +4911,1104 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Active Lifetime License'**
   String get licenseActive;
+
+  /// No description provided for @subscriptionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription & Licensing'**
+  String get subscriptionTitle;
+
+  /// No description provided for @subscriptionLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load subscription status'**
+  String get subscriptionLoadFailed;
+
+  /// No description provided for @subscriptionRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get subscriptionRetry;
+
+  /// No description provided for @subscriptionStatusSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Suspended'**
+  String get subscriptionStatusSuspended;
+
+  /// No description provided for @subscriptionStatusLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime Edition'**
+  String get subscriptionStatusLifetime;
+
+  /// No description provided for @subscriptionStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Free Trial Expired'**
+  String get subscriptionStatusExpired;
+
+  /// No description provided for @subscriptionStatusTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'Free Trial'**
+  String get subscriptionStatusTrial;
+
+  /// No description provided for @subscriptionLifetimeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanent unlimited access. No monthly subscriptions, no renewal fees.'**
+  String get subscriptionLifetimeDesc;
+
+  /// No description provided for @subscriptionTrialDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoy unrestricted access to all features during your 15-day evaluation period.'**
+  String get subscriptionTrialDesc;
+
+  /// No description provided for @subscriptionExpiredDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your evaluation period has ended. Activate lifetime license to unlock full access.'**
+  String get subscriptionExpiredDesc;
+
+  /// No description provided for @subscriptionSuspendedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Account suspended. Contact support to appeal or resolve billing.'**
+  String get subscriptionSuspendedDesc;
+
+  /// No description provided for @subscriptionDaysRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days left'**
+  String subscriptionDaysRemaining(int count);
+
+  /// No description provided for @subscriptionProductEdition.
+  ///
+  /// In en, this message translates to:
+  /// **'Product / Edition'**
+  String get subscriptionProductEdition;
+
+  /// No description provided for @subscriptionOfficialPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Official Price'**
+  String get subscriptionOfficialPrice;
+
+  /// No description provided for @subscriptionBillingCycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing Frequency'**
+  String get subscriptionBillingCycle;
+
+  /// No description provided for @subscriptionOneTimePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time payment (Pay once, use forever)'**
+  String get subscriptionOneTimePayment;
+
+  /// No description provided for @subscriptionPaymentMethods.
+  ///
+  /// In en, this message translates to:
+  /// **'Supported Payment Methods'**
+  String get subscriptionPaymentMethods;
+
+  /// No description provided for @subscriptionPaymentMethodsList.
+  ///
+  /// In en, this message translates to:
+  /// **'Chargily Pay (EDAHABIA / CIB) + CCP'**
+  String get subscriptionPaymentMethodsList;
+
+  /// No description provided for @subscriptionFeaturesIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Included in Lifetime License'**
+  String get subscriptionFeaturesIncluded;
+
+  /// No description provided for @featurePosBarcode.
+  ///
+  /// In en, this message translates to:
+  /// **'Point of Sale (POS) & Fast Barcode Scanning'**
+  String get featurePosBarcode;
+
+  /// No description provided for @featureInvoicesThermal.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoicing, Quotes & Thermal Receipt Printing'**
+  String get featureInvoicesThermal;
+
+  /// No description provided for @featureInventoryAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory & Stock Management with Low-Stock Alerts'**
+  String get featureInventoryAlerts;
+
+  /// No description provided for @featureReportsAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses, Financial Reports & Revenue Analytics'**
+  String get featureReportsAnalytics;
+
+  /// No description provided for @featureOfflineSqlite.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline-First SQLite Database (Works without Internet)'**
+  String get featureOfflineSqlite;
+
+  /// No description provided for @featureMultiDeviceSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-device support & automated cloud sync'**
+  String get featureMultiDeviceSync;
+
+  /// No description provided for @contactBillingSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Billing & Sales Support'**
+  String get contactBillingSupport;
+
+  /// No description provided for @upgradeLifetimeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate Lifetime License ({price})'**
+  String upgradeLifetimeAction(String price);
+
+  /// No description provided for @chargilyExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Instant automatic activation with EDAHABIA or CIB cards via Chargily Pay official payment gateway.'**
+  String get chargilyExplanation;
+
+  /// No description provided for @payWithChargilyBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay {price} with Chargily Pay'**
+  String payWithChargilyBtn(String price);
+
+  /// No description provided for @instantActivationBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Instant Automated Activation'**
+  String get instantActivationBadge;
+
+  /// No description provided for @securityGuaranteed.
+  ///
+  /// In en, this message translates to:
+  /// **'100% Secure Transaction (SATIM / GIE Monétique)'**
+  String get securityGuaranteed;
+
+  /// No description provided for @uploadProofTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Proof of Payment (Receipt)'**
+  String get uploadProofTitle;
+
+  /// No description provided for @uploadProofSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supported formats: JPG, PNG, PDF (Max 5 MB)'**
+  String get uploadProofSubtitle;
+
+  /// No description provided for @submitReceiptBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Receipt for Verification'**
+  String get submitReceiptBtn;
+
+  /// No description provided for @ccpCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'CCP account number copied to clipboard'**
+  String get ccpCopied;
+
+  /// No description provided for @copyCcpNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Account Number'**
+  String get copyCcpNumber;
+
+  /// No description provided for @accountSystemSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Account & Licensing'**
+  String get accountSystemSection;
+
+  /// No description provided for @preferencesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences & Appearance'**
+  String get preferencesSection;
+
+  /// No description provided for @supportSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Support'**
+  String get supportSection;
+
+  /// No description provided for @dataManagementSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Data & System'**
+  String get dataManagementSection;
+
+  /// No description provided for @appVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get appVersion;
+
+  /// No description provided for @dataPreservedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'All your products, sales, invoices, customer balances, and offline records are safely preserved on this device and will be immediately available once you activate your license.'**
+  String get dataPreservedNotice;
+
+  /// No description provided for @selectReceiptPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a payment receipt file first'**
+  String get selectReceiptPrompt;
+
+  /// No description provided for @chargilyInvalidUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment gateway did not return a valid URL'**
+  String get chargilyInvalidUrl;
+
+  /// No description provided for @paymentMethodsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Edahabia • CIB (SATIM)'**
+  String get paymentMethodsAvailable;
+
+  /// No description provided for @freeTrialDaysBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'15 Days Free'**
+  String get freeTrialDaysBadge;
+
+  /// No description provided for @trialFeatureAllModules.
+  ///
+  /// In en, this message translates to:
+  /// **'Full access to all Modiri AI modules'**
+  String get trialFeatureAllModules;
+
+  /// No description provided for @trialFeatureCorePos.
+  ///
+  /// In en, this message translates to:
+  /// **'POS, Invoices, Inventory, & Expenses'**
+  String get trialFeatureCorePos;
+
+  /// No description provided for @trialFeatureOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline-First SQLite data storage'**
+  String get trialFeatureOffline;
+
+  /// No description provided for @trialFeatureNoCard.
+  ///
+  /// In en, this message translates to:
+  /// **'No credit card required to start'**
+  String get trialFeatureNoCard;
+
+  /// No description provided for @newSupplierPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'New Supplier Purchase'**
+  String get newSupplierPurchase;
+
+  /// No description provided for @purchaseInvoiceOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice / Order No. (Optional)'**
+  String get purchaseInvoiceOptional;
+
+  /// No description provided for @orderedItemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Ordered Items ({count})'**
+  String orderedItemsCount(int count);
+
+  /// No description provided for @itemDesignation.
+  ///
+  /// In en, this message translates to:
+  /// **'Item Name *'**
+  String get itemDesignation;
+
+  /// No description provided for @chooseFromCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from product catalog'**
+  String get chooseFromCatalog;
+
+  /// No description provided for @quantityField.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity *'**
+  String get quantityField;
+
+  /// No description provided for @unitPurchaseCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit Cost (DZD) *'**
+  String get unitPurchaseCost;
+
+  /// No description provided for @addPurchaseItemLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Item Line'**
+  String get addPurchaseItemLine;
+
+  /// No description provided for @invoiceTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Total:'**
+  String get invoiceTotal;
+
+  /// No description provided for @downPaymentDzd.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial Payment (DZD)'**
+  String get downPaymentDzd;
+
+  /// No description provided for @remainingDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining Debt: {amount} DZD'**
+  String remainingDebt(String amount);
+
+  /// No description provided for @purchaseNotesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes / Remarks (Optional)'**
+  String get purchaseNotesOptional;
+
+  /// No description provided for @validateSavePurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm and Save Purchase'**
+  String get validateSavePurchase;
+
+  /// No description provided for @pleaseAddAtLeastOneItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add at least one item'**
+  String get pleaseAddAtLeastOneItem;
+
+  /// No description provided for @invoiceTotalMustBeGreaterThanZero.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice total must be greater than 0 DZD'**
+  String get invoiceTotalMustBeGreaterThanZero;
+
+  /// No description provided for @purchaseSavedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase recorded successfully'**
+  String get purchaseSavedSuccessfully;
+
+  /// No description provided for @recordSupplierPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Record Supplier Payment'**
+  String get recordSupplierPayment;
+
+  /// No description provided for @totalOutstandingDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Outstanding Debt: {amount} DZD'**
+  String totalOutstandingDebt(String amount);
+
+  /// No description provided for @allocateToInvoiceOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to Invoice (Optional)'**
+  String get allocateToInvoiceOptional;
+
+  /// No description provided for @globalDebtFifo.
+  ///
+  /// In en, this message translates to:
+  /// **'Global Debt (Oldest Unpaid First)'**
+  String get globalDebtFifo;
+
+  /// No description provided for @paymentAmountField.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Amount (DZD) *'**
+  String get paymentAmountField;
+
+  /// No description provided for @paymentMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Method'**
+  String get paymentMethodLabel;
+
+  /// No description provided for @paymentMethodCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get paymentMethodCash;
+
+  /// No description provided for @paymentMethodBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank Transfer'**
+  String get paymentMethodBank;
+
+  /// No description provided for @paymentMethodCcp.
+  ///
+  /// In en, this message translates to:
+  /// **'CCP Deposit'**
+  String get paymentMethodCcp;
+
+  /// No description provided for @paymentMethodCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check'**
+  String get paymentMethodCheck;
+
+  /// No description provided for @paymentRefOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference / Receipt No. (Optional)'**
+  String get paymentRefOptional;
+
+  /// No description provided for @confirmPaymentAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Payment'**
+  String get confirmPaymentAction;
+
+  /// No description provided for @amountMustBePositive.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount must be greater than zero'**
+  String get amountMustBePositive;
+
+  /// No description provided for @amountExceedsInvoiceDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount exceeds the remaining balance for this invoice'**
+  String get amountExceedsInvoiceDebt;
+
+  /// No description provided for @amountExceedsTotalDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount exceeds the total outstanding debt'**
+  String get amountExceedsTotalDebt;
+
+  /// No description provided for @paymentSavedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment recorded successfully'**
+  String get paymentSavedSuccessfully;
+
+  /// No description provided for @totalStockValuation.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock Value'**
+  String get totalStockValuation;
+
+  /// No description provided for @totalInvoiced.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Invoiced'**
+  String get totalInvoiced;
+
+  /// No description provided for @totalPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Paid'**
+  String get totalPaid;
+
+  /// No description provided for @outstandingDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining Debt'**
+  String get outstandingDebt;
+
+  /// No description provided for @newPurchaseAction.
+  ///
+  /// In en, this message translates to:
+  /// **'New Purchase'**
+  String get newPurchaseAction;
+
+  /// No description provided for @payDebtAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Debt'**
+  String get payDebtAction;
+
+  /// No description provided for @invoicesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoices ({count})'**
+  String invoicesTab(int count);
+
+  /// No description provided for @paymentsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments ({count})'**
+  String paymentsTab(int count);
+
+  /// No description provided for @productsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Products ({count})'**
+  String productsTab(int count);
+
+  /// No description provided for @noPurchasesRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'No purchase invoices recorded yet.'**
+  String get noPurchasesRecorded;
+
+  /// No description provided for @recordFirstPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Record First Purchase'**
+  String get recordFirstPurchase;
+
+  /// No description provided for @noPaymentsRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments recorded yet.'**
+  String get noPaymentsRecorded;
+
+  /// No description provided for @payThisInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay this invoice ({amount} DZD)'**
+  String payThisInvoice(String amount);
+
+  /// No description provided for @invoiceLinesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Lines ({count})'**
+  String invoiceLinesTitle(int count);
+
+  /// No description provided for @sellingPriceShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell: {price} DZD'**
+  String sellingPriceShort(String price);
+
+  /// No description provided for @callSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get callSupplier;
+
+  /// No description provided for @whatsappSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get whatsappSupplier;
+
+  /// No description provided for @editSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Supplier'**
+  String get editSupplier;
+
+  /// No description provided for @deleteSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Supplier'**
+  String get deleteSupplier;
+
+  /// No description provided for @deleteSupplierConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this supplier?'**
+  String get deleteSupplierConfirm;
+
+  /// No description provided for @chargilyPaymentPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Pending Confirmation'**
+  String get chargilyPaymentPending;
+
+  /// No description provided for @chargilyPendingExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment session has been opened. Complete payment in your browser, then tap Check Payment Status below.'**
+  String get chargilyPendingExplanation;
+
+  /// No description provided for @checkPaymentStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Payment Status'**
+  String get checkPaymentStatus;
+
+  /// No description provided for @paymentNotYetReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment has not yet been confirmed by Chargily. Please complete your transaction on the checkout page.'**
+  String get paymentNotYetReceived;
+
+  /// No description provided for @paymentSuccessCongratulations.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment confirmed! Lifetime license activated successfully.'**
+  String get paymentSuccessCongratulations;
+
+  /// No description provided for @downPaymentCannotExceedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial payment cannot exceed the invoice total'**
+  String get downPaymentCannotExceedTotal;
+
+  /// No description provided for @paidInFullBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in full'**
+  String get paidInFullBadge;
+
+  /// No description provided for @partiallyPaidBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Partially paid'**
+  String get partiallyPaidBadge;
+
+  /// No description provided for @unpaidBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid'**
+  String get unpaidBadge;
+
+  /// No description provided for @totalInvoiceAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Invoice Amount'**
+  String get totalInvoiceAmountLabel;
+
+  /// No description provided for @outstandingDebtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Outstanding Debt'**
+  String get outstandingDebtLabel;
+
+  /// No description provided for @noLineItemsRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'No line items recorded.'**
+  String get noLineItemsRecorded;
+
+  /// No description provided for @remainingBalanceShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get remainingBalanceShort;
+
+  /// No description provided for @paymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get paymentTitle;
+
+  /// No description provided for @brandTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Business Management'**
+  String get brandTagline;
+
+  /// No description provided for @oneTimePaymentBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time payment'**
+  String get oneTimePaymentBadge;
+
+  /// No description provided for @lifetimeLicenseBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime License'**
+  String get lifetimeLicenseBadge;
+
+  /// No description provided for @benefitSafeExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'Safe Experience'**
+  String get benefitSafeExperience;
+
+  /// No description provided for @benefitLifetimeAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime Access'**
+  String get benefitLifetimeAccess;
+
+  /// No description provided for @benefitFutureUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Future Updates'**
+  String get benefitFutureUpdates;
+
+  /// No description provided for @benefitPremiumSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Support'**
+  String get benefitPremiumSupport;
+
+  /// No description provided for @securePayment100.
+  ///
+  /// In en, this message translates to:
+  /// **'100% Secure Payment'**
+  String get securePayment100;
+
+  /// No description provided for @allPaymentsProtected.
+  ///
+  /// In en, this message translates to:
+  /// **'All transactions are protected and secure'**
+  String get allPaymentsProtected;
+
+  /// No description provided for @orChooseOtherPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Or choose the other payment method'**
+  String get orChooseOtherPayment;
+
+  /// No description provided for @licenseDetailsHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'License Details'**
+  String get licenseDetailsHeader;
+
+  /// No description provided for @outOfDays.
+  ///
+  /// In en, this message translates to:
+  /// **'out of {total} days'**
+  String outOfDays(int total);
+
+  /// No description provided for @remainingDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days left'**
+  String remainingDaysCount(int count);
+
+  /// No description provided for @scanSupplierInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Invoice'**
+  String get scanSupplierInvoice;
+
+  /// No description provided for @addPurchaseManually.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Purchase Manually'**
+  String get addPurchaseManually;
+
+  /// No description provided for @totalPurchasesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Purchases'**
+  String get totalPurchasesLabel;
+
+  /// No description provided for @outstandingBalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Outstanding Balance'**
+  String get outstandingBalanceLabel;
+
+  /// No description provided for @scanSupplierInvoiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Supplier Invoice'**
+  String get scanSupplierInvoiceTitle;
+
+  /// No description provided for @reviewInvoiceItemsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review & Receive Stock'**
+  String get reviewInvoiceItemsTitle;
+
+  /// No description provided for @retakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake Photo'**
+  String get retakePhoto;
+
+  /// No description provided for @invoiceNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Number'**
+  String get invoiceNumberLabel;
+
+  /// No description provided for @invoiceDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Date'**
+  String get invoiceDateLabel;
+
+  /// No description provided for @matchedProductLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalog Product'**
+  String get matchedProductLabel;
+
+  /// No description provided for @createNewProductOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Create as new product'**
+  String get createNewProductOption;
+
+  /// No description provided for @unitCostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase Cost'**
+  String get unitCostLabel;
+
+  /// No description provided for @lineTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Line Total'**
+  String get lineTotalLabel;
+
+  /// No description provided for @calculatedTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated Total'**
+  String get calculatedTotalLabel;
+
+  /// No description provided for @detectedTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected Total'**
+  String get detectedTotalLabel;
+
+  /// No description provided for @totalDiscrepancyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The sum of items does not match the invoice total.'**
+  String get totalDiscrepancyWarning;
+
+  /// No description provided for @duplicateInvoiceWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'An invoice with this number already exists for this supplier. Do you want to proceed?'**
+  String get duplicateInvoiceWarning;
+
+  /// No description provided for @confirmAndReceiveInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & Receive Inventory'**
+  String get confirmAndReceiveInventory;
+
+  /// No description provided for @receivingSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory Receipt Summary'**
+  String get receivingSummaryTitle;
+
+  /// No description provided for @inventoryReceivedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice saved and {count} products updated in inventory!'**
+  String inventoryReceivedSuccess(int count);
+
+  /// No description provided for @addLineItemButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Item'**
+  String get addLineItemButton;
+
+  /// No description provided for @removeLineItemButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get removeLineItemButton;
+
+  /// No description provided for @searchCatalogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search product in catalog...'**
+  String get searchCatalogHint;
+
+  /// No description provided for @downPaymentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount Paid (Down Payment)'**
+  String get downPaymentLabel;
+
+  /// No description provided for @noLineItemsWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add or retain at least one product item.'**
+  String get noLineItemsWarning;
+
+  /// No description provided for @skipItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip Item'**
+  String get skipItem;
+
+  /// No description provided for @itemSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get itemSkipped;
+
+  /// No description provided for @restoreItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restoreItem;
+
+  /// No description provided for @productsToUpdateCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} products to update in stock'**
+  String productsToUpdateCount(int count);
+
+  /// No description provided for @newProductsToCreateCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} new products to create'**
+  String newProductsToCreateCount(int count);
+
+  /// No description provided for @exportStatement.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Statement'**
+  String get exportStatement;
+
+  /// No description provided for @saleSettlementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale Settlement'**
+  String get saleSettlementTitle;
+
+  /// No description provided for @paidInFullTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in Full'**
+  String get paidInFullTitle;
+
+  /// No description provided for @paidInFullDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Full payment received in cash'**
+  String get paidInFullDesc;
+
+  /// No description provided for @unpaidCreditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid (Credit)'**
+  String get unpaidCreditTitle;
+
+  /// No description provided for @unpaidCreditDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Total amount recorded as customer debt'**
+  String get unpaidCreditDesc;
+
+  /// No description provided for @customerRequiredForCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a customer to record a credit sale'**
+  String get customerRequiredForCredit;
+
+  /// No description provided for @itemsToReceiveCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items to receive'**
+  String itemsToReceiveCount(int count);
+
+  /// No description provided for @customerCreditProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Credit Profile'**
+  String get customerCreditProfileTitle;
+
+  /// No description provided for @customerStatementTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement'**
+  String get customerStatementTab;
+
+  /// No description provided for @unpaidInvoicesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid Invoices ({count})'**
+  String unpaidInvoicesTab(int count);
+
+  /// No description provided for @paymentsHistoryTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Repayments'**
+  String get paymentsHistoryTab;
+
+  /// No description provided for @oldestDebtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest Debt'**
+  String get oldestDebtLabel;
+
+  /// No description provided for @noOldestDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'No unpaid debt'**
+  String get noOldestDebt;
+
+  /// No description provided for @totalCreditIncurred.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Credit'**
+  String get totalCreditIncurred;
+
+  /// No description provided for @totalRepaidLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Repaid'**
+  String get totalRepaidLabel;
+
+  /// No description provided for @unpaidInvoicesCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid Invoices'**
+  String get unpaidInvoicesCountLabel;
+
+  /// No description provided for @invoiceDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Details'**
+  String get invoiceDetailsTitle;
+
+  /// No description provided for @itemsListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Items Breakdown'**
+  String get itemsListTitle;
+
+  /// No description provided for @payFullBalanceShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Full ({amount} DZD)'**
+  String payFullBalanceShortcut(String amount);
+
+  /// No description provided for @payHalfBalanceShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Half (50%)'**
+  String get payHalfBalanceShortcut;
+
+  /// No description provided for @noUnpaidInvoicesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No unpaid invoices for this customer'**
+  String get noUnpaidInvoicesFound;
+
+  /// No description provided for @repaymentNoteOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Note / Reference (Optional)'**
+  String get repaymentNoteOptional;
+
+  /// No description provided for @confirmRepaymentAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Repayment'**
+  String get confirmRepaymentAction;
 }
 
 class _AppLocalizationsDelegate

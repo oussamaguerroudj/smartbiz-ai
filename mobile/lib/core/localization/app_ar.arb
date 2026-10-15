@@ -1106,6 +1106,311 @@
   "feedbackTitle": "إرسال ملاحظات",
   "feedbackRatingLabel": "التقييم",
   "submitFeedbackAction": "إرسال الملاحظات",
-  "licenseActive": "رخصة مدى الحياة نشطة"
+  "licenseActive": "رخصة مدى الحياة نشطة",
+  "subscriptionTitle": "إدارة الاشتراك والترخيص",
+  "subscriptionLoadFailed": "تعذر تحميل بيانات الاشتراك والترخيص",
+  "subscriptionRetry": "إعادة المحاولة",
+  "subscriptionStatusSuspended": "حساب معلّق",
+  "subscriptionStatusLifetime": "رخصة مدى الحياة",
+  "subscriptionStatusExpired": "انتهت الفترة التجريبية",
+  "subscriptionStatusTrial": "نسخة تجريبية مجانية",
+  "subscriptionLifetimeDesc": "وصول دائم وغير محدود لجميع الميزات. بدون اشتراكات شهرية أو رسوم تجديد.",
+  "subscriptionTrialDesc": "استمتع بالوصول الكامل لجميع ميزات التطبيق خلال الفترة التجريبية (15 يوماً).",
+  "subscriptionExpiredDesc": "انتهت الفترة التجريبية. قم بتفعيل الرخصة مدى الحياة لمواصلة العمل.",
+  "subscriptionSuspendedDesc": "الحساب معلق. يرجى التواصل مع الدعم أو تقديم طعن.",
+  "subscriptionDaysRemaining": "باقي {count} يوم",
+  "subscriptionProductEdition": "المنتج / النسخة",
+  "subscriptionOfficialPrice": "السعر الرسمي",
+  "subscriptionBillingCycle": "دورة الدفع",
+  "subscriptionOneTimePayment": "دفع مرة واحدة مدى الحياة (بدون تجديد)",
+  "subscriptionPaymentMethods": "طرق الدفع المعتمدة",
+  "subscriptionPaymentMethodsList": "شارجيلي (الذهبية / CIB) + بريد الجزائر CCP",
+  "subscriptionFeaturesIncluded": "الميزات المشمولة في رخصة مدى الحياة",
+  "featurePosBarcode": "نظام نقاط البيع (POS) وقارئ الباركود السريع",
+  "featureInvoicesThermal": "إصدار الفواتير، عروض الأسعار، والطباعة الحرارية",
+  "featureInventoryAlerts": "إدارة المخزون وتنبيهات نفاد السلع التلقائية",
+  "featureReportsAnalytics": "تتبع المصاريف، التقارير المالية، والأرباح",
+  "featureOfflineSqlite": "قاعدة بيانات SQLite تعمل دون الحاجة للإنترنت",
+  "featureMultiDeviceSync": "المزامنة السحابية الاحتياطية ودعم الأجهزة المتعددة",
+  "contactBillingSupport": "التواصل مع قسم الدعم والمبيعات",
+  "upgradeLifetimeAction": "الترقية إلى رخصة مدى الحياة ({price})",
+  "chargilyExplanation": "تفعيل فوري وآلي للرخصة مدى الحياة عبر بطاقة الذهبية أو CIB من خلال منصة الدفع الإلكتروني الرسمية والآمنة Chargily Pay.",
+  "payWithChargilyBtn": "دفع {price} عبر شارجيلي",
+  "instantActivationBadge": "تفعيل فوري وآلي",
+  "securityGuaranteed": "دفع إلكتروني آمن 100% (SATIM / نقد آلي)",
+  "uploadProofTitle": "إرسال وصل الدفع (Reçu)",
+  "uploadProofSubtitle": "الصيغ المدعومة: JPG، PNG، PDF (الحد الأقصى 5 ميغابايت)",
+  "submitReceiptBtn": "تأكيد إرسال الوصل للتحقق",
+  "ccpCopied": "تم نسخ رقم الحساب البريدي CCP بنجاح",
+  "copyCcpNumber": "نسخ رقم الحساب",
+  "accountSystemSection": "الحساب والترخيص",
+  "preferencesSection": "التفضيلات والمظهر",
+  "supportSection": "المساعدة والدعم",
+  "dataManagementSection": "البيانات والنظام",
+  "appVersion": "الإصدار",
+  "dataPreservedNotice": "جميع منتجاتك ومبيعاتك وفواتيرك وأرصدة الزبائن والعمليات المحفوظة محلياً مؤمّنة بالكامل على جهازك، وستعود للظهور فوراً بمجرد تفعيل الرخصة.",
+  "selectReceiptPrompt": "يرجى اختيار ملف وصل الدفع أولاً",
+  "chargilyInvalidUrl": "بوابة الدفع لم تعد رابط دفع صالح",
+  "paymentMethodsAvailable": "الذهبية • CIB • بريد الجزائر CCP",
+  "freeTrialDaysBadge": "15 يوماً مجاناً",
+  "trialFeatureAllModules": "وصول كامل لجميع وحدات Modiri AI",
+  "trialFeatureCorePos": "نقاط البيع والفواتير والمخزون والمصاريف",
+  "trialFeatureOffline": "تخزين محلي مؤمّن يعمل دون إنترنت",
+  "trialFeatureNoCard": "لا يلزم أي بطاقة بنكية للبدء",
+  "newSupplierPurchase": "شراء جديد من المورد",
+  "purchaseInvoiceOptional": "رقم الفاتورة / سند الطلب (اختياري)",
+  "orderedItemsCount": "المواد المطلوبة ({count})",
+  "@orderedItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "itemDesignation": "اسم السلعة / المادة *",
+  "chooseFromCatalog": "اختيار من قائمة المنتجات",
+  "quantityField": "الكمية *",
+  "unitPurchaseCost": "سعر شراء الوحدة (دج) *",
+  "addPurchaseItemLine": "إضافة مادة أخرى",
+  "invoiceTotal": "إجمالي الفاتورة:",
+  "downPaymentDzd": "الدفعة المسددة (دج)",
+  "remainingDebt": "الدين المتبقي: {amount} دج",
+  "@remainingDebt": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "purchaseNotesOptional": "ملاحظات (اختياري)",
+  "validateSavePurchase": "تأكيد وتسجيل الشراء",
+  "pleaseAddAtLeastOneItem": "يرجى إضافة مادة واحدة على الأقل",
+  "invoiceTotalMustBeGreaterThanZero": "يجب أن يكون إجمالي الفاتورة أكبر من 0 دج",
+  "purchaseSavedSuccessfully": "تم تسجيل الشراء بنجاح",
+  "recordSupplierPayment": "تسجيل دفعة للمورد",
+  "totalOutstandingDebt": "إجمالي الدين المستحق: {amount} دج",
+  "@totalOutstandingDebt": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "allocateToInvoiceOptional": "تخصيص لفاتورة محددة (اختياري)",
+  "globalDebtFifo": "دين إجمالي (تسديد الأقدم أولاً)",
+  "paymentAmountField": "مبلغ الدفعة (دج) *",
+  "paymentMethodLabel": "طريقة الدفع",
+  "paymentMethodCash": "نقداً (كاش)",
+  "paymentMethodBank": "تحويل بنكي",
+  "paymentMethodCcp": "تحويل / صك بريدي CCP",
+  "paymentMethodCheck": "شيك",
+  "paymentRefOptional": "المرجع / رقم الوصل (اختياري)",
+  "confirmPaymentAction": "تأكيد الدفع",
+  "amountMustBePositive": "يجب أن يكون المبلغ أكبر من الصفر",
+  "amountExceedsInvoiceDebt": "المبلغ يتجاوز المبلغ المتبقي لهذه الفاتورة",
+  "amountExceedsTotalDebt": "المبلغ يتجاوز إجمالي الدين المستحق للمورد",
+  "paymentSavedSuccessfully": "تم تسجيل الدفعة بنجاح",
+  "totalStockValuation": "قيمة المخزون",
+  "totalInvoiced": "إجمالي المشتريات",
+  "totalPaid": "إجمالي المسدد",
+  "outstandingDebt": "الدين المتبقي",
+  "newPurchaseAction": "شراء جديد",
+  "payDebtAction": "تسديد دين",
+  "invoicesTab": "الفواتير ({count})",
+  "@invoicesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentsTab": "المدفوعات ({count})",
+  "@paymentsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "productsTab": "المنتجات ({count})",
+  "@productsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noPurchasesRecorded": "لا توجد فواتير شراء مسجلة بعد.",
+  "recordFirstPurchase": "تسجيل أول فاتورة شراء",
+  "noPaymentsRecorded": "لا توجد دفعات مسجلة بعد.",
+  "payThisInvoice": "تسديد هذه الفاتورة ({amount} دج)",
+  "@payThisInvoice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "invoiceLinesTitle": "بنود الفاتورة ({count})",
+  "@invoiceLinesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sellingPriceShort": "البيع: {price} دج",
+  "@sellingPriceShort": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "callSupplier": "اتصال",
+  "whatsappSupplier": "واتساب",
+  "editSupplier": "تعديل المورد",
+  "deleteSupplier": "حذف المورد",
+  "deleteSupplierConfirm": "هل أنت متأكد من حذف هذا المورد؟",
+  "chargilyPaymentPending": "الدفع قيد التأكيد",
+  "chargilyPendingExplanation": "تم فتح صفحة الدفع الإلكتروني. يرجى إتمام العملية في المتصفح ثم الضغط على التحقق من حالة الدفع.",
+  "checkPaymentStatus": "التحقق من حالة الدفع",
+  "paymentNotYetReceived": "لم يتم استلام تأكيد الدفع من شارجيلي بعد. يرجى إتمام عملية الدفع في صفحة المتصفح.",
+  "paymentSuccessCongratulations": "تم تأكيد الدفع بنجاح! تم تفعيل رخصة Modiri AI مدى الحياة.",
+  "downPaymentCannotExceedTotal": "الدفعة المسددة لا يمكن أن تتجاوز إجمالي الفاتورة",
+  "paidInFullBadge": "مدفوعة بالكامل",
+  "partiallyPaidBadge": "مدفوعة جزئياً",
+  "unpaidBadge": "غير مدفوعة",
+  "totalInvoiceAmountLabel": "إجمالي مبلغ الفاتورة",
+  "amountPaidLabel": "المبلغ المسدد",
+  "outstandingDebtLabel": "المبلغ المتبقي (دين)",
+  "noLineItemsRecorded": "لا توجد تفاصيل للمنتجات مسجلة.",
+  "remainingBalanceShort": "المتبقي",
+  "paymentTitle": "دفعة",
+  "brandTagline": "إدارة أعمالك بذكاء",
+  "oneTimePaymentBadge": "دفع لمرة واحدة",
+  "lifetimeLicenseBadge": "رخصة مدى الحياة",
+  "benefitSafeExperience": "تجربة آمنة",
+  "benefitLifetimeAccess": "وصول مدى الحياة",
+  "benefitFutureUpdates": "تحديثات مستقبلية",
+  "benefitPremiumSupport": "دعم فني مميز",
+  "securePayment100": "دفع آمن 100%",
+  "allPaymentsProtected": "جميع عمليات الدفع محمية وآمنة",
+  "orChooseOtherPayment": "أو اختر طريقة الدفع الأخرى",
+  "licenseDetailsHeader": "تفاصيل الرخصة",
+  "outOfDays": "من أصل {total} يوم",
+  "@outOfDays": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "remainingDaysCount": "{count} يوم متبقي",
+  "@remainingDaysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanSupplierInvoice": "مسح الفاتورة ضوئياً",
+  "addPurchaseManually": "إضافة فاتورة يدوياً",
+  "totalPurchasesLabel": "إجمالي المشتريات",
+  "totalPaidLabel": "المبلغ المسدد",
+  "outstandingBalanceLabel": "المبلغ المتبقي",
+  "scanSupplierInvoiceTitle": "مسح فاتورة المورّد",
+  "reviewInvoiceItemsTitle": "مراجعة واستلام البضاعة",
+  "retakePhoto": "إعادة التقاط الصورة",
+  "invoiceNumberLabel": "رقم الفاتورة",
+  "invoiceDateLabel": "تاريخ الفاتورة",
+  "matchedProductLabel": "المنتج في المخزون",
+  "createNewProductOption": "إنشاء كمنتج جديد",
+  "unitCostLabel": "سعر الشراء",
+  "sellingPriceLabel": "سعر البيع",
+  "lineTotalLabel": "المجموع",
+  "calculatedTotalLabel": "المجموع المحسوب",
+  "detectedTotalLabel": "المجموع المكتشف",
+  "totalDiscrepancyWarning": "مجموع عناصر الفاتورة لا يطابق إجمالي الفاتورة المكتشف.",
+  "duplicateInvoiceWarning": "توجد فاتورة مسجلة بهذا الرقم لهذا المورّد مسبقاً. هل تريد المتابعة بالتسجيل؟",
+  "confirmAndReceiveInventory": "تأكيد واستلام في المخزون",
+  "receivingSummaryTitle": "ملخص استلام المخزون",
+  "inventoryReceivedSuccess": "تم حفظ الفاتورة وتحديث {count} منتج في المخزون بنجاح!",
+  "@inventoryReceivedSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addLineItemButton": "إضافة عنصر",
+  "removeLineItemButton": "حذف",
+  "searchCatalogHint": "ابحث عن منتج في المخزون...",
+  "downPaymentLabel": "المبلغ المدفوع مقدماً (اختياري)",
+  "noLineItemsWarning": "يرجى إضافة أو الاحتفاظ بمنتج واحد على الأقل للاستلام.",
+  "skipItem": "تخطي العنصر",
+  "itemSkipped": "تم التخطي",
+  "restoreItem": "استعادة",
+  "productsToUpdateCount": "سيتم تحديث كمية {count} منتج في المخزون",
+  "@productsToUpdateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newProductsToCreateCount": "سيتم إنشاء {count} منتج جديد في الدليل",
+  "@newProductsToCreateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportStatement": "كشف الحساب",
+  "saleSettlementTitle": "تسوية عملية البيع",
+  "paidInFullTitle": "مدفوعة بالكامل",
+  "paidInFullDesc": "تم استلام كامل المبلغ نقداً",
+  "unpaidCreditTitle": "غير مدفوعة (دين / كريدي)",
+  "unpaidCreditDesc": "المبلغ بالكامل يُسجل كدين على ذمة العميل",
+  "customerRequiredForCredit": "يجب تحديد عميل لتسجيل بيع بالدين",
+  "itemsToReceiveCount": "{count} منتجات للاستلام",
+  "@itemsToReceiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerCreditProfileTitle": "ملف ديون العميل",
+  "customerStatementTab": "كشف الحساب",
+  "unpaidInvoicesTab": "فواتير غير مدفوعة ({count})",
+  "@unpaidInvoicesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentsHistoryTab": "سجل الدفعات",
+  "oldestDebtLabel": "أقدم دين",
+  "noOldestDebt": "لا توجد ديون مستحقة",
+  "totalCreditIncurred": "إجمالي المبيعات بالدين",
+  "totalRepaidLabel": "إجمالي المسدد",
+  "unpaidInvoicesCountLabel": "فواتير معلقة",
+  "invoiceDetailsTitle": "تفاصيل الفاتورة",
+  "itemsListTitle": "قائمة المنتجات",
+  "payFullBalanceShortcut": "تسديد كامل المبلغ ({amount} دج)",
+  "@payFullBalanceShortcut": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payHalfBalanceShortcut": "تسديد النصف (50%)",
+  "noUnpaidInvoicesFound": "لا توجد فواتير غير مدفوعة لهذا العميل",
+  "repaymentNoteOptional": "ملاحظة / رقم الإيصال (اختياري)",
+  "confirmRepaymentAction": "تأكيد تسجيل الدفعة"
 }
 

@@ -94,6 +94,19 @@ const viewReceipt = asyncHandler(async (req, res) => {
   return res.sendFile(filePath);
 });
 
+const getOrderStatus = asyncHandler(async (req, res) => {
+  const companyId = req.user.companyId;
+  const { orderId } = req.params;
+  const order = await paymentsService.getPaymentOrderStatus(companyId, orderId);
+  return res.json({ data: order });
+});
+
+const getActiveOrder = asyncHandler(async (req, res) => {
+  const companyId = req.user.companyId;
+  const order = await paymentsService.getActivePaymentOrder(companyId);
+  return res.json({ data: order });
+});
+
 module.exports = {
   checkout,
   webhookChargily,
@@ -101,4 +114,6 @@ module.exports = {
   uploadReceipt,
   listManualRequests,
   viewReceipt,
+  getOrderStatus,
+  getActiveOrder,
 };

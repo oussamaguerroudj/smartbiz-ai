@@ -505,11 +505,23 @@ class SyncService extends StateNotifier<SyncState> {
             }
             await db.update('products', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
           } else if (entityType == 'supplier' && opType == 'CREATE') {
-            await client.post('/suppliers', body: {
+            final res = await client.post('/suppliers', body: {
               ...payload,
+              'id': op['entity_id'],
               'clientId': clientTxId,
             });
-            await db.update('suppliers', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            String? serverId;
+            if (res is Map && res['data'] is Map && res['data']['id'] != null) {
+              serverId = res['data']['id'].toString();
+            }
+            if (serverId != null && serverId != op['entity_id']) {
+              await db.update('suppliers', {'id': serverId}, where: 'id = ?', whereArgs: [op['entity_id']]);
+              await db.update('supplier_purchases', {'supplier_id': serverId}, where: 'supplier_id = ?', whereArgs: [op['entity_id']]);
+              await db.update('products', {'supplier_id': serverId}, where: 'supplier_id = ?', whereArgs: [op['entity_id']]);
+              await db.update('suppliers', {'synced': 1}, where: 'id = ?', whereArgs: [serverId]);
+            } else {
+              await db.update('suppliers', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
+            }
           } else if (entityType == 'supplier' && opType == 'UPDATE') {
             await client.put('/suppliers/${op['entity_id']}', body: payload);
             await db.update('suppliers', {'synced': 1}, where: 'id = ?', whereArgs: [op['entity_id']]);
@@ -1018,6 +1030,62 @@ class SyncService extends StateNotifier<SyncState> {
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
+      // 9. Credit payments (critical for offline revenue from debt repayments)
+      try {
+        final res = await client.get('/credit/payments');
+        if (res is Map && res['data'] is List) {
+          final batch = db.batch();
+          final unsyncedRows = await db.query(
+            'credit_payments',
+            columns: ['id', 'client_id'],
+            where: 'company_id = ? AND synced = 0',
+            whereArgs: [companyId],
+          );
+          final unsyncedIds = unsyncedRows.map((r) => r['id'] as String).toSet();
+          final unsyncedClientIds = unsyncedRows
+              .map((r) => r['client_id'] as String?)
+              .whereType<String>()
+              .toSet();
+
+          for (final cp in res['data']) {
+            final cpId = cp['id']?.toString() ?? '';
+            final cpClientId = cp['client_id']?.toString() ?? cp['clientId']?.toString();
+            if (cpId.isEmpty || unsyncedIds.contains(cpId)) continue;
+            if (cpClientId != null && unsyncedClientIds.contains(cpClientId)) continue;
+
+            if (cpClientId != null && cpClientId.isNotEmpty) {
+              await db.delete(
+                'credit_payments',
+                where: 'company_id = ? AND client_id = ? AND id != ?',
+                whereArgs: [companyId, cpClientId, cpId],
+              );
+            }
+
+            final createdAt = (cp['paid_at'] ?? cp['paidAt'] ?? cp['created_at'] ?? cp['createdAt'] ?? DateTime.now().toIso8601String()).toString();
+            final amount = (cp['amount'] as num?)?.toDouble() ?? 0.0;
+            final customerId = cp['customer_id']?.toString() ?? cp['customerId']?.toString() ?? '';
+
+            if (customerId.isNotEmpty) {
+              batch.insert(
+                'credit_payments',
+                {
+                  'id': cpId,
+                  if (cpClientId != null) 'client_id': cpClientId,
+                  'company_id': companyId,
+                  'customer_id': customerId,
+                  'amount': amount,
+                  'note': cp['note'],
+                  'created_at': createdAt,
+                  'synced': 1,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
           }
           await batch.commit(noResult: true);
         }

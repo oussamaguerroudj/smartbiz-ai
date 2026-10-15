@@ -657,7 +657,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get purchasePriceLabel => 'سعر الشراء (دج)';
 
   @override
-  String get sellingPriceLabel => 'سعر البيع (دج)';
+  String get sellingPriceLabel => 'سعر البيع';
 
   @override
   String get sellingBelowPurchaseWarning => '⚠ سعر البيع أقل من سعر الشراء';
@@ -981,7 +981,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get totalCreditLabel => 'إجمالي الدين';
 
   @override
-  String get totalPaidLabel => 'المدفوع';
+  String get totalPaidLabel => 'المبلغ المسدد';
 
   @override
   String get noOutstandingBalanceForCustomer =>
@@ -1183,7 +1183,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get consultationPriceLabel => 'سعر الاستشارة';
 
   @override
-  String get amountPaidLabel => 'المبلغ المدفوع';
+  String get amountPaidLabel => 'المبلغ المسدد';
 
   @override
   String get markFullyPaidLabel => 'تعليم كمدفوع بالكامل';
@@ -2598,4 +2598,618 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get licenseActive => 'رخصة مدى الحياة نشطة';
+
+  @override
+  String get subscriptionTitle => 'إدارة الاشتراك والترخيص';
+
+  @override
+  String get subscriptionLoadFailed => 'تعذر تحميل بيانات الاشتراك والترخيص';
+
+  @override
+  String get subscriptionRetry => 'إعادة المحاولة';
+
+  @override
+  String get subscriptionStatusSuspended => 'حساب معلّق';
+
+  @override
+  String get subscriptionStatusLifetime => 'رخصة مدى الحياة';
+
+  @override
+  String get subscriptionStatusExpired => 'انتهت الفترة التجريبية';
+
+  @override
+  String get subscriptionStatusTrial => 'نسخة تجريبية مجانية';
+
+  @override
+  String get subscriptionLifetimeDesc =>
+      'وصول دائم وغير محدود لجميع الميزات. بدون اشتراكات شهرية أو رسوم تجديد.';
+
+  @override
+  String get subscriptionTrialDesc =>
+      'استمتع بالوصول الكامل لجميع ميزات التطبيق خلال الفترة التجريبية (15 يوماً).';
+
+  @override
+  String get subscriptionExpiredDesc =>
+      'انتهت الفترة التجريبية. قم بتفعيل الرخصة مدى الحياة لمواصلة العمل.';
+
+  @override
+  String get subscriptionSuspendedDesc =>
+      'الحساب معلق. يرجى التواصل مع الدعم أو تقديم طعن.';
+
+  @override
+  String subscriptionDaysRemaining(int count) {
+    return 'باقي $count يوم';
+  }
+
+  @override
+  String get subscriptionProductEdition => 'المنتج / النسخة';
+
+  @override
+  String get subscriptionOfficialPrice => 'السعر الرسمي';
+
+  @override
+  String get subscriptionBillingCycle => 'دورة الدفع';
+
+  @override
+  String get subscriptionOneTimePayment =>
+      'دفع مرة واحدة مدى الحياة (بدون تجديد)';
+
+  @override
+  String get subscriptionPaymentMethods => 'طرق الدفع المعتمدة';
+
+  @override
+  String get subscriptionPaymentMethodsList =>
+      'شارجيلي (الذهبية / CIB) + بريد الجزائر CCP';
+
+  @override
+  String get subscriptionFeaturesIncluded =>
+      'الميزات المشمولة في رخصة مدى الحياة';
+
+  @override
+  String get featurePosBarcode => 'نظام نقاط البيع (POS) وقارئ الباركود السريع';
+
+  @override
+  String get featureInvoicesThermal =>
+      'إصدار الفواتير، عروض الأسعار، والطباعة الحرارية';
+
+  @override
+  String get featureInventoryAlerts =>
+      'إدارة المخزون وتنبيهات نفاد السلع التلقائية';
+
+  @override
+  String get featureReportsAnalytics =>
+      'تتبع المصاريف، التقارير المالية، والأرباح';
+
+  @override
+  String get featureOfflineSqlite =>
+      'قاعدة بيانات SQLite تعمل دون الحاجة للإنترنت';
+
+  @override
+  String get featureMultiDeviceSync =>
+      'المزامنة السحابية الاحتياطية ودعم الأجهزة المتعددة';
+
+  @override
+  String get contactBillingSupport => 'التواصل مع قسم الدعم والمبيعات';
+
+  @override
+  String upgradeLifetimeAction(String price) {
+    return 'الترقية إلى رخصة مدى الحياة ($price)';
+  }
+
+  @override
+  String get chargilyExplanation =>
+      'تفعيل فوري وآلي للرخصة مدى الحياة عبر بطاقة الذهبية أو CIB من خلال منصة الدفع الإلكتروني الرسمية والآمنة Chargily Pay.';
+
+  @override
+  String payWithChargilyBtn(String price) {
+    return 'دفع $price عبر شارجيلي';
+  }
+
+  @override
+  String get instantActivationBadge => 'تفعيل فوري وآلي';
+
+  @override
+  String get securityGuaranteed => 'دفع إلكتروني آمن 100% (SATIM / نقد آلي)';
+
+  @override
+  String get uploadProofTitle => 'إرسال وصل الدفع (Reçu)';
+
+  @override
+  String get uploadProofSubtitle =>
+      'الصيغ المدعومة: JPG، PNG، PDF (الحد الأقصى 5 ميغابايت)';
+
+  @override
+  String get submitReceiptBtn => 'تأكيد إرسال الوصل للتحقق';
+
+  @override
+  String get ccpCopied => 'تم نسخ رقم الحساب البريدي CCP بنجاح';
+
+  @override
+  String get copyCcpNumber => 'نسخ رقم الحساب';
+
+  @override
+  String get accountSystemSection => 'الحساب والترخيص';
+
+  @override
+  String get preferencesSection => 'التفضيلات والمظهر';
+
+  @override
+  String get supportSection => 'المساعدة والدعم';
+
+  @override
+  String get dataManagementSection => 'البيانات والنظام';
+
+  @override
+  String get appVersion => 'الإصدار';
+
+  @override
+  String get dataPreservedNotice =>
+      'جميع منتجاتك ومبيعاتك وفواتيرك وأرصدة الزبائن والعمليات المحفوظة محلياً مؤمّنة بالكامل على جهازك، وستعود للظهور فوراً بمجرد تفعيل الرخصة.';
+
+  @override
+  String get selectReceiptPrompt => 'يرجى اختيار ملف وصل الدفع أولاً';
+
+  @override
+  String get chargilyInvalidUrl => 'بوابة الدفع لم تعد رابط دفع صالح';
+
+  @override
+  String get paymentMethodsAvailable => 'الذهبية • CIB • بريد الجزائر CCP';
+
+  @override
+  String get freeTrialDaysBadge => '15 يوماً مجاناً';
+
+  @override
+  String get trialFeatureAllModules => 'وصول كامل لجميع وحدات Modiri AI';
+
+  @override
+  String get trialFeatureCorePos => 'نقاط البيع والفواتير والمخزون والمصاريف';
+
+  @override
+  String get trialFeatureOffline => 'تخزين محلي مؤمّن يعمل دون إنترنت';
+
+  @override
+  String get trialFeatureNoCard => 'لا يلزم أي بطاقة بنكية للبدء';
+
+  @override
+  String get newSupplierPurchase => 'شراء جديد من المورد';
+
+  @override
+  String get purchaseInvoiceOptional => 'رقم الفاتورة / سند الطلب (اختياري)';
+
+  @override
+  String orderedItemsCount(int count) {
+    return 'المواد المطلوبة ($count)';
+  }
+
+  @override
+  String get itemDesignation => 'اسم السلعة / المادة *';
+
+  @override
+  String get chooseFromCatalog => 'اختيار من قائمة المنتجات';
+
+  @override
+  String get quantityField => 'الكمية *';
+
+  @override
+  String get unitPurchaseCost => 'سعر شراء الوحدة (دج) *';
+
+  @override
+  String get addPurchaseItemLine => 'إضافة مادة أخرى';
+
+  @override
+  String get invoiceTotal => 'إجمالي الفاتورة:';
+
+  @override
+  String get downPaymentDzd => 'الدفعة المسددة (دج)';
+
+  @override
+  String remainingDebt(String amount) {
+    return 'الدين المتبقي: $amount دج';
+  }
+
+  @override
+  String get purchaseNotesOptional => 'ملاحظات (اختياري)';
+
+  @override
+  String get validateSavePurchase => 'تأكيد وتسجيل الشراء';
+
+  @override
+  String get pleaseAddAtLeastOneItem => 'يرجى إضافة مادة واحدة على الأقل';
+
+  @override
+  String get invoiceTotalMustBeGreaterThanZero =>
+      'يجب أن يكون إجمالي الفاتورة أكبر من 0 دج';
+
+  @override
+  String get purchaseSavedSuccessfully => 'تم تسجيل الشراء بنجاح';
+
+  @override
+  String get recordSupplierPayment => 'تسجيل دفعة للمورد';
+
+  @override
+  String totalOutstandingDebt(String amount) {
+    return 'إجمالي الدين المستحق: $amount دج';
+  }
+
+  @override
+  String get allocateToInvoiceOptional => 'تخصيص لفاتورة محددة (اختياري)';
+
+  @override
+  String get globalDebtFifo => 'دين إجمالي (تسديد الأقدم أولاً)';
+
+  @override
+  String get paymentAmountField => 'مبلغ الدفعة (دج) *';
+
+  @override
+  String get paymentMethodLabel => 'طريقة الدفع';
+
+  @override
+  String get paymentMethodCash => 'نقداً (كاش)';
+
+  @override
+  String get paymentMethodBank => 'تحويل بنكي';
+
+  @override
+  String get paymentMethodCcp => 'تحويل / صك بريدي CCP';
+
+  @override
+  String get paymentMethodCheck => 'شيك';
+
+  @override
+  String get paymentRefOptional => 'المرجع / رقم الوصل (اختياري)';
+
+  @override
+  String get confirmPaymentAction => 'تأكيد الدفع';
+
+  @override
+  String get amountMustBePositive => 'يجب أن يكون المبلغ أكبر من الصفر';
+
+  @override
+  String get amountExceedsInvoiceDebt =>
+      'المبلغ يتجاوز المبلغ المتبقي لهذه الفاتورة';
+
+  @override
+  String get amountExceedsTotalDebt =>
+      'المبلغ يتجاوز إجمالي الدين المستحق للمورد';
+
+  @override
+  String get paymentSavedSuccessfully => 'تم تسجيل الدفعة بنجاح';
+
+  @override
+  String get totalStockValuation => 'قيمة المخزون';
+
+  @override
+  String get totalInvoiced => 'إجمالي المشتريات';
+
+  @override
+  String get totalPaid => 'إجمالي المسدد';
+
+  @override
+  String get outstandingDebt => 'الدين المتبقي';
+
+  @override
+  String get newPurchaseAction => 'شراء جديد';
+
+  @override
+  String get payDebtAction => 'تسديد دين';
+
+  @override
+  String invoicesTab(int count) {
+    return 'الفواتير ($count)';
+  }
+
+  @override
+  String paymentsTab(int count) {
+    return 'المدفوعات ($count)';
+  }
+
+  @override
+  String productsTab(int count) {
+    return 'المنتجات ($count)';
+  }
+
+  @override
+  String get noPurchasesRecorded => 'لا توجد فواتير شراء مسجلة بعد.';
+
+  @override
+  String get recordFirstPurchase => 'تسجيل أول فاتورة شراء';
+
+  @override
+  String get noPaymentsRecorded => 'لا توجد دفعات مسجلة بعد.';
+
+  @override
+  String payThisInvoice(String amount) {
+    return 'تسديد هذه الفاتورة ($amount دج)';
+  }
+
+  @override
+  String invoiceLinesTitle(int count) {
+    return 'بنود الفاتورة ($count)';
+  }
+
+  @override
+  String sellingPriceShort(String price) {
+    return 'البيع: $price دج';
+  }
+
+  @override
+  String get callSupplier => 'اتصال';
+
+  @override
+  String get whatsappSupplier => 'واتساب';
+
+  @override
+  String get editSupplier => 'تعديل المورد';
+
+  @override
+  String get deleteSupplier => 'حذف المورد';
+
+  @override
+  String get deleteSupplierConfirm => 'هل أنت متأكد من حذف هذا المورد؟';
+
+  @override
+  String get chargilyPaymentPending => 'الدفع قيد التأكيد';
+
+  @override
+  String get chargilyPendingExplanation =>
+      'تم فتح صفحة الدفع الإلكتروني. يرجى إتمام العملية في المتصفح ثم الضغط على التحقق من حالة الدفع.';
+
+  @override
+  String get checkPaymentStatus => 'التحقق من حالة الدفع';
+
+  @override
+  String get paymentNotYetReceived =>
+      'لم يتم استلام تأكيد الدفع من شارجيلي بعد. يرجى إتمام عملية الدفع في صفحة المتصفح.';
+
+  @override
+  String get paymentSuccessCongratulations =>
+      'تم تأكيد الدفع بنجاح! تم تفعيل رخصة Modiri AI مدى الحياة.';
+
+  @override
+  String get downPaymentCannotExceedTotal =>
+      'الدفعة المسددة لا يمكن أن تتجاوز إجمالي الفاتورة';
+
+  @override
+  String get paidInFullBadge => 'مدفوعة بالكامل';
+
+  @override
+  String get partiallyPaidBadge => 'مدفوعة جزئياً';
+
+  @override
+  String get unpaidBadge => 'غير مدفوعة';
+
+  @override
+  String get totalInvoiceAmountLabel => 'إجمالي مبلغ الفاتورة';
+
+  @override
+  String get outstandingDebtLabel => 'المبلغ المتبقي (دين)';
+
+  @override
+  String get noLineItemsRecorded => 'لا توجد تفاصيل للمنتجات مسجلة.';
+
+  @override
+  String get remainingBalanceShort => 'المتبقي';
+
+  @override
+  String get paymentTitle => 'دفعة';
+
+  @override
+  String get brandTagline => 'إدارة أعمالك بذكاء';
+
+  @override
+  String get oneTimePaymentBadge => 'دفع لمرة واحدة';
+
+  @override
+  String get lifetimeLicenseBadge => 'رخصة مدى الحياة';
+
+  @override
+  String get benefitSafeExperience => 'تجربة آمنة';
+
+  @override
+  String get benefitLifetimeAccess => 'وصول مدى الحياة';
+
+  @override
+  String get benefitFutureUpdates => 'تحديثات مستقبلية';
+
+  @override
+  String get benefitPremiumSupport => 'دعم فني مميز';
+
+  @override
+  String get securePayment100 => 'دفع آمن 100%';
+
+  @override
+  String get allPaymentsProtected => 'جميع عمليات الدفع محمية وآمنة';
+
+  @override
+  String get orChooseOtherPayment => 'أو اختر طريقة الدفع الأخرى';
+
+  @override
+  String get licenseDetailsHeader => 'تفاصيل الرخصة';
+
+  @override
+  String outOfDays(int total) {
+    return 'من أصل $total يوم';
+  }
+
+  @override
+  String remainingDaysCount(int count) {
+    return '$count يوم متبقي';
+  }
+
+  @override
+  String get scanSupplierInvoice => 'مسح الفاتورة ضوئياً';
+
+  @override
+  String get addPurchaseManually => 'إضافة فاتورة يدوياً';
+
+  @override
+  String get totalPurchasesLabel => 'إجمالي المشتريات';
+
+  @override
+  String get outstandingBalanceLabel => 'المبلغ المتبقي';
+
+  @override
+  String get scanSupplierInvoiceTitle => 'مسح فاتورة المورّد';
+
+  @override
+  String get reviewInvoiceItemsTitle => 'مراجعة واستلام البضاعة';
+
+  @override
+  String get retakePhoto => 'إعادة التقاط الصورة';
+
+  @override
+  String get invoiceNumberLabel => 'رقم الفاتورة';
+
+  @override
+  String get invoiceDateLabel => 'تاريخ الفاتورة';
+
+  @override
+  String get matchedProductLabel => 'المنتج في المخزون';
+
+  @override
+  String get createNewProductOption => 'إنشاء كمنتج جديد';
+
+  @override
+  String get unitCostLabel => 'سعر الشراء';
+
+  @override
+  String get lineTotalLabel => 'المجموع';
+
+  @override
+  String get calculatedTotalLabel => 'المجموع المحسوب';
+
+  @override
+  String get detectedTotalLabel => 'المجموع المكتشف';
+
+  @override
+  String get totalDiscrepancyWarning =>
+      'مجموع عناصر الفاتورة لا يطابق إجمالي الفاتورة المكتشف.';
+
+  @override
+  String get duplicateInvoiceWarning =>
+      'توجد فاتورة مسجلة بهذا الرقم لهذا المورّد مسبقاً. هل تريد المتابعة بالتسجيل؟';
+
+  @override
+  String get confirmAndReceiveInventory => 'تأكيد واستلام في المخزون';
+
+  @override
+  String get receivingSummaryTitle => 'ملخص استلام المخزون';
+
+  @override
+  String inventoryReceivedSuccess(int count) {
+    return 'تم حفظ الفاتورة وتحديث $count منتج في المخزون بنجاح!';
+  }
+
+  @override
+  String get addLineItemButton => 'إضافة عنصر';
+
+  @override
+  String get removeLineItemButton => 'حذف';
+
+  @override
+  String get searchCatalogHint => 'ابحث عن منتج في المخزون...';
+
+  @override
+  String get downPaymentLabel => 'المبلغ المدفوع مقدماً (اختياري)';
+
+  @override
+  String get noLineItemsWarning =>
+      'يرجى إضافة أو الاحتفاظ بمنتج واحد على الأقل للاستلام.';
+
+  @override
+  String get skipItem => 'تخطي العنصر';
+
+  @override
+  String get itemSkipped => 'تم التخطي';
+
+  @override
+  String get restoreItem => 'استعادة';
+
+  @override
+  String productsToUpdateCount(int count) {
+    return 'سيتم تحديث كمية $count منتج في المخزون';
+  }
+
+  @override
+  String newProductsToCreateCount(int count) {
+    return 'سيتم إنشاء $count منتج جديد في الدليل';
+  }
+
+  @override
+  String get exportStatement => 'كشف الحساب';
+
+  @override
+  String get saleSettlementTitle => 'تسوية عملية البيع';
+
+  @override
+  String get paidInFullTitle => 'مدفوعة بالكامل';
+
+  @override
+  String get paidInFullDesc => 'تم استلام كامل المبلغ نقداً';
+
+  @override
+  String get unpaidCreditTitle => 'غير مدفوعة (دين / كريدي)';
+
+  @override
+  String get unpaidCreditDesc => 'المبلغ بالكامل يُسجل كدين على ذمة العميل';
+
+  @override
+  String get customerRequiredForCredit => 'يجب تحديد عميل لتسجيل بيع بالدين';
+
+  @override
+  String itemsToReceiveCount(int count) {
+    return '$count منتجات للاستلام';
+  }
+
+  @override
+  String get customerCreditProfileTitle => 'ملف ديون العميل';
+
+  @override
+  String get customerStatementTab => 'كشف الحساب';
+
+  @override
+  String unpaidInvoicesTab(int count) {
+    return 'فواتير غير مدفوعة ($count)';
+  }
+
+  @override
+  String get paymentsHistoryTab => 'سجل الدفعات';
+
+  @override
+  String get oldestDebtLabel => 'أقدم دين';
+
+  @override
+  String get noOldestDebt => 'لا توجد ديون مستحقة';
+
+  @override
+  String get totalCreditIncurred => 'إجمالي المبيعات بالدين';
+
+  @override
+  String get totalRepaidLabel => 'إجمالي المسدد';
+
+  @override
+  String get unpaidInvoicesCountLabel => 'فواتير معلقة';
+
+  @override
+  String get invoiceDetailsTitle => 'تفاصيل الفاتورة';
+
+  @override
+  String get itemsListTitle => 'قائمة المنتجات';
+
+  @override
+  String payFullBalanceShortcut(String amount) {
+    return 'تسديد كامل المبلغ ($amount دج)';
+  }
+
+  @override
+  String get payHalfBalanceShortcut => 'تسديد النصف (50%)';
+
+  @override
+  String get noUnpaidInvoicesFound => 'لا توجد فواتير غير مدفوعة لهذا العميل';
+
+  @override
+  String get repaymentNoteOptional => 'ملاحظة / رقم الإيصال (اختياري)';
+
+  @override
+  String get confirmRepaymentAction => 'تأكيد تسجيل الدفعة';
 }

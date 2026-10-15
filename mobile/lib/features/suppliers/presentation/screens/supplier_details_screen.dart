@@ -11,8 +11,11 @@ import '../../../../core/network/session.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/external_launcher.dart';
+import '../../../../core/widgets/directional_chevron.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../products/data/products_repository.dart';
+import 'supplier_invoice_scan_screen.dart';
 import 'suppliers_screen.dart';
 
 class SupplierProductItem {
@@ -424,11 +427,151 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
     super.dispose();
   }
 
+  Future<void> _showEditSupplierDialog(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final nameCtrl = TextEditingController(text: widget.supplier.name);
+    final phoneCtrl = TextEditingController(text: widget.supplier.phone ?? '');
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: Text(l10n.editSupplier),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.nameLabel,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: l10n.phoneLabel,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dCtx).pop(true),
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+
+    if (saved == true && mounted) {
+      final newName = nameCtrl.text.trim();
+      final newPhone = phoneCtrl.text.trim();
+      if (newName.isNotEmpty) {
+        await ref.read(suppliersRepositoryProvider.notifier).updateSupplier(
+          widget.supplier.id,
+          newName,
+          newPhone.isNotEmpty ? newPhone : null,
+        );
+        ref.invalidate(supplierProfileProvider(widget.supplier));
+      }
+    }
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+  }
+
+  Future<void> _showDeleteSupplierDialog(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: Text(l10n.deleteSupplier),
+        content: Text(l10n.deleteSupplierConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
+            onPressed: () => Navigator.of(dCtx).pop(true),
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(suppliersRepositoryProvider.notifier).deleteSupplier(widget.supplier.id);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.supplierDeletedSuccess(widget.supplier.name))),
+        );
+      }
+    }
+  }
+
+  Future<void> _showStatementDialog(BuildContext context, SupplierProfileData profile) async {
+    final l10n = AppLocalizations.of(context)!;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (bCtx) => Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(l10n.exportStatement, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(bCtx).pop()),
+              ],
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.receipt_long, color: AppColors.primary),
+              title: Text(l10n.invoicesTab(profile.purchases.length)),
+              trailing: Text('${profile.totalPurchasesAmount.toStringAsFixed(0)} DZD', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.payment, color: AppColors.success),
+              title: Text(l10n.paymentsTab(profile.payments.length)),
+              trailing: Text('${profile.totalPurchasesPaid.toStringAsFixed(0)} DZD', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet, color: AppColors.danger),
+              title: Text(l10n.outstandingBalanceLabel),
+              trailing: Text('${profile.outstandingBalance.toStringAsFixed(0)} DZD', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _makeCall(String phone) async {
     final uri = Uri.parse('tel:$phone');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }
+  }
+
+  Future<void> _openWhatsApp(String phone) async {
+    final l10n = AppLocalizations.of(context)!;
+    await ExternalLauncher.launchWhatsApp(
+      context,
+      phone: phone,
+      message: '${l10n.supplierLabel}: ${widget.supplier.name}',
+    );
   }
 
   Future<void> _showCreatePurchaseDialog(BuildContext context, SupplierProfileData profile) async {
@@ -437,6 +580,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
     final notesCtrl = TextEditingController();
     final List<_PurchaseLineItemDraft> items = [_PurchaseLineItemDraft()];
 
+    final l10n = AppLocalizations.of(context)!;
     try {
       await showModalBottomSheet(
         context: context,
@@ -466,7 +610,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Nouvel Achat Fournisseur',
+                          l10n.newSupplierPurchase,
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         IconButton(
@@ -478,15 +622,15 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     const SizedBox(height: AppSpacing.xs),
                     TextField(
                       controller: invoiceCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'N° Facture / Bon de commande (Optionnel)',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.purchaseInvoiceOptional,
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Articles commandés (${items.length})',
+                      l10n.orderedItemsCount(items.length),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -518,9 +662,9 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                                 Expanded(
                                   child: TextField(
                                     controller: item.nameCtrl,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Désignation article *',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: l10n.itemDesignation,
+                                      border: const OutlineInputBorder(),
                                       isDense: true,
                                     ),
                                     onChanged: (_) => setSheetState(() {}),
@@ -530,7 +674,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                                   const SizedBox(width: 4),
                                   PopupMenuButton<SupplierProductItem>(
                                     icon: const Icon(Icons.list_alt, color: AppColors.primary),
-                                    tooltip: 'Choisir parmi les produits du catalogue',
+                                    tooltip: l10n.chooseFromCatalog,
                                     itemBuilder: (c) => profile.products.map((p) => PopupMenuItem(
                                       value: p,
                                       child: Text('${p.name} (${p.purchasePrice.toStringAsFixed(0)} DZD)'),
@@ -563,9 +707,9 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                                   child: TextField(
                                     controller: item.qtyCtrl,
                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Quantité *',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: l10n.quantityField,
+                                      border: const OutlineInputBorder(),
                                       isDense: true,
                                     ),
                                     onChanged: (_) => setSheetState(() {}),
@@ -576,9 +720,9 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                                   child: TextField(
                                     controller: item.costCtrl,
                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                    decoration: const InputDecoration(
-                                      labelText: 'P.U d\'achat (DZD) *',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: l10n.unitPurchaseCost,
+                                      border: const OutlineInputBorder(),
                                       isDense: true,
                                     ),
                                     onChanged: (_) => setSheetState(() {}),
@@ -604,7 +748,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     }),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Ajouter une ligne d\'article'),
+                      label: Text(l10n.addPurchaseItemLine),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
@@ -625,7 +769,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total facture:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(l10n.invoiceTotal, style: const TextStyle(fontWeight: FontWeight.bold)),
                           Text(
                             '${totalInvoiceAmount.toStringAsFixed(2)} DZD',
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
@@ -641,10 +785,10 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                             controller: initialPaidCtrl,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             decoration: InputDecoration(
-                              labelText: 'Acompte versé (DZD)',
+                              labelText: l10n.downPaymentDzd,
                               border: const OutlineInputBorder(),
                               isDense: true,
-                              helperText: 'Dette restante: ${remainingDebt.toStringAsFixed(0)} DZD',
+                              helperText: l10n.remainingDebt(remainingDebt.toStringAsFixed(0)),
                             ),
                             onChanged: (_) => setSheetState(() {}),
                           ),
@@ -654,16 +798,16 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     const SizedBox(height: AppSpacing.xs),
                     TextField(
                       controller: notesCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Observations (Optionnel)',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.purchaseNotesOptional,
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Valider et enregistrer l\'achat'),
+                      label: Text(l10n.validateSavePurchase),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -672,7 +816,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                       onPressed: () async {
                         if (items.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text(l10n.pleaseAddAtLeastOneItem), backgroundColor: AppColors.danger),
                           );
                           return;
                         }
@@ -680,19 +824,19 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                           final it = items[i];
                           if (it.nameCtrl.text.trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('La désignation de l\'article #${i + 1} est requise'), backgroundColor: AppColors.danger),
+                              SnackBar(content: Text('${l10n.itemDesignation} #${i + 1}: ${l10n.requiredField}'), backgroundColor: AppColors.danger),
                             );
                             return;
                           }
                           if (it.quantity <= 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('La quantité de l\'article #${i + 1} doit être > 0'), backgroundColor: AppColors.danger),
+                              SnackBar(content: Text('${l10n.quantityField} #${i + 1} > 0'), backgroundColor: AppColors.danger),
                             );
                             return;
                           }
                           if (it.unitCost < 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Le coût unitaire de l\'article #${i + 1} ne peut être négatif'), backgroundColor: AppColors.danger),
+                              SnackBar(content: Text('${l10n.unitPurchaseCost} #${i + 1} >= 0'), backgroundColor: AppColors.danger),
                             );
                             return;
                           }
@@ -700,21 +844,21 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
 
                         if (totalInvoiceAmount <= 0) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Le total de la facture doit être supérieur à 0 DZD'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text(l10n.invoiceTotalMustBeGreaterThanZero), backgroundColor: AppColors.danger),
                           );
                           return;
                         }
 
                         if (paid < 0) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('L\'acompte ne peut pas être négatif'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text(l10n.amountMustBePositive), backgroundColor: AppColors.danger),
                           );
                           return;
                         }
 
                         if (paid > totalInvoiceAmount + 0.001) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('L\'acompte ($paid DZD) ne peut excéder le total ($totalInvoiceAmount DZD)'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text(l10n.downPaymentCannotExceedTotal), backgroundColor: AppColors.danger),
                           );
                           return;
                         }
@@ -842,7 +986,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                           ref.invalidate(supplierProfileProvider(widget.supplier));
                           ref.invalidate(productsRepositoryProvider);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Achat enregistré avec succès !'), backgroundColor: AppColors.success),
+                            SnackBar(content: Text(l10n.purchaseSavedSuccessfully), backgroundColor: AppColors.success),
                           );
                         }
                       },
@@ -869,6 +1013,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
     SupplierProfileData profile, {
     String? preselectedPurchaseId,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     final amountCtrl = TextEditingController();
     final refCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
@@ -909,7 +1054,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Enregistrer un Paiement',
+                        l10n.recordSupplierPayment,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       IconButton(
@@ -920,25 +1065,25 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Dette totale en cours: ${profile.outstandingBalance.toStringAsFixed(2)} DZD',
+                    l10n.totalOutstandingDebt(profile.outstandingBalance.toStringAsFixed(0)),
                     style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   DropdownButtonFormField<String?>(
                     initialValue: selectedPurchaseId,
-                    decoration: const InputDecoration(
-                      labelText: 'Affecter à une facture (Optionnel)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.allocateToInvoiceOptional,
+                      border: const OutlineInputBorder(),
                     ),
                     items: [
-                      const DropdownMenuItem<String?>(
+                      DropdownMenuItem<String?>(
                         value: null,
-                        child: Text('Dette globale (Allocation FIFO)'),
+                        child: Text(l10n.globalDebtFifo),
                       ),
                       ...unpaidPurchases.map((p) => DropdownMenuItem<String?>(
                             value: p.id,
                             child: Text(
-                              '${p.invoiceNumber ?? 'Facture'} · Reste: ${p.outstandingBalance.toStringAsFixed(0)} DZD',
+                              '${p.invoiceNumber ?? l10n.invoiceFallback} · ${l10n.remainingDebt(p.outstandingBalance.toStringAsFixed(0))}',
                               overflow: TextOverflow.ellipsis,
                             ),
                           )),
@@ -957,46 +1102,46 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                   TextField(
                     controller: amountCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Montant du versement (DZD) *',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.paymentAmountField,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   DropdownButtonFormField<String>(
                     initialValue: selectedMethod,
-                    decoration: const InputDecoration(
-                      labelText: 'Mode de règlement',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.paymentMethodLabel,
+                      border: const OutlineInputBorder(),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'cash', child: Text('Espèces (Cash)')),
-                      DropdownMenuItem(value: 'bank_transfer', child: Text('Virement bancaire')),
-                      DropdownMenuItem(value: 'ccp', child: Text('Versement CCP')),
-                      DropdownMenuItem(value: 'check', child: Text('Chèque')),
+                    items: [
+                      DropdownMenuItem(value: 'cash', child: Text(l10n.paymentMethodCash)),
+                      DropdownMenuItem(value: 'bank_transfer', child: Text(l10n.paymentMethodBank)),
+                      DropdownMenuItem(value: 'ccp', child: Text(l10n.paymentMethodCcp)),
+                      DropdownMenuItem(value: 'check', child: Text(l10n.paymentMethodCheck)),
                     ],
                     onChanged: (val) => setSheetState(() => selectedMethod = val ?? 'cash'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: refCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Référence / N° Reçu (Optionnel)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.paymentRefOptional,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: notesCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes (Optionnel)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.purchaseNotesOptional,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.payment),
-                    label: const Text('Confirmer le paiement'),
+                    label: Text(l10n.confirmPaymentAction),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       foregroundColor: Colors.white,
@@ -1006,7 +1151,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                       final amount = double.tryParse(amountCtrl.text.trim()) ?? 0;
                       if (amount <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Le montant doit être supérieur à zéro'), backgroundColor: AppColors.danger),
+                          SnackBar(content: Text(l10n.amountMustBePositive), backgroundColor: AppColors.danger),
                         );
                         return;
                       }
@@ -1016,14 +1161,14 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                         final p = unpaidPurchases.firstWhere((it) => it.id == selectedPurchaseId);
                         if (amount > p.outstandingBalance + 0.001) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Le montant ($amount DZD) dépasse le reste à payer (${p.outstandingBalance} DZD)'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text(l10n.amountExceedsInvoiceDebt), backgroundColor: AppColors.danger),
                           );
                           return;
                         }
                       } else {
                         if (amount > profile.outstandingBalance + 0.001) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Le montant ($amount DZD) dépasse la dette totale (${profile.outstandingBalance} DZD)'), backgroundColor: AppColors.danger),
+                            SnackBar(content: Text(l10n.amountExceedsTotalDebt), backgroundColor: AppColors.danger),
                           );
                           return;
                         }
@@ -1140,7 +1285,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                         Navigator.of(bCtx).pop();
                         ref.invalidate(supplierProfileProvider(widget.supplier));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Paiement enregistré !'), backgroundColor: AppColors.success),
+                          SnackBar(content: Text(l10n.paymentSavedSuccessfully), backgroundColor: AppColors.success),
                         );
                       }
                     },
@@ -1163,10 +1308,11 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
     SupplierPurchaseRecord purchase,
     SupplierProfileData profile,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final isPaid = purchase.paymentStatus == 'paid';
     final isPartial = purchase.paymentStatus == 'partially_paid';
     final badgeColor = isPaid ? AppColors.success : (isPartial ? AppColors.warning : AppColors.danger);
-    final badgeText = isPaid ? 'Payée en totalité' : (isPartial ? 'Partiellement payée' : 'Non payée');
+    final badgeText = isPaid ? l10n.paidInFullBadge : (isPartial ? l10n.partiallyPaidBadge : l10n.unpaidBadge);
 
     await showModalBottomSheet(
       context: context,
@@ -1189,11 +1335,11 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          purchase.invoiceNumber ?? 'Facture #${purchase.id.substring(0, 8)}',
+                          purchase.invoiceNumber ?? '${l10n.invoicesTab(1).split(' ')[0]} #${purchase.id.substring(0, 8)}',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Date: ${purchase.purchaseDate.length >= 10 ? purchase.purchaseDate.substring(0, 10) : purchase.purchaseDate}',
+                          '${l10n.dateTimeLabel}: ${purchase.purchaseDate.length >= 10 ? purchase.purchaseDate.substring(0, 10) : purchase.purchaseDate}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -1226,7 +1372,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Montant Total Facture:'),
+                        Text('${l10n.totalInvoiceAmountLabel}:'),
                         Text(
                           '${purchase.totalAmount.toStringAsFixed(2)} DZD',
                           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -1237,7 +1383,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Montant Réglé:'),
+                        Text('${l10n.amountPaidLabel}:'),
                         Text(
                           '${purchase.amountPaid.toStringAsFixed(2)} DZD',
                           style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
@@ -1248,7 +1394,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Reste à payer (Dette):', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('${l10n.outstandingDebtLabel}:', style: const TextStyle(fontWeight: FontWeight.bold)),
                         Text(
                           '${purchase.outstandingBalance.toStringAsFixed(2)} DZD',
                           style: TextStyle(
@@ -1265,7 +1411,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
               const SizedBox(height: AppSpacing.sm),
               // Line items list
               Text(
-                'Lignes de la facture (${purchase.items.length})',
+                l10n.invoiceLinesTitle(purchase.items.length),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSpacing.xs),
@@ -1276,11 +1422,11 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('Aucun détail d\'article enregistré.', style: TextStyle(color: Colors.grey)),
+                  child: Text(l10n.noLineItemsRecorded, style: const TextStyle(color: Colors.grey)),
                 )
               else
                 ...purchase.items.map((it) {
-                  final name = it['product_name'] ?? it['productName'] ?? 'Article';
+                  final name = it['product_name'] ?? it['productName'] ?? l10n.dishNameLabel;
                   final qty = (it['quantity'] as num?)?.toDouble() ?? 1.0;
                   final unitCost = (it['unit_cost'] as num?)?.toDouble() ?? (it['unitCost'] as num?)?.toDouble() ?? 0.0;
                   final lineTotal = (it['line_total'] as num?)?.toDouble() ?? (it['lineTotal'] as num?)?.toDouble() ?? (qty * unitCost);
@@ -1317,13 +1463,13 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                 }),
               if (purchase.notes != null && purchase.notes!.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xs),
-                Text('Observations: ${purchase.notes!}', style: Theme.of(context).textTheme.bodySmall),
+                Text('${l10n.optionalNoteHint}: ${purchase.notes!}', style: Theme.of(context).textTheme.bodySmall),
               ],
               const SizedBox(height: AppSpacing.md),
               if (purchase.outstandingBalance > 0.005)
                 ElevatedButton.icon(
                   icon: const Icon(Icons.payment),
-                  label: Text('Payer cette facture (${purchase.outstandingBalance.toStringAsFixed(0)} DZD)'),
+                  label: Text(l10n.payThisInvoice(purchase.outstandingBalance.toStringAsFixed(0))),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.success,
                     foregroundColor: Colors.white,
@@ -1350,12 +1496,62 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
       appBar: AppBar(
         title: Text(widget.supplier.name),
         actions: [
-          if (widget.supplier.phone != null && widget.supplier.phone!.isNotEmpty)
+          if (widget.supplier.phone != null && widget.supplier.phone!.isNotEmpty) ...[
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF25D366)),
+              tooltip: l10n.whatsappSupplier,
+              onPressed: () => _openWhatsApp(widget.supplier.phone!),
+            ),
             IconButton(
               icon: const Icon(Icons.phone_outlined, color: AppColors.primary),
-              tooltip: l10n.phoneLabel,
+              tooltip: l10n.callSupplier,
               onPressed: () => _makeCall(widget.supplier.phone!),
             ),
+          ],
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (val) {
+              if (val == 'edit') {
+                _showEditSupplierDialog(context);
+              } else if (val == 'delete') {
+                _showDeleteSupplierDialog(context);
+              } else if (val == 'statement') {
+                profileAsync.whenData((profile) => _showStatementDialog(context, profile));
+              }
+            },
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.editSupplier),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'statement',
+                child: Row(
+                  children: [
+                    const Icon(Icons.receipt_long_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.exportStatement),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
+                    const SizedBox(width: 8),
+                    Text(l10n.deleteSupplier, style: const TextStyle(color: AppColors.danger)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: profileAsync.when(
@@ -1432,82 +1628,154 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Financial AP & Valuation KPI Grid
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _KpiMetricCard(
-                            icon: Icons.inventory_2_outlined,
-                            color: AppColors.info,
-                            title: '${profile.totalPurchaseValue.toStringAsFixed(0)} DZD',
-                            subtitle: 'Valeur du stock',
+                    // Compact Financial Summary Card (3 columns)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                        boxShadow: AppSpacing.cardElevation,
+                        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${profile.totalPurchasesAmount.toStringAsFixed(0)} DZD',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  l10n.totalPurchasesLabel,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Expanded(
-                          child: _KpiMetricCard(
-                            icon: Icons.receipt_long_outlined,
-                            color: AppColors.primary,
-                            title: '${profile.totalPurchasesAmount.toStringAsFixed(0)} DZD',
-                            subtitle: 'Total Facturé',
+                          Container(height: 28, width: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${profile.totalPurchasesPaid.toStringAsFixed(0)} DZD',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.success),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  l10n.totalPaidLabel,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _KpiMetricCard(
-                            icon: Icons.check_circle_outline,
-                            color: AppColors.success,
-                            title: '${profile.totalPurchasesPaid.toStringAsFixed(0)} DZD',
-                            subtitle: 'Total Réglé',
+                          Container(height: 28, width: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${profile.outstandingBalance.toStringAsFixed(0)} DZD',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: profile.outstandingBalance > 0.005 ? AppColors.danger : AppColors.success,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  l10n.outstandingBalanceLabel,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Expanded(
-                          child: _KpiMetricCard(
-                            icon: Icons.warning_amber_rounded,
-                            color: profile.outstandingBalance > 0.005 ? AppColors.danger : AppColors.success,
-                            title: '${profile.outstandingBalance.toStringAsFixed(0)} DZD',
-                            subtitle: 'Reste à payer (Dette)',
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Action buttons
+                    // Primary Action: Prominent Scan Invoice & Secondary Action: Add Purchase Manually
                     Row(
                       children: [
                         Expanded(
+                          flex: 3,
                           child: ElevatedButton.icon(
-                            icon: const Icon(Icons.add_shopping_cart, size: 18),
-                            label: const Text('Nouvel achat'),
+                            icon: const Icon(Icons.document_scanner_outlined, size: 20),
+                            label: Text(
+                              l10n.scanSupplierInvoice,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => SupplierInvoiceScanScreen(supplier: widget.supplier),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.edit_note, size: 18),
+                            label: Text(
+                              l10n.addPurchaseManually,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                             onPressed: () => _showCreatePurchaseDialog(context, profile),
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.payment, size: 18),
-                            label: const Text('Payer dette'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.success,
-                              side: const BorderSide(color: AppColors.success),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
-                            onPressed: () => _showRecordPaymentDialog(context, profile),
-                          ),
-                        ),
                       ],
                     ),
+
+                    if (profile.outstandingBalance > 0.005) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.payment, size: 16, color: AppColors.success),
+                          label: Text(
+                            '${l10n.payDebtAction} (${profile.outstandingBalance.toStringAsFixed(0)} DZD)',
+                            style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.success),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () => _showRecordPaymentDialog(context, profile),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1519,9 +1787,9 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                 labelColor: AppColors.primary,
                 unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 tabs: [
-                  Tab(text: 'Factures (${profile.purchases.length})'),
-                  Tab(text: 'Paiements (${profile.payments.length})'),
-                  Tab(text: 'Produits (${profile.products.length})'),
+                  Tab(text: l10n.invoicesTab(profile.purchases.length)),
+                  Tab(text: l10n.paymentsTab(profile.payments.length)),
+                  Tab(text: l10n.productsTab(profile.products.length)),
                 ],
               ),
 
@@ -1549,20 +1817,21 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
   }
 
   Widget _buildPurchasesList(BuildContext context, SupplierProfileData profile) {
+    final l10n = AppLocalizations.of(context)!;
     if (profile.purchases.isEmpty) {
       return Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey),
               const SizedBox(height: AppSpacing.sm),
-              const Text('Aucune facture d\'achat enregistrée.'),
+              Text(l10n.noPurchasesRecorded),
               const SizedBox(height: AppSpacing.xs),
               ElevatedButton(
                 onPressed: () => _showCreatePurchaseDialog(context, profile),
-                child: const Text('Enregistrer le premier achat'),
+                child: Text(l10n.recordFirstPurchase),
               ),
             ],
           ),
@@ -1578,7 +1847,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
         final isPaid = p.paymentStatus == 'paid';
         final isPartial = p.paymentStatus == 'partially_paid';
         final badgeColor = isPaid ? AppColors.success : (isPartial ? AppColors.warning : AppColors.danger);
-        final badgeText = isPaid ? 'Payée' : (isPartial ? 'Partielle' : 'Non payée');
+        final badgeText = isPaid ? l10n.paidInFullBadge : (isPartial ? l10n.partiallyPaidBadge : l10n.unpaidBadge);
 
         return Material(
           color: Colors.transparent,
@@ -1609,7 +1878,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          p.invoiceNumber ?? 'Facture #${p.id.substring(0, 8)}',
+                          p.invoiceNumber ?? '${l10n.invoicesTab(1).split(' ')[0]} #${p.id.substring(0, 8)}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
@@ -1628,7 +1897,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                       ),
                       if (p.outstandingBalance > 0.005)
                         Text(
-                          'Reste: ${p.outstandingBalance.toStringAsFixed(0)} DZD',
+                          '${l10n.remainingBalanceShort}: ${p.outstandingBalance.toStringAsFixed(0)} DZD',
                           style: const TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600),
                         )
                       else
@@ -1636,7 +1905,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     ],
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                  const ForwardChevron(size: 18, color: Colors.grey),
                 ],
               ),
             ),
@@ -1647,16 +1916,17 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
   }
 
   Widget _buildPaymentsList(BuildContext context, SupplierProfileData profile) {
+    final l10n = AppLocalizations.of(context)!;
     if (profile.payments.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.payment_outlined, size: 48, color: Colors.grey),
-              SizedBox(height: AppSpacing.sm),
-              Text('Aucun paiement enregistré.'),
+              const Icon(Icons.payment_outlined, size: 48, color: Colors.grey),
+              const SizedBox(height: AppSpacing.sm),
+              Text(l10n.noPaymentsRecorded),
             ],
           ),
         ),
@@ -1692,7 +1962,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Paiement · ${pay.paymentMethod.toUpperCase()}',
+                      '${l10n.paymentTitle} · ${pay.paymentMethod.toUpperCase()}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     if (pay.reference != null && pay.reference!.isNotEmpty)
@@ -1808,7 +2078,7 @@ class _SupplierDetailsScreenState extends ConsumerState<SupplierDetailsScreen>
                     ),
                   ),
                   Text(
-                    'Vente: ${p.sellingPrice.toStringAsFixed(0)} DZD',
+                    l10n.sellingPriceShort(p.sellingPrice.toStringAsFixed(0)),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

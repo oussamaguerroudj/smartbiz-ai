@@ -662,7 +662,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get purchasePriceLabel => 'Prix d\'achat (DZD)';
 
   @override
-  String get sellingPriceLabel => 'Prix de vente (DZD)';
+  String get sellingPriceLabel => 'Prix de vente';
 
   @override
   String get sellingBelowPurchaseWarning =>
@@ -1001,7 +1001,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get totalCreditLabel => 'Crédit total';
 
   @override
-  String get totalPaidLabel => 'Payé';
+  String get totalPaidLabel => 'Total payé';
 
   @override
   String get noOutstandingBalanceForCustomer =>
@@ -1203,7 +1203,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get consultationPriceLabel => 'Prix de la consultation';
 
   @override
-  String get amountPaidLabel => 'Montant payé';
+  String get amountPaidLabel => 'Montant Réglé';
 
   @override
   String get markFullyPaidLabel => 'Marquer comme payé intégralement';
@@ -2633,4 +2633,629 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get licenseActive => 'Licence à vie active';
+
+  @override
+  String get subscriptionTitle => 'Abonnement et Licence';
+
+  @override
+  String get subscriptionLoadFailed =>
+      'Échec du chargement de l\'état de l\'abonnement';
+
+  @override
+  String get subscriptionRetry => 'Réessayer';
+
+  @override
+  String get subscriptionStatusSuspended => 'Compte suspendu';
+
+  @override
+  String get subscriptionStatusLifetime => 'Édition à vie';
+
+  @override
+  String get subscriptionStatusExpired => 'Essai expiré';
+
+  @override
+  String get subscriptionStatusTrial => 'Essai gratuit';
+
+  @override
+  String get subscriptionLifetimeDesc =>
+      'Accès illimité permanent. Sans abonnement mensuel ni frais de renouvellement.';
+
+  @override
+  String get subscriptionTrialDesc =>
+      'Profitez d\'un accès complet à toutes les fonctionnalités pendant votre essai de 15 jours.';
+
+  @override
+  String get subscriptionExpiredDesc =>
+      'Votre période d\'essai est terminée. Activez la licence à vie pour continuer.';
+
+  @override
+  String get subscriptionSuspendedDesc =>
+      'Compte suspendu. Contactez le support pour régulariser votre compte.';
+
+  @override
+  String subscriptionDaysRemaining(int count) {
+    return '$count j restants';
+  }
+
+  @override
+  String get subscriptionProductEdition => 'Produit / Édition';
+
+  @override
+  String get subscriptionOfficialPrice => 'Prix Officiel';
+
+  @override
+  String get subscriptionBillingCycle => 'Fréquence de facturation';
+
+  @override
+  String get subscriptionOneTimePayment =>
+      'Paiement unique (À vie, sans renouvellement)';
+
+  @override
+  String get subscriptionPaymentMethods => 'Moyens de paiement acceptés';
+
+  @override
+  String get subscriptionPaymentMethodsList =>
+      'Chargily Pay (EDAHABIA / CIB) + CCP';
+
+  @override
+  String get subscriptionFeaturesIncluded => 'Inclus dans la Licence à Vie';
+
+  @override
+  String get featurePosBarcode =>
+      'Point de Vente (POS) et Scanner code-barres rapide';
+
+  @override
+  String get featureInvoicesThermal =>
+      'Facturation, Devis et Impression de reçus thermiques';
+
+  @override
+  String get featureInventoryAlerts =>
+      'Gestion des stocks et Alertes automatiques de stock bas';
+
+  @override
+  String get featureReportsAnalytics =>
+      'Dépenses, Rapports financiers et Analyse des bénéfices';
+
+  @override
+  String get featureOfflineSqlite =>
+      'Base de données SQLite hors ligne (Sans Internet)';
+
+  @override
+  String get featureMultiDeviceSync =>
+      'Synchronisation cloud et Sauvegarde multi-appareils';
+
+  @override
+  String get contactBillingSupport => 'Contacter le Support Facturation';
+
+  @override
+  String upgradeLifetimeAction(String price) {
+    return 'Passer à la Licence à Vie ($price)';
+  }
+
+  @override
+  String get chargilyExplanation =>
+      'Activation instantanée et automatique de la licence à vie par carte Edahabia ou CIB via la plateforme officielle Chargily Pay.';
+
+  @override
+  String payWithChargilyBtn(String price) {
+    return 'Payer $price avec Chargily Pay';
+  }
+
+  @override
+  String get instantActivationBadge => 'Activation Immédiate et Automatique';
+
+  @override
+  String get securityGuaranteed =>
+      'Paiement 100% Sécurisé (SATIM / GIE Monétique)';
+
+  @override
+  String get uploadProofTitle => 'Preuve de paiement (Reçu)';
+
+  @override
+  String get uploadProofSubtitle =>
+      'Formats acceptés : JPG, PNG, PDF (Max 5 Mo)';
+
+  @override
+  String get submitReceiptBtn => 'Envoyer le reçu pour vérification';
+
+  @override
+  String get ccpCopied => 'Numéro de compte CCP copié dans le presse-papiers';
+
+  @override
+  String get copyCcpNumber => 'Copier le numéro de compte';
+
+  @override
+  String get accountSystemSection => 'Compte et Licence';
+
+  @override
+  String get preferencesSection => 'Préférences et Apparence';
+
+  @override
+  String get supportSection => 'Aide et Support';
+
+  @override
+  String get dataManagementSection => 'Données et Système';
+
+  @override
+  String get appVersion => 'Version';
+
+  @override
+  String get dataPreservedNotice =>
+      'Tous vos produits, ventes, factures, soldes clients et données hors ligne sont intégralement préservés sur cet appareil.';
+
+  @override
+  String get selectReceiptPrompt =>
+      'Veuillez d\'abord sélectionner un justificatif de paiement';
+
+  @override
+  String get chargilyInvalidUrl =>
+      'La passerelle de paiement n\'a pas renvoyé d\'URL valide';
+
+  @override
+  String get paymentMethodsAvailable => 'Edahabia • CIB • CCP';
+
+  @override
+  String get freeTrialDaysBadge => '15 jours gratuits';
+
+  @override
+  String get trialFeatureAllModules =>
+      'Accès complet à tous les modules Modiri AI';
+
+  @override
+  String get trialFeatureCorePos => 'POS, Factures, Stocks et Dépenses';
+
+  @override
+  String get trialFeatureOffline =>
+      'Stockage local SQLite fiable sans Internet';
+
+  @override
+  String get trialFeatureNoCard =>
+      'Aucune carte bancaire requise pour démarrer';
+
+  @override
+  String get newSupplierPurchase => 'Nouvel achat fournisseur';
+
+  @override
+  String get purchaseInvoiceOptional =>
+      'N° Facture / Bon de commande (Optionnel)';
+
+  @override
+  String orderedItemsCount(int count) {
+    return 'Articles commandés ($count)';
+  }
+
+  @override
+  String get itemDesignation => 'Désignation article *';
+
+  @override
+  String get chooseFromCatalog => 'Choisir parmi les produits du catalogue';
+
+  @override
+  String get quantityField => 'Quantité *';
+
+  @override
+  String get unitPurchaseCost => 'P.U d\'achat (DZD) *';
+
+  @override
+  String get addPurchaseItemLine => 'Ajouter une ligne d\'article';
+
+  @override
+  String get invoiceTotal => 'Total facture:';
+
+  @override
+  String get downPaymentDzd => 'Acompte versé (DZD)';
+
+  @override
+  String remainingDebt(String amount) {
+    return 'Dette restante: $amount DZD';
+  }
+
+  @override
+  String get purchaseNotesOptional => 'Observations (Optionnel)';
+
+  @override
+  String get validateSavePurchase => 'Valider et enregistrer l\'achat';
+
+  @override
+  String get pleaseAddAtLeastOneItem => 'Veuillez ajouter au moins un article';
+
+  @override
+  String get invoiceTotalMustBeGreaterThanZero =>
+      'Le total de la facture doit être supérieur à 0 DZD';
+
+  @override
+  String get purchaseSavedSuccessfully => 'Achat enregistré avec succès !';
+
+  @override
+  String get recordSupplierPayment => 'Enregistrer un paiement fournisseur';
+
+  @override
+  String totalOutstandingDebt(String amount) {
+    return 'Dette totale en cours: $amount DZD';
+  }
+
+  @override
+  String get allocateToInvoiceOptional => 'Affecter à une facture (Optionnel)';
+
+  @override
+  String get globalDebtFifo => 'Dette globale (Allocation FIFO)';
+
+  @override
+  String get paymentAmountField => 'Montant du versement (DZD) *';
+
+  @override
+  String get paymentMethodLabel => 'Mode de règlement';
+
+  @override
+  String get paymentMethodCash => 'Espèces (Cash)';
+
+  @override
+  String get paymentMethodBank => 'Virement bancaire';
+
+  @override
+  String get paymentMethodCcp => 'Versement CCP';
+
+  @override
+  String get paymentMethodCheck => 'Chèque';
+
+  @override
+  String get paymentRefOptional => 'Référence / N° Reçu (Optionnel)';
+
+  @override
+  String get confirmPaymentAction => 'Confirmer le paiement';
+
+  @override
+  String get amountMustBePositive => 'Le montant doit être supérieur à zéro';
+
+  @override
+  String get amountExceedsInvoiceDebt =>
+      'Le montant dépasse le reste à payer de cette facture';
+
+  @override
+  String get amountExceedsTotalDebt =>
+      'Le montant dépasse la dette totale du fournisseur';
+
+  @override
+  String get paymentSavedSuccessfully => 'Paiement enregistré avec succès !';
+
+  @override
+  String get totalStockValuation => 'Valeur du stock';
+
+  @override
+  String get totalInvoiced => 'Total Facturé';
+
+  @override
+  String get totalPaid => 'Total Réglé';
+
+  @override
+  String get outstandingDebt => 'Reste à payer (Dette)';
+
+  @override
+  String get newPurchaseAction => 'Nouvel achat';
+
+  @override
+  String get payDebtAction => 'Payer dette';
+
+  @override
+  String invoicesTab(int count) {
+    return 'Factures ($count)';
+  }
+
+  @override
+  String paymentsTab(int count) {
+    return 'Paiements ($count)';
+  }
+
+  @override
+  String productsTab(int count) {
+    return 'Produits ($count)';
+  }
+
+  @override
+  String get noPurchasesRecorded => 'Aucune facture d\'achat enregistrée.';
+
+  @override
+  String get recordFirstPurchase => 'Enregistrer le premier achat';
+
+  @override
+  String get noPaymentsRecorded => 'Aucun paiement enregistré.';
+
+  @override
+  String payThisInvoice(String amount) {
+    return 'Payer cette facture ($amount DZD)';
+  }
+
+  @override
+  String invoiceLinesTitle(int count) {
+    return 'Lignes de la facture ($count)';
+  }
+
+  @override
+  String sellingPriceShort(String price) {
+    return 'Vente: $price DZD';
+  }
+
+  @override
+  String get callSupplier => 'Appeler';
+
+  @override
+  String get whatsappSupplier => 'WhatsApp';
+
+  @override
+  String get editSupplier => 'Modifier le fournisseur';
+
+  @override
+  String get deleteSupplier => 'Supprimer le fournisseur';
+
+  @override
+  String get deleteSupplierConfirm =>
+      'Êtes-vous sûr de vouloir supprimer ce fournisseur ?';
+
+  @override
+  String get chargilyPaymentPending => 'Paiement en attente de confirmation';
+
+  @override
+  String get chargilyPendingExplanation =>
+      'Votre session de paiement a été ouverte. Veuillez finaliser votre paiement dans le navigateur puis appuyer sur Vérifier le statut ci-dessous.';
+
+  @override
+  String get checkPaymentStatus => 'Vérifier le statut du paiement';
+
+  @override
+  String get paymentNotYetReceived =>
+      'Le paiement n\'a pas encore été confirmé par Chargily. Veuillez finaliser votre transaction sur la page de paiement.';
+
+  @override
+  String get paymentSuccessCongratulations =>
+      'Paiement confirmé ! Votre licence à vie a été activée avec succès.';
+
+  @override
+  String get downPaymentCannotExceedTotal =>
+      'L\'acompte ne peut pas dépasser le montant total de la facture';
+
+  @override
+  String get paidInFullBadge => 'Payée en totalité';
+
+  @override
+  String get partiallyPaidBadge => 'Partiellement payée';
+
+  @override
+  String get unpaidBadge => 'Non payée';
+
+  @override
+  String get totalInvoiceAmountLabel => 'Montant Total Facture';
+
+  @override
+  String get outstandingDebtLabel => 'Reste à payer (Dette)';
+
+  @override
+  String get noLineItemsRecorded => 'Aucun détail d\'article enregistré.';
+
+  @override
+  String get remainingBalanceShort => 'Reste';
+
+  @override
+  String get paymentTitle => 'Paiement';
+
+  @override
+  String get brandTagline => 'Gérez vos activités avec intelligence';
+
+  @override
+  String get oneTimePaymentBadge => 'Paiement unique';
+
+  @override
+  String get lifetimeLicenseBadge => 'Licence à vie';
+
+  @override
+  String get benefitSafeExperience => 'Expérience sécurisée';
+
+  @override
+  String get benefitLifetimeAccess => 'Accès à vie';
+
+  @override
+  String get benefitFutureUpdates => 'Mises à jour futures';
+
+  @override
+  String get benefitPremiumSupport => 'Support premium';
+
+  @override
+  String get securePayment100 => 'Paiement 100% sécurisé';
+
+  @override
+  String get allPaymentsProtected =>
+      'Toutes les opérations sont protégées et sécurisées';
+
+  @override
+  String get orChooseOtherPayment => 'Ou choisissez l\'autre mode de paiement';
+
+  @override
+  String get licenseDetailsHeader => 'Détails de la licence';
+
+  @override
+  String outOfDays(int total) {
+    return 'sur $total jours';
+  }
+
+  @override
+  String remainingDaysCount(int count) {
+    return '$count jours restants';
+  }
+
+  @override
+  String get scanSupplierInvoice => 'Scanner la facture';
+
+  @override
+  String get addPurchaseManually => 'Ajouter achat manuellement';
+
+  @override
+  String get totalPurchasesLabel => 'Total achats';
+
+  @override
+  String get outstandingBalanceLabel => 'Solde restant';
+
+  @override
+  String get scanSupplierInvoiceTitle => 'Scanner facture fournisseur';
+
+  @override
+  String get reviewInvoiceItemsTitle => 'Vérifier et réceptionner le stock';
+
+  @override
+  String get retakePhoto => 'Reprendre la photo';
+
+  @override
+  String get invoiceNumberLabel => 'Numéro de facture';
+
+  @override
+  String get invoiceDateLabel => 'Date de la facture';
+
+  @override
+  String get matchedProductLabel => 'Produit du catalogue';
+
+  @override
+  String get createNewProductOption => 'Créer comme nouveau produit';
+
+  @override
+  String get unitCostLabel => 'Coût d\'achat';
+
+  @override
+  String get lineTotalLabel => 'Total';
+
+  @override
+  String get calculatedTotalLabel => 'Total calculé';
+
+  @override
+  String get detectedTotalLabel => 'Total détecté';
+
+  @override
+  String get totalDiscrepancyWarning =>
+      'La somme des articles ne correspond pas au total détecté.';
+
+  @override
+  String get duplicateInvoiceWarning =>
+      'Une facture avec ce numéro existe déjà pour ce fournisseur. Voulez-vous continuer ?';
+
+  @override
+  String get confirmAndReceiveInventory => 'Confirmer et réceptionner';
+
+  @override
+  String get receivingSummaryTitle => 'Résumé de réception de stock';
+
+  @override
+  String inventoryReceivedSuccess(int count) {
+    return 'Facture enregistrée et $count produits mis à jour dans le stock !';
+  }
+
+  @override
+  String get addLineItemButton => 'Ajouter un article';
+
+  @override
+  String get removeLineItemButton => 'Supprimer';
+
+  @override
+  String get searchCatalogHint => 'Rechercher un produit dans le catalogue...';
+
+  @override
+  String get downPaymentLabel => 'Montant payé (acompte facultatif)';
+
+  @override
+  String get noLineItemsWarning =>
+      'Veuillez ajouter ou conserver au moins un article valide.';
+
+  @override
+  String get skipItem => 'Ignorer l\'article';
+
+  @override
+  String get itemSkipped => 'Ignoré';
+
+  @override
+  String get restoreItem => 'Restaurer';
+
+  @override
+  String productsToUpdateCount(int count) {
+    return '$count produits à mettre à jour en stock';
+  }
+
+  @override
+  String newProductsToCreateCount(int count) {
+    return '$count nouveaux produits à créer';
+  }
+
+  @override
+  String get exportStatement => 'Relevé de compte';
+
+  @override
+  String get saleSettlementTitle => 'Règlement de la vente';
+
+  @override
+  String get paidInFullTitle => 'Payée en totalité';
+
+  @override
+  String get paidInFullDesc => 'Paiement comptant reçu en totalité';
+
+  @override
+  String get unpaidCreditTitle => 'Non payée (Crédit)';
+
+  @override
+  String get unpaidCreditDesc => 'Totalité enregistrée en dette client';
+
+  @override
+  String get customerRequiredForCredit =>
+      'Veuillez sélectionner un client pour une vente à crédit';
+
+  @override
+  String itemsToReceiveCount(int count) {
+    return '$count articles à réceptionner';
+  }
+
+  @override
+  String get customerCreditProfileTitle => 'Profil crédit client';
+
+  @override
+  String get customerStatementTab => 'Relevé';
+
+  @override
+  String unpaidInvoicesTab(int count) {
+    return 'Factures impayées ($count)';
+  }
+
+  @override
+  String get paymentsHistoryTab => 'Règlements';
+
+  @override
+  String get oldestDebtLabel => 'Plus ancienne dette';
+
+  @override
+  String get noOldestDebt => 'Aucune dette impayée';
+
+  @override
+  String get totalCreditIncurred => 'Total crédit';
+
+  @override
+  String get totalRepaidLabel => 'Total remboursé';
+
+  @override
+  String get unpaidInvoicesCountLabel => 'Factures en attente';
+
+  @override
+  String get invoiceDetailsTitle => 'Détails de la facture';
+
+  @override
+  String get itemsListTitle => 'Détail des articles';
+
+  @override
+  String payFullBalanceShortcut(String amount) {
+    return 'Régler la totalité ($amount DZD)';
+  }
+
+  @override
+  String get payHalfBalanceShortcut => 'Régler la moitié (50%)';
+
+  @override
+  String get noUnpaidInvoicesFound => 'Aucune facture impayée pour ce client';
+
+  @override
+  String get repaymentNoteOptional => 'Note / Référence du reçu (Optionnel)';
+
+  @override
+  String get confirmRepaymentAction => 'Confirmer le règlement';
 }

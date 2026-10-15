@@ -59,6 +59,14 @@ function validateFileSignature(buffer, originalFilename) {
 async function createChargilyCheckout({ companyId, userId, successUrl, failureUrl }) {
   const fixedAmount = subscriptionConfig.product.priceDzd; // Fixed 15,000 DZD
   const currency = subscriptionConfig.product.currency;
+  const apiKey = subscriptionConfig.chargily.apiKey;
+
+  if (!apiKey && process.env.NODE_ENV === 'production') {
+    throw ApiError.internal(
+      'Chargily electronic payment service is not configured. Please use manual CCP payment.',
+      'PAYMENT_GATEWAY_NOT_CONFIGURED',
+    );
+  }
 
   const orderNumber = `ORD-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
   const idempotencyKey = crypto.randomUUID();
@@ -76,6 +84,31 @@ async function createChargilyCheckout({ companyId, userId, successUrl, failureUr
     }
     if (company.entitlement_type === 'lifetime') {
       throw ApiError.badRequest('Company already owns a lifetime license', 'ALREADY_PURCHASED');
+    }
+
+    // Reuse existing recent pending Chargily order (within 30 mins) to prevent duplicate payable orders
+    const existingOrderRes = await client.query(
+      `SELECT * FROM payment_orders
+       WHERE company_id = $1 AND payment_method = 'chargily' AND status = 'pending'
+         AND checkout_url IS NOT NULL
+         AND created_at > now() - INTERVAL '30 minutes'
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [companyId],
+    );
+
+    if (existingOrderRes.rows.length > 0) {
+      const existing = existingOrderRes.rows[0];
+      return {
+        orderId: existing.id,
+        orderNumber: existing.order_number,
+        amount: Number(existing.amount),
+        currency: existing.currency,
+        checkoutUrl: existing.checkout_url,
+        status: existing.status,
+        chargilyConfigured: !!subscriptionConfig.chargily.apiKey,
+      };
     }
 
     const orderRes = await client.query(
@@ -629,6 +662,122 @@ async function getReceiptFile(filename, user) {
 }
 
 
+async function getPaymentOrderStatus(companyId, orderId) {
+  const res = await query(
+    `SELECT id, order_number, user_id, company_id, status, amount, currency, created_at, paid_at, provider_checkout_id, payment_method, checkout_url
+     FROM payment_orders
+     WHERE id = $1 AND company_id = $2`,
+    [orderId, companyId],
+  );
+  let order = res.rows[0];
+  if (!order) {
+    throw ApiError.notFound('Payment order not found');
+  }
+
+  // Active Chargily status reconciliation if pending and checkout ID exists
+  if (
+    (order.status === 'pending' || order.status === 'created') &&
+    order.payment_method === 'chargily' &&
+    order.provider_checkout_id &&
+    subscriptionConfig.chargily.apiKey
+  ) {
+    try {
+      const chargilyRes = await fetch(
+        `${subscriptionConfig.chargily.baseUrl}/checkouts/${order.provider_checkout_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${subscriptionConfig.chargily.apiKey}`,
+          },
+        },
+      );
+      if (chargilyRes.ok) {
+        const checkoutData = await chargilyRes.json();
+        const providerStatus = (checkoutData.status || '').toLowerCase();
+
+        if (providerStatus === 'paid') {
+          await withTransaction(async (client) => {
+            await client.query(
+              `UPDATE payment_orders
+               SET status = 'paid', paid_at = now(), updated_at = now()
+               WHERE id = $1 AND status != 'paid'`,
+              [order.id],
+            );
+            await client.query(
+              `UPDATE companies
+               SET entitlement_type = 'lifetime',
+                   entitlement_granted_at = now(),
+                   entitlement_granted_by = $2,
+                   updated_at = now()
+               WHERE id = $1`,
+              [companyId, order.user_id],
+            );
+            await client.query(
+              `INSERT INTO license_audit_logs (
+                 company_id, user_id, actor_id, action, previous_entitlement,
+                 new_entitlement, reason, metadata
+               ) VALUES ($1, $2, $2, 'chargily_reconciled', 'trial', 'lifetime',
+                 'Reconciled directly from Chargily API checkouts verification', $3)`,
+              [companyId, order.user_id, JSON.stringify(checkoutData)],
+            );
+            await client.query(
+              `INSERT INTO notifications (company_id, user_id, type, title, body)
+               VALUES ($1, $2, 'license_granted', $3, $4)`,
+              [
+                companyId,
+                order.user_id,
+                'Lifetime License Activated | تم تفعيل رخصة مدى الحياة',
+                'Thank you! Your payment of 15,000 DZD has been verified. Your Modiri AI lifetime license is permanently active.\n\nشكراً لك! تم تأكيد دفع 15,000 دج. رخصة Modiri AI مدى الحياة مفعلة لحسابك بشكل دائم.',
+              ],
+            );
+          });
+          order.status = 'paid';
+          order.paid_at = new Date();
+        } else if (
+          providerStatus === 'failed' ||
+          providerStatus === 'canceled' ||
+          providerStatus === 'expired'
+        ) {
+          await query(
+            `UPDATE payment_orders SET status = $2, updated_at = now() WHERE id = $1`,
+            [order.id, providerStatus],
+          );
+          order.status = providerStatus;
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[CHARGILY] Active verification error:', err.message);
+    }
+  }
+
+  return {
+    orderId: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
+    amount: Number(order.amount),
+    currency: order.currency,
+    checkoutUrl: order.checkout_url,
+    createdAt: order.created_at,
+    paidAt: order.paid_at,
+    isPaid: order.status === 'paid',
+  };
+}
+
+async function getActivePaymentOrder(companyId) {
+  const res = await query(
+    `SELECT id
+     FROM payment_orders
+     WHERE company_id = $1 AND status IN ('pending', 'created', 'under_review')
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [companyId],
+  );
+  const order = res.rows[0];
+  if (!order) return null;
+
+  return getPaymentOrderStatus(companyId, order.id);
+}
+
 module.exports = {
   createChargilyCheckout,
   processChargilyWebhook,
@@ -636,4 +785,6 @@ module.exports = {
   uploadReceipt,
   getCompanyManualRequests,
   getReceiptFile,
+  getPaymentOrderStatus,
+  getActivePaymentOrder,
 };

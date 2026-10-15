@@ -139,6 +139,14 @@ class SuppliersRepository extends StateNotifier<AsyncValue<List<Supplier>>> {
     if (companyId == null) return;
 
     final db = await AppDatabase.instance.database;
+    for (final s in suppliers) {
+      await db.delete(
+        'suppliers',
+        where: 'company_id = ? AND name = ? AND id != ? AND synced = 0',
+        whereArgs: [companyId, s.name, s.id],
+      );
+    }
+
     final batch = db.batch();
     for (final s in suppliers) {
       batch.insert(
@@ -188,6 +196,7 @@ class SuppliersRepository extends StateNotifier<AsyncValue<List<Supplier>>> {
       entityId: newId,
       operationType: 'CREATE',
       payload: {
+        'id': newId,
         'name': name,
         if (phone != null && phone.isNotEmpty) 'phone': phone,
       },
@@ -460,6 +469,7 @@ class _AddSupplierSheetState extends ConsumerState<_AddSupplierSheet> {
   }
 
   Future<void> _save() async {
+    if (_isLoading) return;
     if (_nameController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
     try {
@@ -547,6 +557,7 @@ class _EditSupplierSheetState extends ConsumerState<_EditSupplierSheet> {
   }
 
   Future<void> _update() async {
+    if (_isLoading) return;
     if (_nameController.text.trim().isEmpty) return;
     setState(() => _isLoading = true);
     try {

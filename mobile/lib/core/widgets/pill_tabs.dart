@@ -80,6 +80,7 @@ class _PillTabsState extends State<PillTabs> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final ready = _widths.length == widget.labels.length && _widths.isNotEmpty;
 
     return FittedBox(
@@ -87,57 +88,57 @@ class _PillTabsState extends State<PillTabs> {
       child: Container(
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-        color: const Color(0xFFEEF0F8),
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Stack(
-        children: [
-          if (ready)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutCubic,
-              left: _lefts[widget.selectedIndex],
-              width: _widths[widget.selectedIndex],
-              top: 0,
-              bottom: 0,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-              ),
-            ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < widget.labels.length; i++)
-                GestureDetector(
-                  key: _keys[i],
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => widget.onChanged(i),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 350),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: i == widget.selectedIndex
-                            ? Colors.white
-                            : AppColors.textSecondaryLight,
-                      ),
-                      child: Text(widget.labels[i]),
-                    ),
+          color: isDark ? const Color(0xFF1E2442) : const Color(0xFFEEF0F8),
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Stack(
+          children: [
+            if (ready)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutCubic,
+                left: _lefts[widget.selectedIndex],
+                width: _widths[widget.selectedIndex],
+                top: 0,
+                bottom: 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(9),
                   ),
                 ),
-            ],
-          ),
-        ],
+              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < widget.labels.length; i++)
+                  GestureDetector(
+                    key: _keys[i],
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onChanged(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 350),
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: i == widget.selectedIndex
+                              ? Colors.white
+                              : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                        ),
+                        child: Text(widget.labels[i]),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

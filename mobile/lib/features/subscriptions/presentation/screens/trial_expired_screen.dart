@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/session.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -8,6 +7,8 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/external_launcher.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
+import '../../../../core/widgets/status_pill.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../data/subscriptions_repository.dart';
 
 class TrialExpiredScreen extends ConsumerStatefulWidget {
@@ -30,7 +31,6 @@ class TrialExpiredScreen extends ConsumerStatefulWidget {
 
 class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
   bool _isCheckingStatus = false;
-  static const String _whatsappUrl = 'https://wa.me/213774195871';
 
   String _tr(BuildContext context, {required String en, required String ar, required String fr}) {
     final code = Localizations.localeOf(context).languageCode;
@@ -130,6 +130,8 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider);
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final expiredDate = session.trialEndsAt ?? session.licenseExpiresAt;
     final isTemporaryLicense = session.entitlementStatus == 'expired_temporary';
 
@@ -139,23 +141,23 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: FadeSlideIn(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Center(
                       child: Container(
-                        width: 84,
-                        height: 84,
+                        width: 76,
+                        height: 76,
                         decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.15),
+                          color: AppColors.warning.withValues(alpha: 0.14),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.timer_off_outlined,
-                          size: 46,
-                          color: Colors.amber,
+                          size: 40,
+                          color: AppColors.warning,
                         ),
                       ),
                     ),
@@ -169,16 +171,11 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                               ar: 'انتهت صلاحية الرخصة المؤقتة',
                               fr: 'Licence temporaire expirée',
                             )
-                          : _tr(
-                              context,
-                              en: 'Free Trial Expired',
-                              ar: 'انتهت الفترة التجريبية المجانية',
-                              fr: "Période d'essai gratuit expirée",
-                            ),
+                          : l10n.subscriptionStatusExpired,
                       textAlign: TextAlign.center,
-                      style: AppTypography.screenTitle(theme.colorScheme.onSurface).copyWith(
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 24,
+                        fontSize: 22,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -186,10 +183,11 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                     if (session.email != null || session.companyName != null)
                       Center(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(20),
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                            border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
                           ),
                           child: Text(
                             [session.companyName, session.email]
@@ -200,14 +198,14 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                         ),
                       ),
 
-                    const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Explanation & Offer Card
                     Container(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
                         border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
                         boxShadow: AppSpacing.cardElevation,
                       ),
@@ -215,12 +213,7 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _tr(
-                              context,
-                              en: 'Your trial period has ended. Upgrade to the Modiri AI Lifetime License to unlock full, permanent access for your business.',
-                              ar: 'لقد انتهت الفترة التجريبية الخاصة بحسابك. قم بالترقية إلى رخصة Modiri AI مدى الحياة لاستعادة الوصول الكامل والدائم لجميع ميزات التطبيق.',
-                              fr: "Votre période d'essai est terminée. Passez à la licence Modiri AI à vie pour débloquer un accès complet et permanent.",
-                            ),
+                            l10n.subscriptionExpiredDesc,
                             style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
                           ),
                           if (expiredDate != null) ...[
@@ -233,35 +226,22 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                               ),
                             ),
                           ],
-                          const Divider(height: 24),
+                          const Divider(height: 20),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
                                 child: Text(
-                                  _tr(
-                                    context,
-                                    en: 'Modiri AI Lifetime License',
-                                    ar: 'رخصة Modiri AI مدى الحياة',
-                                    fr: 'Licence Modiri AI à vie',
+                                  l10n.lifetimeLicenseTitle,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14.5,
                                   ),
-                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Text(
-                                  '15,000 DZD',
-                                  style: TextStyle(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
+                              const StatusPill(
+                                label: '15,000 DZD',
+                                tone: PillTone.success,
                               ),
                             ],
                           ),
@@ -269,29 +249,24 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.sm),
 
                     // Data Preservation Reassurance Banner
                     Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
+                      padding: const EdgeInsets.all(AppSpacing.sm),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.shield_outlined, color: AppColors.primary, size: 22),
-                          const SizedBox(width: 10),
+                          const Icon(Icons.shield_outlined, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _tr(
-                                context,
-                                en: 'All your products, sales, invoices, customer balances, and offline records are safely preserved on this device and will be immediately available once you activate your license.',
-                                ar: 'جميع منتجاتك ومبيعاتك وفواتيرك وأرصدة الزبائن والعمليات المحفوظة محلياً مؤمّنة بالكامل على جهازك، وستعود للظهور فوراً بمجرد تفعيل الرخصة.',
-                                fr: 'Tous vos produits, ventes, factures, soldes clients et données hors ligne sont intégralement préservés sur cet appareil.',
-                              ),
+                              l10n.dataPreservedNotice,
                               style: theme.textTheme.bodySmall?.copyWith(height: 1.4),
                             ),
                           ),
@@ -304,20 +279,17 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                     // Upgrade / Activate License Button
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(54),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusButton),
+                        ),
                       ),
                       onPressed: widget.onUpgradeSelected,
-                      icon: const Icon(Icons.workspace_premium_rounded),
+                      icon: const Icon(Icons.workspace_premium_rounded, size: 20),
                       label: Text(
-                        _tr(
-                          context,
-                          en: 'Activate Lifetime License (15,000 DZD)',
-                          ar: 'تفعيل الرخصة مدى الحياة (15,000 دج)',
-                          fr: 'Activer la licence à vie (15 000 DZD)',
-                        ),
+                        l10n.upgradeLifetimeAction('15,000 DZD'),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                     ),
@@ -328,7 +300,9 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusButton),
+                        ),
                       ),
                       onPressed: _isCheckingStatus ? null : _checkLicenseStatus,
                       icon: _isCheckingStatus
@@ -337,7 +311,7 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.refresh_rounded),
+                          : const Icon(Icons.refresh_rounded, size: 18),
                       label: Text(
                         _tr(
                           context,
@@ -354,35 +328,32 @@ class _TrialExpiredScreenState extends ConsumerState<TrialExpiredScreen> {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      onPressed: () => _openWhatsApp(session),
-                      icon: const Icon(Icons.chat_outlined),
-                      label: Text(
-                        _tr(
-                          context,
-                          en: 'Contact Support via WhatsApp',
-                          ar: 'التواصل مع الدعم عبر واتساب',
-                          fr: 'Contacter le support via WhatsApp',
+                        foregroundColor: const Color(0xFF25D366),
+                        side: const BorderSide(color: Color(0xFF25D366)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusButton),
                         ),
                       ),
+                      onPressed: () => _openWhatsApp(session),
+                      icon: const Icon(Icons.chat_outlined, size: 18),
+                      label: Text(l10n.contactOnWhatsApp),
                     ),
 
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
                       child: Divider(),
                     ),
 
                     // Switch Account
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        minimumSize: const Size.fromHeight(46),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusButton),
+                        ),
                       ),
                       onPressed: _handleSwitchAccount,
-                      icon: const Icon(Icons.switch_account_outlined),
+                      icon: const Icon(Icons.switch_account_outlined, size: 18),
                       label: Text(
                         _tr(
                           context,

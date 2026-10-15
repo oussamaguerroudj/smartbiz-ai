@@ -25,7 +25,8 @@ async function salesRevenueForRange(companyId, rangeStart, rangeEnd) {
   const result = await query(
     `SELECT COALESCE(SUM(total), 0) AS revenue, COUNT(*)::int AS count
      FROM sales
-     WHERE company_id = $1 AND sold_at::date BETWEEN $2::date AND $3::date`,
+     WHERE company_id = $1 AND sold_at::date BETWEEN $2::date AND $3::date
+       AND payment_status != 'cancelled'`,
     [companyId, rangeStart, rangeEnd],
   );
   return {

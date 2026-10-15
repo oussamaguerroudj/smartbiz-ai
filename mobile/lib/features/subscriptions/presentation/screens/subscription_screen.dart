@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/session.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_typography.dart';
 import '../../../../core/utils/external_launcher.dart';
 import '../../../../core/widgets/directional_chevron.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
@@ -11,31 +10,31 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/subscriptions_repository.dart';
 import 'purchase_screen.dart';
 
+/// Production-Grade 2026 Premium Subscription & Licensing Screen for Modiri AI.
+/// Pixel-perfect implementation following the approved design reference.
+/// Displays authoritative entitlement status, trial countdown progress,
+/// lifetime specifications, and upgrade actions.
 class SubscriptionScreen extends ConsumerWidget {
   const SubscriptionScreen({super.key});
-
-  String _tr(BuildContext context, {required String en, required String ar, required String fr}) {
-    final code = Localizations.localeOf(context).languageCode;
-    if (code == 'ar') return ar;
-    if (code == 'fr') return fr;
-    return en;
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entitlementAsync = ref.watch(entitlementProvider);
     final session = ref.watch(sessionProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.brandBackground,
       appBar: AppBar(
         title: Text(
-          _tr(
-            context,
-            en: 'Subscription & Licensing',
-            ar: 'إدارة الاشتراك والترخيص',
-            fr: 'Abonnement et Licence',
-          ),
+          l10n.subscriptionTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
+        centerTitle: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const PreviousChevron(),
           onPressed: () => Navigator.of(context).pop(),
@@ -47,31 +46,43 @@ class SubscriptionScreen extends ConsumerWidget {
             ref.invalidate(entitlementProvider);
           },
           child: entitlementAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(
+              child: CircularProgressIndicator(),
+            ),
             error: (err, _) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 48),
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 36),
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      _tr(
-                        context,
-                        en: 'Failed to load subscription status',
-                        ar: 'تعذر تحميل بيانات الاشتراك والترخيص',
-                        fr: "Échec du chargement de l'état de l'abonnement",
-                      ),
+                      l10n.subscriptionLoadFailed,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(err.toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      err.toString(),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.lg),
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: () => ref.invalidate(entitlementProvider),
-                      child: Text(_tr(context, en: 'Retry', ar: 'إعادة المحاولة', fr: 'Réessayer')),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: Text(l10n.subscriptionRetry),
                     ),
                   ],
                 ),
@@ -79,81 +90,62 @@ class SubscriptionScreen extends ConsumerWidget {
             ),
             data: (entitlement) => SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: FadeSlideIn(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Hero Entitlement Status Card
-                    _buildHeroCard(context, entitlement, session),
-                    const SizedBox(height: AppSpacing.lg),
+                    // 1. Authoritative Premium Status Hero Card (Dark Navy Gradient)
+                    _buildStatusHeroCard(context, entitlement, session, l10n),
+                    const SizedBox(height: 16),
 
-                    // Price & Edition Details
-                    _buildPlanSummaryCard(context, entitlement),
-                    const SizedBox(height: AppSpacing.lg),
+                    // 2. License Details Structured Card
+                    _buildLicenseDetailsCard(context, l10n, isDark),
+                    const SizedBox(height: 16),
 
-                    // Features Included
-                    _buildFeaturesList(context),
-                    const SizedBox(height: AppSpacing.xl),
+                    // 3. Included Lifetime Capabilities Card
+                    _buildFeaturesIncludedCard(context, l10n, isDark),
+                    const SizedBox(height: 20),
 
-                    // Action Buttons
+                    // 4. Primary Upgrade Action Button (If not lifetime active)
                     if (entitlement.entitlementType != 'lifetime') ...[
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(54),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 2,
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const PurchaseScreen()),
-                          );
-                        },
-                        icon: const Icon(Icons.star_rounded),
-                        label: Text(
-                          _tr(
-                            context,
-                            en: 'Upgrade to Lifetime License (15,000 DZD)',
-                            ar: 'الترقية إلى رخصة مدى الحياة (15,000 دج)',
-                            fr: 'Passer à la Licence à Vie (15 000 DZD)',
-                          ),
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
+                      _buildUpgradeButton(context, l10n),
+                      const SizedBox(height: 12),
                     ],
 
+                    // 5. Direct WhatsApp Support Action
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        side: BorderSide(
+                          color: isDark ? AppColors.borderDark : AppColors.brandBorder,
+                        ),
                       ),
                       onPressed: () {
+                        final accountIdentifier = session.companyName ?? session.email ?? '';
                         ExternalLauncher.launchWhatsApp(
                           context,
                           phone: '0774195871',
-                          message: _tr(
-                            context,
-                            en: 'Hello Modiri AI Support, I have an inquiry about my license/subscription (${session.companyName ?? session.email}).',
-                            ar: 'السلام عليكم فريق دعم Modiri AI، لدي استفسار بخصوص الاشتراك والترخيص لحساب (${session.companyName ?? session.email}).',
-                            fr: 'Bonjour Support Modiri AI, j\'ai une question concernant mon abonnement/licence (${session.companyName ?? session.email}).',
-                          ),
+                          message: Localizations.localeOf(context).languageCode == 'ar'
+                              ? 'السلام عليكم فريق دعم Modiri AI، لدي استفسار بخصوص الاشتراك والترخيص لحساب ($accountIdentifier).'
+                              : Localizations.localeOf(context).languageCode == 'fr'
+                                  ? 'Bonjour Support Modiri AI, j\'ai une question concernant mon abonnement/licence ($accountIdentifier).'
+                                  : 'Hello Modiri AI Support, I have an inquiry about my license/subscription ($accountIdentifier).',
                         );
                       },
-                      icon: const Icon(Icons.support_agent_rounded),
+                      icon: const Icon(Icons.support_agent_rounded, size: 20, color: AppColors.brandPrimaryBlue),
                       label: Text(
-                        _tr(
-                          context,
-                          en: 'Contact Billing Support',
-                          ar: 'التواصل مع قسم الدعم والمبيعات',
-                          fr: 'Contacter le Support Facturation',
+                        l10n.contactBillingSupport,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.brandTextPrimary,
                         ),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -164,265 +156,450 @@ class SubscriptionScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeroCard(BuildContext context, EntitlementState entitlement, Session session) {
+  /// Dark Navy Gradient Status Hero Card
+  Widget _buildStatusHeroCard(
+    BuildContext context,
+    EntitlementState entitlement,
+    Session session,
+    AppLocalizations l10n,
+  ) {
     final isLifetime = entitlement.entitlementType == 'lifetime';
     final isSuspended = entitlement.isSuspended;
     final isExpired = entitlement.status == 'expired';
     final isTrial = entitlement.entitlementType == 'trial' && !isExpired && !isSuspended;
+    final daysRemaining = entitlement.daysRemaining ?? 0;
 
-    Color badgeColor;
-    String badgeText;
-    IconData badgeIcon;
-    List<Color> gradientColors;
+    final String statusLabel = isLifetime
+        ? l10n.subscriptionStatusLifetime
+        : isSuspended
+            ? l10n.subscriptionStatusSuspended
+            : isExpired
+                ? l10n.subscriptionStatusExpired
+                : l10n.subscriptionStatusTrial;
 
-    if (isSuspended) {
-      badgeColor = AppColors.danger;
-      badgeText = _tr(context, en: 'SUSPENDED', ar: 'حساب معلّق', fr: 'SUSPENDU');
-      badgeIcon = Icons.lock_rounded;
-      gradientColors = const [Color(0xFF7F1D1D), Color(0xFF450A0A)];
-    } else if (isLifetime) {
-      badgeColor = const Color(0xFF10B981);
-      badgeText = _tr(context, en: 'LIFETIME EDITION', ar: 'رخصة مدى الحياة', fr: 'LICENCE À VIE');
-      badgeIcon = Icons.verified_rounded;
-      gradientColors = const [Color(0xFF064E3B), Color(0xFF022C22)];
-    } else if (isExpired) {
-      badgeColor = AppColors.warning;
-      badgeText = _tr(context, en: 'TRIAL EXPIRED', ar: 'انتهت الفترة التجريبية', fr: 'ESSAI EXPIRÉ');
-      badgeIcon = Icons.timer_off_rounded;
-      gradientColors = const [Color(0xFF78350F), Color(0xFF451A03)];
-    } else {
-      badgeColor = const Color(0xFF38BDF8);
-      badgeText = _tr(context, en: 'FREE TRIAL', ar: 'نسخة تجريبية مجانية', fr: 'ESSAI GRATUIT');
-      badgeIcon = Icons.hourglass_top_rounded;
-      gradientColors = const [Color(0xFF1E293B), Color(0xFF0F172A)];
-    }
+    final IconData statusIcon = isLifetime
+        ? Icons.verified_rounded
+        : isSuspended
+            ? Icons.lock_outline_rounded
+            : isExpired
+                ? Icons.timer_off_outlined
+                : Icons.hourglass_top_rounded;
+
+    final String title = isLifetime
+        ? 'Modiri AI — Lifetime Active'
+        : 'النسخة الاحترافية — Modiri AI';
+
+    final String description = isLifetime
+        ? l10n.subscriptionLifetimeDesc
+        : isTrial
+            ? l10n.subscriptionTrialDesc
+            : isExpired
+                ? l10n.subscriptionExpiredDesc
+                : l10n.subscriptionSuspendedDesc;
+
+    final double progressRatio = isLifetime
+        ? 1.0
+        : (daysRemaining / 15.0).clamp(0.0, 1.0);
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF071B49),
+            Color(0xFF102B68),
+            Color(0xFF1F2B7B),
+          ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.4), width: 1.5),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: const Color(0xFF071B49).withValues(alpha: 0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Top Row: Status Pill & Days Pill
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Status Pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: badgeColor),
+                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isLifetime
+                        ? AppColors.success.withValues(alpha: 0.5)
+                        : AppColors.brandBrightBlue.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(badgeIcon, color: badgeColor, size: 16),
-                    const SizedBox(width: 6),
+                    Icon(
+                      statusIcon,
+                      color: isLifetime ? AppColors.success : const Color(0xFF93C5FD),
+                      size: 15,
+                    ),
+                    const SizedBox(width: 5),
                     Text(
-                      badgeText,
+                      statusLabel,
                       style: TextStyle(
-                        color: badgeColor,
+                        color: isLifetime ? AppColors.success : const Color(0xFF93C5FD),
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        letterSpacing: 0.5,
+                        fontSize: 11.5,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (isTrial && entitlement.daysRemaining != null)
+
+              // Days Remaining Pill (when trial active)
+              if (isTrial)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    _tr(
-                      context,
-                      en: '${entitlement.daysRemaining} days left',
-                      ar: 'باقي ${entitlement.daysRemaining} يوم',
-                      fr: '${entitlement.daysRemaining} j restants',
-                    ),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, color: Colors.white, size: 13),
+                      const SizedBox(width: 5),
+                      Text(
+                        l10n.subscriptionDaysRemaining(daysRemaining),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 16),
 
+          // Title
           Text(
-            isLifetime
-                ? _tr(
-                    context,
-                    en: 'Modiri AI — Lifetime Active',
-                    ar: 'Modiri AI — مفعل مدى الحياة',
-                    fr: 'Modiri AI — Activé à Vie',
-                  )
-                : _tr(
-                    context,
-                    en: 'Modiri AI — Small Business Edition',
-                    ar: 'Modiri AI — النسخة الاحترافية',
-                    fr: 'Modiri AI — Édition Professionnelle',
-                  ),
+            title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 20,
               fontWeight: FontWeight.bold,
+              fontSize: 18,
+              letterSpacing: 0.2,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 6),
 
+          // Description
           Text(
-            isLifetime
-                ? _tr(
-                    context,
-                    en: 'Permanent unlimited access. No monthly subscriptions, no renewal fees.',
-                    ar: 'وصول دائم وغير محدود لجميع الميزات. بدون اشتراكات شهرية أو رسوم تجديد.',
-                    fr: 'Accès illimité permanent. Sans abonnement mensuel ni frais de renouvellement.',
-                  )
-                : isTrial
-                    ? _tr(
-                        context,
-                        en: 'Enjoy unrestricted access to all features during your 15-day evaluation period.',
-                        ar: 'استمتع بالوصول الكامل لجميع ميزات التطبيق خلال الفترة التجريبية (15 يوماً).',
-                        fr: "Profitez d'un accès complet à toutes les fonctionnalités pendant votre essai de 15 jours.",
-                      )
-                    : isExpired
-                        ? _tr(
-                            context,
-                            en: 'Your evaluation period has ended. Activate lifetime license to unlock.',
-                            ar: 'انتهت الفترة التجريبية. قم بتفعيل الرخصة مدى الحياة لمواصلة العمل.',
-                            fr: "Votre période d'essai est terminée. Activez la licence à vie pour continuer.",
-                          )
-                        : _tr(
-                            context,
-                            en: 'Account suspended. Contact support or submit an appeal.',
-                            ar: 'الحساب معلق. يرجى التواصل مع الدعم أو تقديم طعن.',
-                            fr: 'Compte suspendu. Contactez le support ou soumettez un recours.',
-                          ),
+            description,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 13,
-              height: 1.4,
+              color: Colors.white.withValues(alpha: 0.82),
+              fontSize: 12.5,
+              height: 1.45,
             ),
           ),
+          const SizedBox(height: 18),
 
-          if (isTrial && entitlement.daysRemaining != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            ClipRRect(
+          // Glowing Linear Progress Bar
+          Container(
+            height: 8,
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (entitlement.daysRemaining! / 15.0).clamp(0.0, 1.0),
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  entitlement.daysRemaining! <= 3 ? AppColors.warning : AppColors.primary,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+            child: FractionallySizedBox(
+              alignment: AlignmentDirectional.centerStart,
+              widthFactor: progressRatio,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF18C8F4),
+                      Color(0xFF3563FF),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF18C8F4).withValues(alpha: 0.5),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
-                minHeight: 6,
               ),
             ),
-          ],
+          ),
+          const SizedBox(height: 8),
+
+          // Progress Captions
+          if (isTrial)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.remainingDaysCount(daysRemaining),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  l10n.outOfDays(15),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildPlanSummaryCard(BuildContext context, EntitlementState entitlement) {
-    final theme = Theme.of(context);
-
+  /// Structured License Details Card
+  Widget _buildLicenseDetailsCard(BuildContext context, AppLocalizations l10n, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: Column(
-        children: [
-          _RowItem(
-            label: _tr(context, en: 'Product / Edition', ar: 'المنتج / النسخة', fr: 'Produit / Édition'),
-            value: 'Modiri AI Lifetime License',
-          ),
-          const Divider(),
-          _RowItem(
-            label: _tr(context, en: 'Official Price', ar: 'السعر الرسمي', fr: 'Prix Officiel'),
-            value: '15,000 DZD (15,000 دج)',
-            highlight: true,
-          ),
-          const Divider(),
-          _RowItem(
-            label: _tr(context, en: 'Billing Frequency', ar: 'دورة الدفع', fr: 'Fréquence'),
-            value: _tr(context, en: 'One-time payment (Pay once, use forever)', ar: 'دفع مرة واحدة مدى الحياة', fr: 'Paiement unique (À vie)'),
-          ),
-          const Divider(),
-          _RowItem(
-            label: _tr(context, en: 'Payment Methods', ar: 'طرق الدفع المعتمدة', fr: 'Moyens de Paiement'),
-            value: 'Chargily (EDAHABIA / CIB) + CCP',
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.brandBorder,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFeaturesList(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _tr(context, en: 'Included in Lifetime License', ar: 'الميزات المشمولة في رخصة مدى الحياة', fr: 'Inclus dans la Licence à Vie'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          // Header Row with Document Icon
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.description_outlined,
+                  color: AppColors.brandPrimaryBlue,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                l10n.licenseDetailsHeader,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14.5,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.brandTextPrimary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          _FeatureCheck(text: _tr(context, en: 'Point of Sale (POS) & Fast Barcode Scanning', ar: 'نظام نقاط البيع (POS) وقارئ الباركود السريع', fr: 'Point de Vente (POS) & Scanner de codes-barres')),
-          _FeatureCheck(text: _tr(context, en: 'Invoicing, Quotes & Thermal Receipt Printing', ar: 'إصدار الفواتير، عروض الأسعار، والطباعة الحرارية', fr: 'Facturation, Devis & Impression de reçus thermiques')),
-          _FeatureCheck(text: _tr(context, en: 'Inventory & Stock Management with Low-Stock Alerts', ar: 'إدارة المخزون وتنبيهات نفاد السلع التلقائية', fr: 'Gestion des stocks & Alertes de stock bas')),
-          _FeatureCheck(text: _tr(context, en: 'Expenses, Financial Reports & Revenue Analytics', ar: 'تتبع المصاريف، التقارير المالية، والأرباح', fr: 'Dépenses, Rapports financiers & Bénéfices')),
-          _FeatureCheck(text: _tr(context, en: 'Offline-First SQLite Database (Works with or without Internet)', ar: 'قاعدة بيانات SQLite تعمل دون الحاجة للإنترنت', fr: 'Fonctionnement hors ligne SQLite garanti')),
-          _FeatureCheck(text: _tr(context, en: 'Multi-device support & automated sync backup', ar: 'المزامنة السحابية الاحتياطية ودعم الأجهزة المتعددة', fr: 'Synchronisation cloud & Sauvegarde multi-appareils')),
+          const SizedBox(height: 12),
+          Divider(color: isDark ? AppColors.borderDark : AppColors.brandDivider),
+
+          // Structured Information Rows
+          _DetailRow(
+            label: l10n.subscriptionProductEdition,
+            value: 'Modiri AI Lifetime License',
+            isDark: isDark,
+          ),
+          Divider(color: isDark ? AppColors.borderDark : AppColors.brandDivider),
+          _DetailRow(
+            label: l10n.subscriptionOfficialPrice,
+            value: '15,000 DZD',
+            isPrice: true,
+            isDark: isDark,
+          ),
+          Divider(color: isDark ? AppColors.borderDark : AppColors.brandDivider),
+          _DetailRow(
+            label: l10n.subscriptionBillingCycle,
+            value: l10n.subscriptionOneTimePayment,
+            isDark: isDark,
+          ),
+          Divider(color: isDark ? AppColors.borderDark : AppColors.brandDivider),
+          _DetailRow(
+            label: l10n.subscriptionPaymentMethods,
+            value: 'Chargily (EDAHABIA / CIB) + CCP',
+            isDark: isDark,
+          ),
         ],
+      ),
+    );
+  }
+
+  /// Included Lifetime Capabilities Card
+  Widget _buildFeaturesIncludedCard(BuildContext context, AppLocalizations l10n, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.brandBorder,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row with Shield Check Icon
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.security_rounded,
+                  color: AppColors.brandPrimaryBlue,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.subscriptionFeaturesIncluded,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.5,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.brandTextPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Features List with Blue Circular Checkmarks
+          _FeatureCheckItem(text: l10n.featurePosBarcode, isDark: isDark),
+          _FeatureCheckItem(text: l10n.featureInvoicesThermal, isDark: isDark),
+          _FeatureCheckItem(text: l10n.featureInventoryAlerts, isDark: isDark),
+          _FeatureCheckItem(text: l10n.featureReportsAnalytics, isDark: isDark),
+          _FeatureCheckItem(text: l10n.featureOfflineSqlite, isDark: isDark),
+          _FeatureCheckItem(text: l10n.featureMultiDeviceSync, isDark: isDark),
+        ],
+      ),
+    );
+  }
+
+  /// Primary Upgrade Gradient Button
+  Widget _buildUpgradeButton(BuildContext context, AppLocalizations l10n) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          colors: AppColors.primaryButtonGradient,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brandPrimaryBlue.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PurchaseScreen()),
+            );
+          },
+          borderRadius: BorderRadius.circular(22),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              children: [
+                ForwardChevron(
+                  color: Colors.white,
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 22),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'الترقية إلى رخصة مدى الحياة (15,000 DZD)',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 28),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _RowItem extends StatelessWidget {
-  const _RowItem({required this.label, required this.value, this.highlight = false});
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.isPrice = false,
+    required this.isDark,
+  });
+
   final String label;
   final String value;
-  final bool highlight;
+  final bool isPrice;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -430,17 +607,20 @@ class _RowItem extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).textTheme.bodySmall?.color,
+                fontSize: 12.5,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.brandTextSecondary,
               ),
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: highlight ? AppColors.primary : null,
+              fontSize: isPrice ? 14 : 12.5,
+              fontWeight: isPrice ? FontWeight.w800 : FontWeight.w600,
+              color: isPrice
+                  ? AppColors.brandPrimaryBlue
+                  : (isDark ? AppColors.textPrimaryDark : AppColors.brandTextPrimary),
             ),
           ),
         ],
@@ -449,23 +629,37 @@ class _RowItem extends StatelessWidget {
   }
 }
 
-class _FeatureCheck extends StatelessWidget {
-  const _FeatureCheck({required this.text});
+class _FeatureCheckItem extends StatelessWidget {
+  const _FeatureCheckItem({
+    required this.text,
+    required this.isDark,
+  });
+
   final String text;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 18),
-          const SizedBox(width: 8),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.brandPrimaryBlue,
+            size: 19,
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.brandTextPrimary,
+                height: 1.35,
+              ),
             ),
           ),
         ],

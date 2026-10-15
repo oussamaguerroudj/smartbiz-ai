@@ -1106,6 +1106,311 @@
   "feedbackTitle": "Envoyer des commentaires",
   "feedbackRatingLabel": "Évaluation",
   "submitFeedbackAction": "Envoyer",
-  "licenseActive": "Licence à vie active"
+  "licenseActive": "Licence à vie active",
+  "subscriptionTitle": "Abonnement et Licence",
+  "subscriptionLoadFailed": "Échec du chargement de l'état de l'abonnement",
+  "subscriptionRetry": "Réessayer",
+  "subscriptionStatusSuspended": "Compte suspendu",
+  "subscriptionStatusLifetime": "Édition à vie",
+  "subscriptionStatusExpired": "Essai expiré",
+  "subscriptionStatusTrial": "Essai gratuit",
+  "subscriptionLifetimeDesc": "Accès illimité permanent. Sans abonnement mensuel ni frais de renouvellement.",
+  "subscriptionTrialDesc": "Profitez d'un accès complet à toutes les fonctionnalités pendant votre essai de 15 jours.",
+  "subscriptionExpiredDesc": "Votre période d'essai est terminée. Activez la licence à vie pour continuer.",
+  "subscriptionSuspendedDesc": "Compte suspendu. Contactez le support pour régulariser votre compte.",
+  "subscriptionDaysRemaining": "{count} j restants",
+  "subscriptionProductEdition": "Produit / Édition",
+  "subscriptionOfficialPrice": "Prix Officiel",
+  "subscriptionBillingCycle": "Fréquence de facturation",
+  "subscriptionOneTimePayment": "Paiement unique (À vie, sans renouvellement)",
+  "subscriptionPaymentMethods": "Moyens de paiement acceptés",
+  "subscriptionPaymentMethodsList": "Chargily Pay (EDAHABIA / CIB) + CCP",
+  "subscriptionFeaturesIncluded": "Inclus dans la Licence à Vie",
+  "featurePosBarcode": "Point de Vente (POS) et Scanner code-barres rapide",
+  "featureInvoicesThermal": "Facturation, Devis et Impression de reçus thermiques",
+  "featureInventoryAlerts": "Gestion des stocks et Alertes automatiques de stock bas",
+  "featureReportsAnalytics": "Dépenses, Rapports financiers et Analyse des bénéfices",
+  "featureOfflineSqlite": "Base de données SQLite hors ligne (Sans Internet)",
+  "featureMultiDeviceSync": "Synchronisation cloud et Sauvegarde multi-appareils",
+  "contactBillingSupport": "Contacter le Support Facturation",
+  "upgradeLifetimeAction": "Passer à la Licence à Vie ({price})",
+  "chargilyExplanation": "Activation instantanée et automatique de la licence à vie par carte Edahabia ou CIB via la plateforme officielle Chargily Pay.",
+  "payWithChargilyBtn": "Payer {price} avec Chargily Pay",
+  "instantActivationBadge": "Activation Immédiate et Automatique",
+  "securityGuaranteed": "Paiement 100% Sécurisé (SATIM / GIE Monétique)",
+  "uploadProofTitle": "Preuve de paiement (Reçu)",
+  "uploadProofSubtitle": "Formats acceptés : JPG, PNG, PDF (Max 5 Mo)",
+  "submitReceiptBtn": "Envoyer le reçu pour vérification",
+  "ccpCopied": "Numéro de compte CCP copié dans le presse-papiers",
+  "copyCcpNumber": "Copier le numéro de compte",
+  "accountSystemSection": "Compte et Licence",
+  "preferencesSection": "Préférences et Apparence",
+  "supportSection": "Aide et Support",
+  "dataManagementSection": "Données et Système",
+  "appVersion": "Version",
+  "dataPreservedNotice": "Tous vos produits, ventes, factures, soldes clients et données hors ligne sont intégralement préservés sur cet appareil.",
+  "selectReceiptPrompt": "Veuillez d'abord sélectionner un justificatif de paiement",
+  "chargilyInvalidUrl": "La passerelle de paiement n'a pas renvoyé d'URL valide",
+  "paymentMethodsAvailable": "Edahabia • CIB • CCP",
+  "freeTrialDaysBadge": "15 jours gratuits",
+  "trialFeatureAllModules": "Accès complet à tous les modules Modiri AI",
+  "trialFeatureCorePos": "POS, Factures, Stocks et Dépenses",
+  "trialFeatureOffline": "Stockage local SQLite fiable sans Internet",
+  "trialFeatureNoCard": "Aucune carte bancaire requise pour démarrer",
+  "newSupplierPurchase": "Nouvel achat fournisseur",
+  "purchaseInvoiceOptional": "N° Facture / Bon de commande (Optionnel)",
+  "orderedItemsCount": "Articles commandés ({count})",
+  "@orderedItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "itemDesignation": "Désignation article *",
+  "chooseFromCatalog": "Choisir parmi les produits du catalogue",
+  "quantityField": "Quantité *",
+  "unitPurchaseCost": "P.U d'achat (DZD) *",
+  "addPurchaseItemLine": "Ajouter une ligne d'article",
+  "invoiceTotal": "Total facture:",
+  "downPaymentDzd": "Acompte versé (DZD)",
+  "remainingDebt": "Dette restante: {amount} DZD",
+  "@remainingDebt": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "purchaseNotesOptional": "Observations (Optionnel)",
+  "validateSavePurchase": "Valider et enregistrer l'achat",
+  "pleaseAddAtLeastOneItem": "Veuillez ajouter au moins un article",
+  "invoiceTotalMustBeGreaterThanZero": "Le total de la facture doit être supérieur à 0 DZD",
+  "purchaseSavedSuccessfully": "Achat enregistré avec succès !",
+  "recordSupplierPayment": "Enregistrer un paiement fournisseur",
+  "totalOutstandingDebt": "Dette totale en cours: {amount} DZD",
+  "@totalOutstandingDebt": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "allocateToInvoiceOptional": "Affecter à une facture (Optionnel)",
+  "globalDebtFifo": "Dette globale (Allocation FIFO)",
+  "paymentAmountField": "Montant du versement (DZD) *",
+  "paymentMethodLabel": "Mode de règlement",
+  "paymentMethodCash": "Espèces (Cash)",
+  "paymentMethodBank": "Virement bancaire",
+  "paymentMethodCcp": "Versement CCP",
+  "paymentMethodCheck": "Chèque",
+  "paymentRefOptional": "Référence / N° Reçu (Optionnel)",
+  "confirmPaymentAction": "Confirmer le paiement",
+  "amountMustBePositive": "Le montant doit être supérieur à zéro",
+  "amountExceedsInvoiceDebt": "Le montant dépasse le reste à payer de cette facture",
+  "amountExceedsTotalDebt": "Le montant dépasse la dette totale du fournisseur",
+  "paymentSavedSuccessfully": "Paiement enregistré avec succès !",
+  "totalStockValuation": "Valeur du stock",
+  "totalInvoiced": "Total Facturé",
+  "totalPaid": "Total Réglé",
+  "outstandingDebt": "Reste à payer (Dette)",
+  "newPurchaseAction": "Nouvel achat",
+  "payDebtAction": "Payer dette",
+  "invoicesTab": "Factures ({count})",
+  "@invoicesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentsTab": "Paiements ({count})",
+  "@paymentsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "productsTab": "Produits ({count})",
+  "@productsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noPurchasesRecorded": "Aucune facture d'achat enregistrée.",
+  "recordFirstPurchase": "Enregistrer le premier achat",
+  "noPaymentsRecorded": "Aucun paiement enregistré.",
+  "payThisInvoice": "Payer cette facture ({amount} DZD)",
+  "@payThisInvoice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "invoiceLinesTitle": "Lignes de la facture ({count})",
+  "@invoiceLinesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sellingPriceShort": "Vente: {price} DZD",
+  "@sellingPriceShort": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "callSupplier": "Appeler",
+  "whatsappSupplier": "WhatsApp",
+  "editSupplier": "Modifier le fournisseur",
+  "deleteSupplier": "Supprimer le fournisseur",
+  "deleteSupplierConfirm": "Êtes-vous sûr de vouloir supprimer ce fournisseur ?",
+  "chargilyPaymentPending": "Paiement en attente de confirmation",
+  "chargilyPendingExplanation": "Votre session de paiement a été ouverte. Veuillez finaliser votre paiement dans le navigateur puis appuyer sur Vérifier le statut ci-dessous.",
+  "checkPaymentStatus": "Vérifier le statut du paiement",
+  "paymentNotYetReceived": "Le paiement n'a pas encore été confirmé par Chargily. Veuillez finaliser votre transaction sur la page de paiement.",
+  "paymentSuccessCongratulations": "Paiement confirmé ! Votre licence à vie a été activée avec succès.",
+  "downPaymentCannotExceedTotal": "L'acompte ne peut pas dépasser le montant total de la facture",
+  "paidInFullBadge": "Payée en totalité",
+  "partiallyPaidBadge": "Partiellement payée",
+  "unpaidBadge": "Non payée",
+  "totalInvoiceAmountLabel": "Montant Total Facture",
+  "amountPaidLabel": "Montant Réglé",
+  "outstandingDebtLabel": "Reste à payer (Dette)",
+  "noLineItemsRecorded": "Aucun détail d'article enregistré.",
+  "remainingBalanceShort": "Reste",
+  "paymentTitle": "Paiement",
+  "brandTagline": "Gérez vos activités avec intelligence",
+  "oneTimePaymentBadge": "Paiement unique",
+  "lifetimeLicenseBadge": "Licence à vie",
+  "benefitSafeExperience": "Expérience sécurisée",
+  "benefitLifetimeAccess": "Accès à vie",
+  "benefitFutureUpdates": "Mises à jour futures",
+  "benefitPremiumSupport": "Support premium",
+  "securePayment100": "Paiement 100% sécurisé",
+  "allPaymentsProtected": "Toutes les opérations sont protégées et sécurisées",
+  "orChooseOtherPayment": "Ou choisissez l'autre mode de paiement",
+  "licenseDetailsHeader": "Détails de la licence",
+  "outOfDays": "sur {total} jours",
+  "@outOfDays": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "remainingDaysCount": "{count} jours restants",
+  "@remainingDaysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanSupplierInvoice": "Scanner la facture",
+  "addPurchaseManually": "Ajouter achat manuellement",
+  "totalPurchasesLabel": "Total achats",
+  "totalPaidLabel": "Total payé",
+  "outstandingBalanceLabel": "Solde restant",
+  "scanSupplierInvoiceTitle": "Scanner facture fournisseur",
+  "reviewInvoiceItemsTitle": "Vérifier et réceptionner le stock",
+  "retakePhoto": "Reprendre la photo",
+  "invoiceNumberLabel": "Numéro de facture",
+  "invoiceDateLabel": "Date de la facture",
+  "matchedProductLabel": "Produit du catalogue",
+  "createNewProductOption": "Créer comme nouveau produit",
+  "unitCostLabel": "Coût d'achat",
+  "sellingPriceLabel": "Prix de vente",
+  "lineTotalLabel": "Total",
+  "calculatedTotalLabel": "Total calculé",
+  "detectedTotalLabel": "Total détecté",
+  "totalDiscrepancyWarning": "La somme des articles ne correspond pas au total détecté.",
+  "duplicateInvoiceWarning": "Une facture avec ce numéro existe déjà pour ce fournisseur. Voulez-vous continuer ?",
+  "confirmAndReceiveInventory": "Confirmer et réceptionner",
+  "receivingSummaryTitle": "Résumé de réception de stock",
+  "inventoryReceivedSuccess": "Facture enregistrée et {count} produits mis à jour dans le stock !",
+  "@inventoryReceivedSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addLineItemButton": "Ajouter un article",
+  "removeLineItemButton": "Supprimer",
+  "searchCatalogHint": "Rechercher un produit dans le catalogue...",
+  "downPaymentLabel": "Montant payé (acompte facultatif)",
+  "noLineItemsWarning": "Veuillez ajouter ou conserver au moins un article valide.",
+  "skipItem": "Ignorer l'article",
+  "itemSkipped": "Ignoré",
+  "restoreItem": "Restaurer",
+  "productsToUpdateCount": "{count} produits à mettre à jour en stock",
+  "@productsToUpdateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newProductsToCreateCount": "{count} nouveaux produits à créer",
+  "@newProductsToCreateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportStatement": "Relevé de compte",
+  "saleSettlementTitle": "Règlement de la vente",
+  "paidInFullTitle": "Payée en totalité",
+  "paidInFullDesc": "Paiement comptant reçu en totalité",
+  "unpaidCreditTitle": "Non payée (Crédit)",
+  "unpaidCreditDesc": "Totalité enregistrée en dette client",
+  "customerRequiredForCredit": "Veuillez sélectionner un client pour une vente à crédit",
+  "itemsToReceiveCount": "{count} articles à réceptionner",
+  "@itemsToReceiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerCreditProfileTitle": "Profil crédit client",
+  "customerStatementTab": "Relevé",
+  "unpaidInvoicesTab": "Factures impayées ({count})",
+  "@unpaidInvoicesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentsHistoryTab": "Règlements",
+  "oldestDebtLabel": "Plus ancienne dette",
+  "noOldestDebt": "Aucune dette impayée",
+  "totalCreditIncurred": "Total crédit",
+  "totalRepaidLabel": "Total remboursé",
+  "unpaidInvoicesCountLabel": "Factures en attente",
+  "invoiceDetailsTitle": "Détails de la facture",
+  "itemsListTitle": "Détail des articles",
+  "payFullBalanceShortcut": "Régler la totalité ({amount} DZD)",
+  "@payFullBalanceShortcut": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payHalfBalanceShortcut": "Régler la moitié (50%)",
+  "noUnpaidInvoicesFound": "Aucune facture impayée pour ce client",
+  "repaymentNoteOptional": "Note / Référence du reçu (Optionnel)",
+  "confirmRepaymentAction": "Confirmer le règlement"
 }
 

@@ -189,11 +189,7 @@ class ReportsRepository {
             SELECT COALESCE(SUM(amount), 0) AS total
             FROM credit_payments
             WHERE company_id = ? AND synced = 0
-              AND (CASE
-                WHEN payment_date IS NOT NULL AND payment_date != '' THEN
-                  (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
-                ELSE (CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END)
-              END) BETWEEN date(?) AND date(?)
+              AND ${LocalFinancialCalculator.safeCreatedAtDate} BETWEEN date(?) AND date(?)
             ''',
             [companyId, rangeStart, rangeEnd],
           );
@@ -286,11 +282,7 @@ class ReportsRepository {
           SELECT COALESCE(SUM(amount), 0) AS total
           FROM credit_payments
           WHERE company_id = ? AND synced = 0
-            AND (CASE
-              WHEN payment_date IS NOT NULL AND payment_date != '' THEN
-                (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
-              ELSE (CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END)
-            END) BETWEEN date(?) AND date(?)
+            AND ${LocalFinancialCalculator.safeCreatedAtDate} BETWEEN date(?) AND date(?)
           ''',
           [companyId, rangeStart, rangeEnd],
         );

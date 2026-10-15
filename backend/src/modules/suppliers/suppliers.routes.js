@@ -42,17 +42,32 @@ async function findAll(companyId) {
 async function create(
   companyId,
   {
+    id,
     name,
     phone,
     address,
   },
 ) {
+  if (id) {
+    const existing = await query(
+      'SELECT id, company_id FROM suppliers WHERE id = $1',
+      [id],
+    );
+    if (existing.rows.length > 0) {
+      if (existing.rows[0].company_id !== companyId) {
+        throw ApiError.conflict('Supplier with this ID already exists', 'CONFLICT');
+      }
+      return findById(companyId, id);
+    }
+  }
+
   const result = await query(
     `INSERT INTO suppliers
-       (company_id, name, phone, address)
-     VALUES ($1, $2, $3, $4)
+       (id, company_id, name, phone, address)
+     VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5)
      RETURNING *`,
     [
+      id || null,
       companyId,
       name,
       phone || null,
@@ -174,6 +189,7 @@ async function softDelete(companyId, id) {
 // Service
 async function createSupplier(companyId, data = {}) {
   const {
+    id,
     name,
     phone,
     address,
@@ -225,6 +241,7 @@ async function createSupplier(companyId, data = {}) {
   }
 
   return create(companyId, {
+    id: typeof id === 'string' && id.trim().length > 0 ? id.trim() : null,
     name: name.trim(),
     phone: typeof phone === 'string'
       ? phone.trim()

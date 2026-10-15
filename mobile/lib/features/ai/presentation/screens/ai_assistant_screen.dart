@@ -167,21 +167,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
               ),
               Expanded(
                 child: _messages.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.all(AppSpacing.md),
-                          child: Text(
-                            'Ask about your business — e.g. '
-                            '"How much did I earn this month?" '
-                            'or "Which products are low in stock?"',
-                            textAlign: TextAlign.center,
-                            style: AppTypography.body(
-                              Colors.white.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ),
-                      )
+                    ? const SizedBox.shrink()
                     : ListView.builder(
                         controller: _scrollController,
                         padding:
@@ -243,8 +229,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                             ),
                             cursorColor: Colors.white,
                             decoration: InputDecoration(
-                              hintText:
-                                  'Ask about your business…',
+                              hintText: l10n.askAboutYourBusiness,
                               hintStyle: TextStyle(
                                 color: Colors.white.withValues(
                                   alpha: 0.55,

@@ -1183,6 +1183,332 @@
   "feedbackTitle": "Send Feedback",
   "feedbackRatingLabel": "Rating",
   "submitFeedbackAction": "Submit Feedback",
-  "licenseActive": "Active Lifetime License"
+  "licenseActive": "Active Lifetime License",
+  "subscriptionTitle": "Subscription & Licensing",
+  "subscriptionLoadFailed": "Failed to load subscription status",
+  "subscriptionRetry": "Retry",
+  "subscriptionStatusSuspended": "Account Suspended",
+  "subscriptionStatusLifetime": "Lifetime Edition",
+  "subscriptionStatusExpired": "Free Trial Expired",
+  "subscriptionStatusTrial": "Free Trial",
+  "subscriptionLifetimeDesc": "Permanent unlimited access. No monthly subscriptions, no renewal fees.",
+  "subscriptionTrialDesc": "Enjoy unrestricted access to all features during your 15-day evaluation period.",
+  "subscriptionExpiredDesc": "Your evaluation period has ended. Activate lifetime license to unlock full access.",
+  "subscriptionSuspendedDesc": "Account suspended. Contact support to appeal or resolve billing.",
+  "subscriptionDaysRemaining": "{count} days left",
+  "@subscriptionDaysRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionProductEdition": "Product / Edition",
+  "subscriptionOfficialPrice": "Official Price",
+  "subscriptionBillingCycle": "Billing Frequency",
+  "subscriptionOneTimePayment": "One-time payment (Pay once, use forever)",
+  "subscriptionPaymentMethods": "Supported Payment Methods",
+  "subscriptionPaymentMethodsList": "Chargily Pay (EDAHABIA / CIB) + CCP",
+  "subscriptionFeaturesIncluded": "Included in Lifetime License",
+  "featurePosBarcode": "Point of Sale (POS) & Fast Barcode Scanning",
+  "featureInvoicesThermal": "Invoicing, Quotes & Thermal Receipt Printing",
+  "featureInventoryAlerts": "Inventory & Stock Management with Low-Stock Alerts",
+  "featureReportsAnalytics": "Expenses, Financial Reports & Revenue Analytics",
+  "featureOfflineSqlite": "Offline-First SQLite Database (Works without Internet)",
+  "featureMultiDeviceSync": "Multi-device support & automated cloud sync",
+  "contactBillingSupport": "Contact Billing & Sales Support",
+  "upgradeLifetimeAction": "Activate Lifetime License ({price})",
+  "@upgradeLifetimeAction": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chargilyExplanation": "Instant automatic activation with EDAHABIA or CIB cards via Chargily Pay official payment gateway.",
+  "payWithChargilyBtn": "Pay {price} with Chargily Pay",
+  "@payWithChargilyBtn": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "instantActivationBadge": "Instant Automated Activation",
+  "securityGuaranteed": "100% Secure Transaction (SATIM / GIE Monétique)",
+  "uploadProofTitle": "Upload Proof of Payment (Receipt)",
+  "uploadProofSubtitle": "Supported formats: JPG, PNG, PDF (Max 5 MB)",
+  "submitReceiptBtn": "Submit Receipt for Verification",
+  "ccpCopied": "CCP account number copied to clipboard",
+  "copyCcpNumber": "Copy Account Number",
+  "accountSystemSection": "Account & Licensing",
+  "preferencesSection": "Preferences & Appearance",
+  "supportSection": "Help & Support",
+  "dataManagementSection": "Data & System",
+  "appVersion": "Version",
+  "dataPreservedNotice": "All your products, sales, invoices, customer balances, and offline records are safely preserved on this device and will be immediately available once you activate your license.",
+  "selectReceiptPrompt": "Please select a payment receipt file first",
+  "chargilyInvalidUrl": "Payment gateway did not return a valid URL",
+  "paymentMethodsAvailable": "Edahabia • CIB (SATIM)",
+  "freeTrialDaysBadge": "15 Days Free",
+  "trialFeatureAllModules": "Full access to all Modiri AI modules",
+  "trialFeatureCorePos": "POS, Invoices, Inventory, & Expenses",
+  "trialFeatureOffline": "Offline-First SQLite data storage",
+  "trialFeatureNoCard": "No credit card required to start",
+  "newSupplierPurchase": "New Supplier Purchase",
+  "purchaseInvoiceOptional": "Invoice / Order No. (Optional)",
+  "orderedItemsCount": "Ordered Items ({count})",
+  "@orderedItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "itemDesignation": "Item Name *",
+  "chooseFromCatalog": "Choose from product catalog",
+  "quantityField": "Quantity *",
+  "unitPurchaseCost": "Unit Cost (DZD) *",
+  "addPurchaseItemLine": "Add Item Line",
+  "invoiceTotal": "Invoice Total:",
+  "downPaymentDzd": "Initial Payment (DZD)",
+  "remainingDebt": "Remaining Debt: {amount} DZD",
+  "@remainingDebt": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "purchaseNotesOptional": "Notes / Remarks (Optional)",
+  "validateSavePurchase": "Confirm and Save Purchase",
+  "pleaseAddAtLeastOneItem": "Please add at least one item",
+  "invoiceTotalMustBeGreaterThanZero": "Invoice total must be greater than 0 DZD",
+  "purchaseSavedSuccessfully": "Purchase recorded successfully",
+  "recordSupplierPayment": "Record Supplier Payment",
+  "totalOutstandingDebt": "Total Outstanding Debt: {amount} DZD",
+  "@totalOutstandingDebt": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "allocateToInvoiceOptional": "Assign to Invoice (Optional)",
+  "globalDebtFifo": "Global Debt (Oldest Unpaid First)",
+  "paymentAmountField": "Payment Amount (DZD) *",
+  "paymentMethodLabel": "Payment Method",
+  "paymentMethodCash": "Cash",
+  "paymentMethodBank": "Bank Transfer",
+  "paymentMethodCcp": "CCP Deposit",
+  "paymentMethodCheck": "Check",
+  "paymentRefOptional": "Reference / Receipt No. (Optional)",
+  "confirmPaymentAction": "Confirm Payment",
+  "amountMustBePositive": "Amount must be greater than zero",
+  "amountExceedsInvoiceDebt": "Amount exceeds the remaining balance for this invoice",
+  "amountExceedsTotalDebt": "Amount exceeds the total outstanding debt",
+  "paymentSavedSuccessfully": "Payment recorded successfully",
+  "totalStockValuation": "Stock Value",
+  "totalInvoiced": "Total Invoiced",
+  "totalPaid": "Total Paid",
+  "outstandingDebt": "Remaining Debt",
+  "newPurchaseAction": "New Purchase",
+  "payDebtAction": "Pay Debt",
+  "invoicesTab": "Invoices ({count})",
+  "@invoicesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentsTab": "Payments ({count})",
+  "@paymentsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "productsTab": "Products ({count})",
+  "@productsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noPurchasesRecorded": "No purchase invoices recorded yet.",
+  "recordFirstPurchase": "Record First Purchase",
+  "noPaymentsRecorded": "No payments recorded yet.",
+  "payThisInvoice": "Pay this invoice ({amount} DZD)",
+  "@payThisInvoice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "invoiceLinesTitle": "Invoice Lines ({count})",
+  "@invoiceLinesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sellingPriceShort": "Sell: {price} DZD",
+  "@sellingPriceShort": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "callSupplier": "Call",
+  "whatsappSupplier": "WhatsApp",
+  "editSupplier": "Edit Supplier",
+  "deleteSupplier": "Delete Supplier",
+  "deleteSupplierConfirm": "Are you sure you want to delete this supplier?",
+  "chargilyPaymentPending": "Payment Pending Confirmation",
+  "chargilyPendingExplanation": "Your payment session has been opened. Complete payment in your browser, then tap Check Payment Status below.",
+  "checkPaymentStatus": "Check Payment Status",
+  "paymentNotYetReceived": "Payment has not yet been confirmed by Chargily. Please complete your transaction on the checkout page.",
+  "paymentSuccessCongratulations": "Payment confirmed! Lifetime license activated successfully.",
+  "downPaymentCannotExceedTotal": "Initial payment cannot exceed the invoice total",
+  "paidInFullBadge": "Paid in full",
+  "partiallyPaidBadge": "Partially paid",
+  "unpaidBadge": "Unpaid",
+  "totalInvoiceAmountLabel": "Total Invoice Amount",
+  "amountPaidLabel": "Amount Paid",
+  "outstandingDebtLabel": "Outstanding Debt",
+  "noLineItemsRecorded": "No line items recorded.",
+  "remainingBalanceShort": "Remaining",
+  "paymentTitle": "Payment",
+  "brandTagline": "Smart Business Management",
+  "oneTimePaymentBadge": "One-time payment",
+  "lifetimeLicenseBadge": "Lifetime License",
+  "benefitSafeExperience": "Safe Experience",
+  "benefitLifetimeAccess": "Lifetime Access",
+  "benefitFutureUpdates": "Future Updates",
+  "benefitPremiumSupport": "Premium Support",
+  "securePayment100": "100% Secure Payment",
+  "allPaymentsProtected": "All transactions are protected and secure",
+  "orChooseOtherPayment": "Or choose the other payment method",
+  "licenseDetailsHeader": "License Details",
+  "outOfDays": "out of {total} days",
+  "@outOfDays": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "remainingDaysCount": "{count} days left",
+  "@remainingDaysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanSupplierInvoice": "Scan Invoice",
+  "addPurchaseManually": "Add Purchase Manually",
+  "totalPurchasesLabel": "Total Purchases",
+  "totalPaidLabel": "Total Paid",
+  "outstandingBalanceLabel": "Outstanding Balance",
+  "scanSupplierInvoiceTitle": "Scan Supplier Invoice",
+  "reviewInvoiceItemsTitle": "Review & Receive Stock",
+  "retakePhoto": "Retake Photo",
+  "invoiceNumberLabel": "Invoice Number",
+  "invoiceDateLabel": "Invoice Date",
+  "matchedProductLabel": "Catalog Product",
+  "createNewProductOption": "Create as new product",
+  "unitCostLabel": "Purchase Cost",
+  "sellingPriceLabel": "Selling Price",
+  "lineTotalLabel": "Line Total",
+  "calculatedTotalLabel": "Calculated Total",
+  "detectedTotalLabel": "Detected Total",
+  "totalDiscrepancyWarning": "The sum of items does not match the invoice total.",
+  "duplicateInvoiceWarning": "An invoice with this number already exists for this supplier. Do you want to proceed?",
+  "confirmAndReceiveInventory": "Confirm & Receive Inventory",
+  "receivingSummaryTitle": "Inventory Receipt Summary",
+  "inventoryReceivedSuccess": "Invoice saved and {count} products updated in inventory!",
+  "@inventoryReceivedSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addLineItemButton": "Add Item",
+  "removeLineItemButton": "Remove",
+  "searchCatalogHint": "Search product in catalog...",
+  "downPaymentLabel": "Amount Paid (Down Payment)",
+  "noLineItemsWarning": "Please add or retain at least one product item.",
+  "skipItem": "Skip Item",
+  "itemSkipped": "Skipped",
+  "restoreItem": "Restore",
+  "productsToUpdateCount": "{count} products to update in stock",
+  "@productsToUpdateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newProductsToCreateCount": "{count} new products to create",
+  "@newProductsToCreateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportStatement": "Account Statement",
+  "saleSettlementTitle": "Sale Settlement",
+  "paidInFullTitle": "Paid in Full",
+  "paidInFullDesc": "Full payment received in cash",
+  "unpaidCreditTitle": "Unpaid (Credit)",
+  "unpaidCreditDesc": "Total amount recorded as customer debt",
+  "customerRequiredForCredit": "Please select a customer to record a credit sale",
+  "itemsToReceiveCount": "{count} items to receive",
+  "@itemsToReceiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerCreditProfileTitle": "Customer Credit Profile",
+  "customerStatementTab": "Statement",
+  "unpaidInvoicesTab": "Unpaid Invoices ({count})",
+  "@unpaidInvoicesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentsHistoryTab": "Repayments",
+  "oldestDebtLabel": "Oldest Debt",
+  "noOldestDebt": "No unpaid debt",
+  "totalCreditIncurred": "Total Credit",
+  "totalRepaidLabel": "Total Repaid",
+  "unpaidInvoicesCountLabel": "Unpaid Invoices",
+  "invoiceDetailsTitle": "Invoice Details",
+  "itemsListTitle": "Items Breakdown",
+  "payFullBalanceShortcut": "Pay Full ({amount} DZD)",
+  "@payFullBalanceShortcut": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payHalfBalanceShortcut": "Pay Half (50%)",
+  "noUnpaidInvoicesFound": "No unpaid invoices for this customer",
+  "repaymentNoteOptional": "Payment Note / Reference (Optional)",
+  "confirmRepaymentAction": "Confirm Repayment"
 }
 

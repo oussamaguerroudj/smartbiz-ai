@@ -60,11 +60,16 @@ const customerStatementPdf = asyncHandler(async (req, res) => {
   );
 });
 
+const listPayments = asyncHandler(async (req, res) => {
+  res.json({ data: await service.listPayments(req.user.companyId) });
+});
+
 module.exports = {
   createPurchase,
   listPurchases,
   getPurchase,
   recordPayment,
+  listPayments,
   customerTransactions,
   summary,
   customerStatement,

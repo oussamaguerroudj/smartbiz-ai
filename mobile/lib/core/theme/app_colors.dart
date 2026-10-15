@@ -19,8 +19,34 @@ class AppColors {
   // Semantic
   static const Color warning = Color(0xFFF5A524); // Amber 500
   static const Color danger = Color(0xFFF0654A); // Coral 500
-  static const Color success = primary;
+  static const Color success = Color(0xFF10B981); // Emerald 500 (Clean, modern SaaS green)
   static const Color info = Color(0xFF5B72F7); // Periwinkle — used sparingly
+
+  // Section 5.1: 2026 Premium Design System Tokens
+  static const Color brandPrimary = Color(0xFF304FFE);
+  static const Color brandPrimaryBlue = Color(0xFF3563FF);
+  static const Color brandBrightBlue = Color(0xFF287BFF);
+  static const Color brandViolet = Color(0xFF713BFF);
+  static const Color brandDeepNavy = Color(0xFF071B49);
+  static const Color brandSecondaryNavy = Color(0xFF102B68);
+  static const Color brandCyan = Color(0xFF18C8F4);
+  static const Color brandBackground = Color(0xFFF4F6FD);
+  static const Color brandCard = Color(0xFFFFFFFF);
+  static const Color brandTextPrimary = Color(0xFF111936);
+  static const Color brandTextSecondary = Color(0xFF7884A5);
+  static const Color brandBorder = Color(0xFFE1E7F5);
+  static const Color brandDivider = Color(0xFFE8EDF8);
+
+  static const List<Color> premiumNavyGradient = [
+    Color(0xFF071B49),
+    Color(0xFF102B68),
+    Color(0xFF1A3378),
+  ];
+
+  static const List<Color> primaryButtonGradient = [
+    Color(0xFF287BFF),
+    Color(0xFF713BFF),
+  ];
 
   // Light theme surfaces
   static const Color backgroundLight = Color(0xFFF4F6FC); // Mist

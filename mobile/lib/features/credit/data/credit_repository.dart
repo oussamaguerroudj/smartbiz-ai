@@ -5,9 +5,11 @@ import 'package:uuid/uuid.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
 import '../../../core/sync/sync_service.dart';
-import '../../customers/presentation/screens/customers_screen.dart' show customersRepositoryProvider;
+import '../../customers/presentation/screens/customers_screen.dart'
+    show Customer, customersRepositoryProvider;
 import '../../dashboard/data/dashboard_repository.dart';
 import '../../products/data/products_repository.dart';
 import '../../reports/data/reports_repository.dart' show invalidateAllReports;
@@ -82,7 +84,7 @@ class CustomerTransaction {
   final String? description;
   final DateTime createdAt;
 
-  bool get isPurchase => type == 'credit_purchase';
+  bool get isPurchase => type == 'credit_purchase' || type == 'credit_sale';
 
   factory CustomerTransaction.fromJson(Map<String, dynamic> json) => CustomerTransaction(
         id: json['id'] as String,
@@ -110,6 +112,66 @@ class CreditSummary {
         totalCredit: double.parse(json['totalCredit'].toString()),
         totalPaid: double.parse(json['totalPaid'].toString()),
       );
+}
+
+class CustomerInvoiceItem {
+  CustomerInvoiceItem({
+    required this.productName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.lineTotal,
+  });
+
+  final String productName;
+  final double quantity;
+  final double unitPrice;
+  final double lineTotal;
+}
+
+class CustomerInvoiceDetail {
+  CustomerInvoiceDetail({
+    required this.id,
+    required this.invoiceNumber,
+    required this.date,
+    required this.total,
+    required this.amountPaid,
+    required this.remainingBalance,
+    required this.status,
+    required this.items,
+  });
+
+  final String id;
+  final String invoiceNumber;
+  final DateTime date;
+  final double total;
+  final double amountPaid;
+  final double remainingBalance;
+  final String status;
+  final List<CustomerInvoiceItem> items;
+}
+
+class CustomerCreditProfile {
+  CustomerCreditProfile({
+    required this.customer,
+    required this.totalCreditSales,
+    required this.totalRepayments,
+    required this.remainingBalance,
+    required this.unpaidInvoiceCount,
+    required this.oldestDebtDate,
+    required this.transactions,
+    required this.unpaidInvoices,
+    required this.allInvoices,
+  });
+
+  final Customer customer;
+  final double totalCreditSales;
+  final double totalRepayments;
+  final double remainingBalance;
+  final int unpaidInvoiceCount;
+  final DateTime? oldestDebtDate;
+  final List<CustomerTransaction> transactions;
+  final List<CustomerInvoiceDetail> unpaidInvoices;
+  final List<CustomerInvoiceDetail> allInvoices;
 }
 
 class CreditRepository {
@@ -218,7 +280,6 @@ class CreditRepository {
           'company_id': companyId,
           'customer_id': customerId,
           'amount': amountPaidNow,
-          'payment_date': nowIso,
           'note': 'Paid at time of purchase',
           'created_at': nowIso,
           'synced': 0,
@@ -290,6 +351,10 @@ class CreditRepository {
     final companyId = _companyId;
     if (companyId == null) return;
 
+    if (amount <= 0) {
+      throw ApiException(statusCode: 400, message: 'Amount must be greater than zero', code: 'INVALID_AMOUNT');
+    }
+
     final db = await AppDatabase.instance.database;
 
     // Scoped to this company's customers
@@ -300,8 +365,16 @@ class CreditRepository {
       limit: 1,
     );
     final currentBalance = custRows.isNotEmpty ? ((custRows.first['balance_due'] as num?)?.toDouble() ?? 0.0) : 0.0;
-    final newBalance = (currentBalance - amount).clamp(0.0, double.infinity);
 
+    if (amount > currentBalance + 0.01) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Repayment amount cannot exceed total outstanding balance',
+        code: 'OVERPAYMENT',
+      );
+    }
+
+    final newBalance = (currentBalance - amount).clamp(0.0, double.infinity);
     final paymentId = const Uuid().v4();
     final nowIso = DateTime.now().toIso8601String();
 
@@ -312,7 +385,6 @@ class CreditRepository {
         'company_id': companyId,
         'customer_id': customerId,
         'amount': amount,
-        'payment_date': nowIso,
         'note': note,
         'created_at': nowIso,
         'synced': 0,
@@ -331,9 +403,45 @@ class CreditRepository {
         'type': 'payment',
         'amount': -amount,
         'balance_after': newBalance,
-        'description': note ?? 'Payment',
+        'description': note ?? 'Debt Repayment',
         'created_at': nowIso,
       });
+
+      // FIFO settlement for credit sales
+      if (newBalance <= 0.005) {
+        // All customer debts are completely settled
+        await txn.update(
+          'sales',
+          {'payment_status': 'paid'},
+          where: 'customer_id = ? AND company_id = ? AND payment_status != ?',
+          whereArgs: [customerId, companyId, 'paid'],
+        );
+      } else {
+        final allCreditSales = await txn.query(
+          'sales',
+          where: 'customer_id = ? AND company_id = ? AND payment_status != ?',
+          whereArgs: [customerId, companyId, 'paid'],
+          orderBy: 'sold_at ASC',
+        );
+        final totalDebtOfSales = allCreditSales.fold<double>(
+          0.0,
+          (sum, s) => sum + ((s['total'] as num?)?.toDouble() ?? 0.0),
+        );
+        double paidAmountToDistribute = (totalDebtOfSales - newBalance).clamp(0.0, double.infinity);
+
+        for (final s in allCreditSales) {
+          final sTotal = ((s['total'] as num?)?.toDouble() ?? 0.0);
+          if (paidAmountToDistribute >= sTotal - 0.005) {
+            await txn.update('sales', {'payment_status': 'paid'}, where: 'id = ?', whereArgs: [s['id']]);
+            paidAmountToDistribute -= sTotal;
+          } else if (paidAmountToDistribute > 0.005) {
+            await txn.update('sales', {'payment_status': 'partial'}, where: 'id = ?', whereArgs: [s['id']]);
+            paidAmountToDistribute = 0;
+          } else {
+            await txn.update('sales', {'payment_status': 'unpaid'}, where: 'id = ?', whereArgs: [s['id']]);
+          }
+        }
+      }
     });
 
     final payload = {
@@ -356,6 +464,163 @@ class CreditRepository {
     invalidateAllReports(_ref);
 
     unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
+  }
+
+  Future<CustomerCreditProfile> getCustomerCreditProfile(String customerId) async {
+    final companyId = _companyId;
+    if (companyId == null) throw Exception('Not authenticated');
+
+    final db = await AppDatabase.instance.database;
+
+    // 1. Fetch customer details
+    final custRows = await db.query(
+      'customers',
+      where: 'id = ? AND company_id = ?',
+      whereArgs: [customerId, companyId],
+      limit: 1,
+    );
+    if (custRows.isEmpty) throw Exception('Customer not found');
+    final customer = Customer.fromJson(custRows.first);
+
+    // 2. Fetch all chronological transactions
+    final transactions = await customerTransactions(customerId);
+
+    // 3. Fetch sales & invoices
+    final salesRows = await db.rawQuery('''
+      SELECT s.id, s.total, s.discount, s.payment_status, s.sold_at, s.created_at, inv.invoice_number
+      FROM sales s
+      LEFT JOIN invoices inv ON inv.sale_id = s.id
+      WHERE s.customer_id = ? AND s.company_id = ?
+      ORDER BY s.sold_at DESC
+    ''', [customerId, companyId]);
+
+    final List<CustomerInvoiceDetail> invoicesList = [];
+
+    for (final s in salesRows) {
+      final saleId = s['id'] as String;
+      final total = (s['total'] as num?)?.toDouble() ?? 0.0;
+      final rawStatus = (s['payment_status'] as String? ?? 'paid').toLowerCase();
+      final dateStr = (s['sold_at'] ?? s['created_at']) as String;
+      final invNumber = s['invoice_number'] as String? ?? 'INV-${saleId.substring(0, 6).toUpperCase()}';
+
+      final itemsRows = await db.query(
+        'sale_items',
+        where: 'sale_id = ?',
+        whereArgs: [saleId],
+      );
+
+      final items = itemsRows.map((it) => CustomerInvoiceItem(
+        productName: it['product_name'] as String? ?? 'Product',
+        quantity: (it['quantity'] as num?)?.toDouble() ?? 1.0,
+        unitPrice: (it['unit_price'] as num?)?.toDouble() ?? 0.0,
+        lineTotal: (it['line_total'] as num?)?.toDouble() ?? 0.0,
+      )).toList();
+
+      double amountPaid = 0.0;
+      double remaining = total;
+      if (rawStatus == 'paid') {
+        amountPaid = total;
+        remaining = 0.0;
+      } else if (rawStatus == 'unpaid') {
+        amountPaid = 0.0;
+        remaining = total;
+      } else {
+        amountPaid = 0.0;
+        remaining = total;
+      }
+
+      invoicesList.add(CustomerInvoiceDetail(
+        id: saleId,
+        invoiceNumber: invNumber,
+        date: DateTime.tryParse(dateStr) ?? DateTime.now(),
+        total: total,
+        amountPaid: amountPaid,
+        remainingBalance: remaining,
+        status: rawStatus,
+        items: items,
+      ));
+    }
+
+    // 4. Fetch legacy credit_purchases
+    final cpRows = await db.query(
+      'credit_purchases',
+      where: 'customer_id = ? AND company_id = ?',
+      whereArgs: [customerId, companyId],
+      orderBy: 'created_at DESC',
+    );
+
+    for (final cp in cpRows) {
+      final cpId = cp['id'] as String;
+      final subtotal = (cp['subtotal'] as num?)?.toDouble() ?? 0.0;
+      final paidNow = (cp['amount_paid_now'] as num?)?.toDouble() ?? 0.0;
+      final remaining = (cp['remaining_credit'] as num?)?.toDouble() ?? 0.0;
+      final status = cp['status'] as String? ?? 'unpaid';
+      final dateStr = cp['created_at'] as String;
+
+      final itemsRows = await db.query(
+        'credit_items',
+        where: 'purchase_id = ?',
+        whereArgs: [cpId],
+      );
+
+      final items = itemsRows.map((it) => CustomerInvoiceItem(
+        productName: it['product_name'] as String? ?? 'Product',
+        quantity: (it['quantity'] as num?)?.toDouble() ?? 1.0,
+        unitPrice: (it['unit_price'] as num?)?.toDouble() ?? 0.0,
+        lineTotal: (it['line_total'] as num?)?.toDouble() ?? 0.0,
+      )).toList();
+
+      invoicesList.add(CustomerInvoiceDetail(
+        id: cpId,
+        invoiceNumber: 'CR-${cpId.substring(0, 6).toUpperCase()}',
+        date: DateTime.tryParse(dateStr) ?? DateTime.now(),
+        total: subtotal,
+        amountPaid: paidNow,
+        remainingBalance: remaining,
+        status: status,
+        items: items,
+      ));
+    }
+
+    invoicesList.sort((a, b) => b.date.compareTo(a.date));
+
+    // Filter unpaid invoices: if status is unpaid or partial or remainingBalance > 0
+    final unpaidInvoices = invoicesList
+        .where((inv) => inv.remainingBalance > 0.005 || inv.status == 'unpaid' || inv.status == 'partial' || inv.status == 'partially_paid')
+        .toList();
+
+    DateTime? oldestDebt;
+    if (unpaidInvoices.isNotEmpty) {
+      oldestDebt = unpaidInvoices.map((i) => i.date).reduce((a, b) => a.isBefore(b) ? a : b);
+    }
+
+    // Calculate total credit sales and total repayments from transactions
+    double totalCredit = 0.0;
+    double totalRepayments = 0.0;
+
+    for (final tx in transactions) {
+      if (tx.amount > 0) {
+        totalCredit += tx.amount;
+      } else {
+        totalRepayments += tx.amount.abs();
+      }
+    }
+
+    if (totalCredit == 0 && invoicesList.isNotEmpty) {
+      totalCredit = invoicesList.fold(0.0, (acc, i) => acc + i.total);
+    }
+
+    return CustomerCreditProfile(
+      customer: customer,
+      totalCreditSales: totalCredit,
+      totalRepayments: totalRepayments,
+      remainingBalance: customer.balanceDue,
+      unpaidInvoiceCount: unpaidInvoices.length,
+      oldestDebtDate: oldestDebt,
+      transactions: transactions,
+      unpaidInvoices: unpaidInvoices,
+      allInvoices: invoicesList,
+    );
   }
 
   Future<CreditSummary> summary() async {

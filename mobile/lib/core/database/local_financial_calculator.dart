@@ -124,11 +124,7 @@ class LocalFinancialCalculator {
         '''
         SELECT COALESCE(SUM(amount), 0) AS total
         FROM credit_payments
-        WHERE company_id = ? AND (CASE
-          WHEN payment_date IS NOT NULL AND payment_date != '' THEN
-            (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
-          ELSE $_safeCreatedAtDate
-        END) BETWEEN date(?) AND date(?)
+        WHERE company_id = ? AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)
         ''',
         [companyId, rangeStart, rangeEnd],
       );
@@ -347,11 +343,7 @@ class LocalFinancialCalculator {
         double mCredit = 0.0;
         try {
           final mCreditRes = await activeDb.rawQuery(
-            '''SELECT COALESCE(SUM(amount), 0) AS total FROM credit_payments WHERE company_id = ? AND (CASE
-              WHEN payment_date IS NOT NULL AND payment_date != '' THEN
-                (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
-              ELSE $_safeCreatedAtDate
-            END) BETWEEN date(?) AND date(?)''',
+            '''SELECT COALESCE(SUM(amount), 0) AS total FROM credit_payments WHERE company_id = ? AND $_safeCreatedAtDate BETWEEN date(?) AND date(?)''',
             [companyId, mStart, mEnd],
           );
           mCredit = (mCreditRes.first['total'] as num?)?.toDouble() ?? 0.0;

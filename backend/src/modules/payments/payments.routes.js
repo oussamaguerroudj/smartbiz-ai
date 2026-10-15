@@ -15,5 +15,7 @@ router.post('/manual-request', paymentsController.createManualRequest);
 router.post('/manual-request/:id/receipt', paymentsController.uploadReceipt);
 router.get('/manual-requests', paymentsController.listManualRequests);
 router.get('/receipts/:filename', paymentsController.viewReceipt);
+router.get('/orders/:orderId', paymentsController.getOrderStatus);
+router.get('/active-order', paymentsController.getActiveOrder);
 
 module.exports = router;

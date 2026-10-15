@@ -162,6 +162,21 @@ class SubscriptionsRepository {
     return (response as Map<String, dynamic>)['data'] as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> getOrderStatus(String orderId) async {
+    final response = await _apiClient.get('/payments/orders/$orderId');
+    return (response as Map<String, dynamic>)['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>?> getActivePaymentOrder() async {
+    try {
+      final response = await _apiClient.get('/payments/active-order');
+      if (response is Map<String, dynamic> && response['data'] != null) {
+        return response['data'] as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<Map<String, dynamic>> createManualPaymentRequest({String? transferReference}) async {
     final response = await _apiClient.post('/payments/manual-request', body: {
       if (transferReference != null) 'transferReference': transferReference,

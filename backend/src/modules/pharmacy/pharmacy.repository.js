@@ -111,25 +111,32 @@ async function salesSummaryForRange(companyId, rangeStart, rangeEnd) {
          SELECT SUM(s2.total)
          FROM sales s2
          WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
+           AND s2.payment_status = 'paid'
        ), 0) AS revenue,
        COALESCE((
          SELECT SUM(s2.total)
          FROM sales s2
          WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
+           AND s2.payment_status = 'paid'
        ), 0) - COALESCE((
          SELECT SUM(si.unit_cost * si.quantity)
          FROM sale_items si
          JOIN sales s2 ON s2.id = si.sale_id
          WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
+           AND s2.payment_status != 'cancelled'
        ), 0) AS gross_profit,
-       COUNT(*)::int AS transaction_count,
+       COALESCE((
+         SELECT COUNT(*)::int
+         FROM sales s2
+         WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
+           AND s2.payment_status != 'cancelled'
+       ), 0) AS transaction_count,
        COALESCE((
          SELECT SUM(si.quantity) FROM sale_items si
          JOIN sales s2 ON s2.id = si.sale_id
          WHERE s2.company_id = $1 AND s2.sold_at::date BETWEEN $2::date AND $3::date
-       ), 0)::int AS units_sold
-     FROM sales s
-     WHERE s.company_id = $1 AND s.sold_at::date BETWEEN $2::date AND $3::date`,
+           AND s2.payment_status != 'cancelled'
+       ), 0)::int AS units_sold`,
     [companyId, rangeStart, rangeEnd],
   );
   const row = result.rows[0] || { revenue: 0, gross_profit: 0, transaction_count: 0, units_sold: 0 };

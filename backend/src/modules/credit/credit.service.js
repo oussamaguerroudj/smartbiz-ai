@@ -343,10 +343,31 @@ async function streamCustomerCreditStatementPdf(res, companyId, customerId) {
   pdfService.streamCustomerCreditStatementPdf(res, { company, customer, statement });
 }
 
+async function listPayments(companyId) {
+  const result = await query(
+    `SELECT id, company_id, customer_id, credit_purchase_id, amount, note, client_id, paid_at AS created_at
+     FROM credit_payments
+     WHERE company_id = $1
+     ORDER BY paid_at DESC`,
+    [companyId],
+  );
+  return result.rows.map((r) => ({
+    id: r.id,
+    company_id: r.company_id,
+    customer_id: r.customer_id,
+    credit_purchase_id: r.credit_purchase_id,
+    amount: Number(r.amount),
+    note: r.note,
+    client_id: r.client_id,
+    created_at: r.created_at,
+  }));
+}
+
 module.exports = {
   createCreditPurchase,
   recordPayment,
   listCreditPurchases,
+  listPayments,
   getCreditPurchase,
   getCustomerTransactions,
   getSummary,

@@ -267,19 +267,29 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
     final paymentSelection = await showModalBottomSheet<_PaymentOption?>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusCard)),
+      ),
       builder: (ctx) => _PaymentMethodSheet(
         cartTotal: activeCart.total,
         customerName: activeCart.customerName,
+        hasCustomer: activeCart.customerId != null,
       ),
     );
     if (paymentSelection == null || !mounted) return;
 
     var currentCustomerId = activeCart.customerId;
-    if (paymentSelection.status != PaymentStatus.paid && currentCustomerId == null) {
-      _showSnack(l10n.selectCustomerFirst);
+    if (paymentSelection.status == PaymentStatus.unpaid && currentCustomerId == null) {
+      _showSnack(l10n.customerRequiredForCredit);
       final chosen = await _openCustomerPicker();
-      if (chosen == null || !mounted) return;
+      if (chosen == null || !mounted) {
+        _showSnack(l10n.customerRequiredForCredit);
+        return;
+      }
       currentCustomerId = chosen.id;
+      final cartManager = ref.read(multiCartProvider.notifier);
+      await cartManager.updateCustomer(customerId: chosen.id, customerName: chosen.name);
     }
 
     setState(() => _isSubmitting = true);
@@ -831,10 +841,12 @@ class _PaymentMethodSheet extends StatefulWidget {
   const _PaymentMethodSheet({
     required this.cartTotal,
     this.customerName,
+    this.hasCustomer = false,
   });
 
   final double cartTotal;
   final String? customerName;
+  final bool hasCustomer;
 
   @override
   State<_PaymentMethodSheet> createState() => _PaymentMethodSheetState();
@@ -842,20 +854,11 @@ class _PaymentMethodSheet extends StatefulWidget {
 
 class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
   String _selectedMethod = 'paid';
-  final _amountPaidController = TextEditingController();
-
-  @override
-  void dispose() {
-    _amountPaidController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final total = widget.cartTotal;
-    final partialPaid = double.tryParse(_amountPaidController.text) ?? 0.0;
-    final remainingCredit = (total - partialPaid).clamp(0.0, total);
 
     return SafeArea(
       child: Padding(
@@ -874,7 +877,7 @@ class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Règlement de la vente',
+                    l10n.saleSettlementTitle,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -891,18 +894,28 @@ class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
               if (widget.customerName != null) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Client: ${widget.customerName}',
+                  widget.customerName!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondaryLight,
                       ),
                 ),
               ],
               const Divider(height: 24),
+              // Option 1: Paid in Full
               InkWell(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
                 onTap: () => setState(() => _selectedMethod = 'paid'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                    color: _selectedMethod == 'paid'
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                    border: Border.all(
+                      color: _selectedMethod == 'paid' ? AppColors.primary : Colors.transparent,
+                    ),
+                  ),
                   child: Row(
                     children: [
                       Icon(
@@ -916,8 +929,9 @@ class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l10n.statusPaid, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const Text('Paiement comptant reçu en totalité', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(l10n.paidInFullTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 2),
+                            Text(l10n.paidInFullDesc, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -925,16 +939,27 @@ class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              // Option 2: Unpaid (Credit)
               InkWell(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
                 onTap: () => setState(() => _selectedMethod = 'credit'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                    color: _selectedMethod == 'credit'
+                        ? AppColors.warning.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                    border: Border.all(
+                      color: _selectedMethod == 'credit' ? AppColors.warning : Colors.transparent,
+                    ),
+                  ),
                   child: Row(
                     children: [
                       Icon(
                         _selectedMethod == 'credit' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        color: _selectedMethod == 'credit' ? AppColors.primary : Colors.grey,
+                        color: _selectedMethod == 'credit' ? AppColors.warning : Colors.grey,
                       ),
                       const SizedBox(width: 12),
                       const Icon(Icons.credit_card_outlined, color: AppColors.warning),
@@ -943,8 +968,9 @@ class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l10n.statusUnpaid, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const Text('Vente à crédit — totalité en dette client', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(l10n.unpaidCreditTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 2),
+                            Text(l10n.unpaidCreditDesc, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -952,73 +978,49 @@ class _PaymentMethodSheetState extends State<_PaymentMethodSheet> {
                   ),
                 ),
               ),
-              InkWell(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                onTap: () => setState(() => _selectedMethod = 'partial'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              if (_selectedMethod == 'credit' && !widget.hasCustomer) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning),
+                  ),
                   child: Row(
                     children: [
-                      Icon(
-                        _selectedMethod == 'partial' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        color: _selectedMethod == 'partial' ? AppColors.primary : Colors.grey,
-                      ),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.payments_outlined, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Paiement partiel', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text('Acompte payé maintenant, reste en dette', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
+                      const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.customerRequiredForCredit,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF8A5A00),
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ),
-              if (_selectedMethod == 'partial') ...[
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _amountPaidController,
-                  keyboardType: TextInputType.number,
-                  autofocus: true,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: l10n.amountToPayNowLabel,
-                    suffixText: 'DZD',
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${l10n.remainingCreditLabel}: ${remainingCredit.toStringAsFixed(0)} DZD',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.warning,
                   ),
                 ),
               ],
               const SizedBox(height: 20),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _selectedMethod == 'credit' ? AppColors.warning : AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
                 onPressed: () {
                   if (_selectedMethod == 'paid') {
-                    Navigator.of(context).pop(const _PaymentOption(status: PaymentStatus.paid));
-                  } else if (_selectedMethod == 'credit') {
-                    Navigator.of(context).pop(const _PaymentOption(status: PaymentStatus.unpaid, amountPaidNow: 0.0));
+                    Navigator.of(context).pop(_PaymentOption(status: PaymentStatus.paid, amountPaidNow: total));
                   } else {
-                    if (partialPaid <= 0 || partialPaid >= total) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.amountExceedsTotal)),
-                      );
-                      return;
-                    }
-                    Navigator.of(context).pop(_PaymentOption(status: PaymentStatus.partial, amountPaidNow: partialPaid));
+                    Navigator.of(context).pop(const _PaymentOption(status: PaymentStatus.unpaid, amountPaidNow: 0.0));
                   }
                 },
-                child: Text(l10n.confirmSaleButton),
+                child: Text(l10n.confirmSaleButton, style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),

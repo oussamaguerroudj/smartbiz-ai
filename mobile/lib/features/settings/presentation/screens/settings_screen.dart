@@ -2,23 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/directional_chevron.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
+import '../../../../core/widgets/settings_group.dart';
+import '../../../../core/widgets/status_pill.dart';
 import '../../data/settings_providers.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../widgets/clear_application_data_dialog.dart';
 import 'profile_screen.dart';
 import '../../../subscriptions/data/subscriptions_repository.dart';
-import '../../../subscriptions/presentation/screens/purchase_screen.dart';
 import '../../../subscriptions/presentation/screens/subscription_screen.dart';
 import '../../../support/presentation/screens/contact_us_screen.dart';
 import '../../../support/presentation/screens/feedback_screen.dart';
 
-/// Settings — Spec Ch. 23. Business profile / currency editing from
-/// Settings still needs its own dedicated edit screen — PUT /companies/me
-/// exists and IS used already (Business Setup screen, onboarding), but
-/// there's no "edit later" UI wired to it yet from here. Theme and
-/// language are fully functional (Phase 5 wiring). Logout is real.
+/// Production-Grade 2026 Premium Application Settings Screen for Modiri AI.
+/// Pixel-perfect implementation following the approved design reference.
+/// Features the Modiri AI Brand Header Card, structured system, business profile,
+/// appearance, localization, support, and data management sections.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -39,188 +40,399 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final entitlementAsync = ref.watch(entitlementProvider);
     final entitlement = entitlementAsync.valueOrNull;
 
     String licenseSubtitle = l10n.lifetimeLicenseSubtitle;
+    PillTone licenseTone = PillTone.brand;
+    String licenseBadgeText = l10n.subscriptionStatusTrial;
+
     if (entitlement != null) {
       if (entitlement.entitlementType == 'lifetime') {
-        licenseSubtitle = 'Licence à vie active / Active';
+        licenseSubtitle = l10n.subscriptionLifetimeDesc;
+        licenseTone = PillTone.success;
+        licenseBadgeText = l10n.subscriptionStatusLifetime;
       } else if (entitlement.entitlementType == 'trial') {
         final days = entitlement.daysRemaining ?? 0;
         licenseSubtitle = l10n.trialExpiringNotice(days);
+        licenseTone = days <= 3 ? PillTone.warning : PillTone.brand;
+        licenseBadgeText = l10n.subscriptionDaysRemaining(days);
       } else if (entitlement.status == 'expired') {
         licenseSubtitle = l10n.trialExpiredNotice;
+        licenseTone = PillTone.warning;
+        licenseBadgeText = l10n.subscriptionStatusExpired;
+      } else if (entitlement.isSuspended) {
+        licenseSubtitle = l10n.subscriptionSuspendedDesc;
+        licenseTone = PillTone.danger;
+        licenseBadgeText = l10n.subscriptionStatusSuspended;
       }
     }
 
-      return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-        children: [
-          _SettingsSectionHeader(title: l10n.moreSectionSystem),
-          _SettingsTile(
-            icon: Icons.workspace_premium_rounded,
-            title: l10n.lifetimeLicenseTitle,
-            subtitle: licenseSubtitle,
-            iconColor: entitlement?.entitlementType == 'lifetime' ? AppColors.success : AppColors.primary,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
-              );
-            },
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.brandBackground,
+      appBar: AppBar(
+        title: Text(
+          l10n.settingsTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        centerTitle: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
           ),
-          const SizedBox(height: AppSpacing.sm),
-          _SettingsSectionHeader(title: l10n.businessProfileTitle),
-          _SettingsTile(
-            icon: Icons.storefront_outlined,
-            title: l10n.businessProfileTitle,
-            subtitle: l10n.businessProfileSubtitle,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
-          ),
-          _SettingsTile(
-            icon: Icons.payments_outlined,
-            title: l10n.currencyTitle,
-            subtitle: 'DZD',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _SettingsSectionHeader(title: l10n.themeTitle),
-          _SettingsTile(
-            icon: Icons.dark_mode_outlined,
-            title: l10n.themeTitle,
-            subtitle: _themeLabel(l10n, themeMode),
-            onTap: () => _showThemePicker(context, ref, themeMode),
-          ),
-          _SettingsTile(
-            icon: Icons.language_outlined,
-            title: l10n.languageTitle,
-            subtitle: _localeLabel(locale ?? Localizations.localeOf(context)),
-            onTap: () => _showLocalePicker(
-              context,
-              ref,
-              locale ?? Localizations.localeOf(context),
+          children: [
+            // 1. Modiri AI Brand Card
+            _buildBrandHeaderCard(context, l10n, isDark),
+            const SizedBox(height: 12),
+
+            // 2. Section 1: Account & Licensing
+            SettingsGroup(
+              title: l10n.accountSystemSection,
+              items: [
+                SettingsTileData(
+                  icon: Icons.storefront_rounded,
+                  title: l10n.businessProfileTitle,
+                  subtitle: l10n.businessProfileSubtitle,
+                  iconColor: AppColors.brandPrimaryBlue,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                ),
+                SettingsTileData(
+                  icon: Icons.payments_rounded,
+                  title: l10n.currencyTitle,
+                  subtitle: 'DZD',
+                  iconColor: const Color(0xFF0EA5E9),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                ),
+                SettingsTileData(
+                  icon: Icons.workspace_premium_rounded,
+                  title: l10n.lifetimeLicenseTitle,
+                  subtitle: licenseSubtitle,
+                  iconColor: entitlement?.entitlementType == 'lifetime'
+                      ? AppColors.success
+                      : AppColors.brandPrimaryBlue,
+                  badge: StatusPill(
+                    label: licenseBadgeText,
+                    tone: licenseTone,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                    );
+                  },
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _SettingsSectionHeader(title: l10n.contactUsTitle),
-          _SettingsTile(
-            icon: Icons.support_agent_rounded,
-            title: l10n.contactUsTitle,
-            subtitle: l10n.contactOnWhatsApp,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ContactUsScreen()),
-              );
-            },
-          ),
-          _SettingsTile(
-            icon: Icons.rate_review_outlined,
-            title: l10n.feedbackTitle,
-            subtitle: l10n.submitFeedbackAction,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const FeedbackScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _SettingsSectionHeader(title: l10n.clearDataTitle),
-          _SettingsTile(
-            icon: Icons.delete_forever_rounded,
-            title: l10n.clearDataTitle,
-            subtitle: l10n.clearDataSubtitle,
-            iconColor: AppColors.danger,
-            onTap: () => _showClearDataDialog(context, ref),
-          ),
-          _SettingsTile(
-            icon: Icons.logout_rounded,
-            title: l10n.logoutTitle,
-            iconColor: AppColors.danger,
-            onTap: () => _confirmLogout(context, ref),
-          ),
-        ].staggered(),
+            const SizedBox(height: 6),
+
+            // 4. Section 3: Preferences & Appearance
+            SettingsGroup(
+              title: l10n.preferencesSection,
+              items: [
+                SettingsTileData(
+                  icon: Icons.dark_mode_rounded,
+                  title: l10n.themeTitle,
+                  subtitle: _themeLabel(l10n, themeMode),
+                  iconColor: const Color(0xFF8B5CF6),
+                  onTap: () => _showThemePicker(context, ref, themeMode),
+                ),
+                SettingsTileData(
+                  icon: Icons.language_rounded,
+                  title: l10n.languageTitle,
+                  subtitle: _localeLabel(locale ?? Localizations.localeOf(context)),
+                  iconColor: const Color(0xFF3B82F6),
+                  onTap: () => _showLocalePicker(
+                    context,
+                    ref,
+                    locale ?? Localizations.localeOf(context),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // 5. Section 4: Help & Support
+            SettingsGroup(
+              title: l10n.supportSection,
+              items: [
+                SettingsTileData(
+                  icon: Icons.headset_mic_rounded,
+                  title: l10n.contactUsTitle,
+                  subtitle: l10n.contactOnWhatsApp,
+                  iconColor: const Color(0xFF10B981),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ContactUsScreen()),
+                    );
+                  },
+                ),
+                SettingsTileData(
+                  icon: Icons.edit_note_rounded,
+                  title: l10n.feedbackTitle,
+                  subtitle: l10n.submitFeedbackAction,
+                  iconColor: const Color(0xFFF59E0B),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const FeedbackScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // 6. Section 5: Data Management & System Maintenance
+            SettingsGroup(
+              title: l10n.dataManagementSection,
+              items: [
+                SettingsTileData(
+                  icon: Icons.delete_sweep_rounded,
+                  title: l10n.clearDataTitle,
+                  subtitle: l10n.clearDataSubtitle,
+                  iconColor: AppColors.danger,
+                  onTap: () => _showClearDataDialog(context, ref),
+                ),
+                SettingsTileData(
+                  icon: Icons.logout_rounded,
+                  title: l10n.logoutTitle,
+                  iconColor: AppColors.danger,
+                  isDestructive: true,
+                  onTap: () => _confirmLogout(context, ref),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // 7. App Version & Platform Branding Footer
+            Center(
+              child: Column(
+                children: [
+                  Text(
+                    'Modiri AI • ${l10n.appVersion} 0.1.5 (Build 13)',
+                    style: TextStyle(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.brandTextSecondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Smart Business Management Platform',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: (isDark ? AppColors.textSecondaryDark : AppColors.brandTextSecondary)
+                          .withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
 
-
-  Future<void> _showClearDataDialog(BuildContext context, WidgetRef ref) async {
-    final result = await ClearApplicationDataDialog.show(context);
-    if (result != null && context.mounted) {
-      final isSuccess = result == true || (result is Map && result['cleared'] == true);
-      if (isSuccess) {
-        final l10n = AppLocalizations.of(context)!;
-        final isOffline = (result is Map && result['isOffline'] == true);
-        _snack(context, isOffline ? l10n.clearDataOfflineSuccess : l10n.clearDataSuccess);
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    }
-  }
-
-  void _snack(BuildContext context, String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
-  void _confirmLogout(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.logoutTitle),
-        content: Text(l10n.logoutConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cancel),
+  /// Modiri AI Brand Header Card
+  Widget _buildBrandHeaderCard(BuildContext context, AppLocalizations l10n, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.brandBorder,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              ref.read(authRepositoryProvider).logout();
-              // Pop every pushed screen back to the app's base route —
-              // main.dart's _AppFlow will then rebuild and, seeing the
-              // now-empty session, fall back to the Login screen.
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: Text(l10n.logoutTitle),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Logo Icon Container
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF287BFF),
+                  Color(0xFF713BFF),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.brandPrimaryBlue.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Text(
+                    'M',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Title & Tagline
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Modiri AI',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.brandTagline,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.brandTextSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  Future<void> _showClearDataDialog(BuildContext context, WidgetRef ref) async {
+    final result = await ClearApplicationDataDialog.show(context);
+    if (result != null && context.mounted) {
+      final isSuccess = result == true || (result is Map && result['cleared'] == true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isSuccess
+                ? 'Local cache cleared successfully'
+                : 'Failed to clear local cache completely',
+          ),
+          backgroundColor: isSuccess ? AppColors.success : AppColors.danger,
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.logoutTitle),
+        content: Text(l10n.logoutConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.logoutTitle),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await ref.read(authRepositoryProvider).logout();
+    }
+  }
+
   void _showThemePicker(BuildContext context, WidgetRef ref, ThemeMode current) {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: RadioGroup<ThemeMode>(
-            groupValue: current,
-            onChanged: (v) {
-              if (v != null) {
-                ref.read(themeModeProvider.notifier).state = v;
-                Navigator.of(context).pop();
-              }
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: ThemeMode.values
-                  .map((m) => RadioListTile<ThemeMode>(
-                        title: Text(_themeLabel(l10n, m)),
-                        value: m,
-                      ))
-                  .toList(),
-            ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.brightness_auto_outlined),
+                title: Text(l10n.themeSystem),
+                trailing: current == ThemeMode.system
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  ref.read(themeModeProvider.notifier).state = ThemeMode.system;
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.light_mode_outlined),
+                title: Text(l10n.themeLight),
+                trailing: current == ThemeMode.light
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  ref.read(themeModeProvider.notifier).state = ThemeMode.light;
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.dark_mode_outlined),
+                title: Text(l10n.themeDark),
+                trailing: current == ThemeMode.dark
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  ref.read(themeModeProvider.notifier).state = ThemeMode.dark;
+                  Navigator.of(ctx).pop();
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -230,103 +442,45 @@ class SettingsScreen extends ConsumerWidget {
   void _showLocalePicker(BuildContext context, WidgetRef ref, Locale current) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: RadioGroup<Locale>(
-            groupValue: current,
-            onChanged: (v) {
-              if (v != null) {
-                ref.read(localeProvider.notifier).setLocale(v);
-                Navigator.of(context).pop();
-              }
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: supportedLocales
-                  .map((l) => RadioListTile<Locale>(
-                        title: Text(_localeLabel(l)),
-                        value: l,
-                      ))
-                  .toList(),
-            ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('العربية'),
+                trailing: current.languageCode == 'ar'
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  ref.read(localeProvider.notifier).setLocale(const Locale('ar'));
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              ListTile(
+                title: const Text('Français'),
+                trailing: current.languageCode == 'fr'
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  ref.read(localeProvider.notifier).setLocale(const Locale('fr'));
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              ListTile(
+                title: const Text('English'),
+                trailing: current.languageCode == 'en'
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  ref.read(localeProvider.notifier).setLocale(const Locale('en'));
+                  Navigator.of(ctx).pop();
+                },
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SettingsSectionHeader extends StatelessWidget {
-  const _SettingsSectionHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        left: AppSpacing.xs,
-        right: AppSpacing.xs,
-        top: AppSpacing.xs,
-        bottom: 4,
-      ),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.iconColor,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Color? iconColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = iconColor ?? AppColors.primary;
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-        boxShadow: AppSpacing.cardElevation,
-      ),
-      child: ListTile(
-        leading: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(11),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, color: color, size: 19),
-        ),
-        title: Text(title),
-        subtitle: subtitle != null ? Text(subtitle!) : null,
-        trailing: Icon(
-          Directionality.of(context) == TextDirection.rtl
-              ? Icons.chevron_left
-              : Icons.chevron_right,
-        ),
-        onTap: onTap,
       ),
     );
   }

@@ -90,7 +90,7 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
       final unsyncedSalesRes = await db.rawQuery(
         '''
         SELECT
-          COALESCE(SUM(total), 0) AS revenue,
+          COALESCE(SUM(CASE WHEN s.payment_status = 'paid' THEN s.total ELSE 0 END), 0) AS revenue,
           COALESCE(SUM(
             (SELECT COALESCE(SUM(COALESCE(NULLIF(si.unit_cost, 0), p.purchase_price, 0) * si.quantity), 0)
              FROM sale_items si
@@ -119,11 +119,7 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
           SELECT COALESCE(SUM(amount), 0) AS total
           FROM credit_payments
           WHERE company_id = ? AND synced = 0
-            AND (CASE
-              WHEN payment_date IS NOT NULL AND payment_date != '' THEN
-                (CASE WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime') ELSE date(payment_date) END)
-              ELSE (CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END)
-            END) = date(?)
+            AND ${LocalFinancialCalculator.safeCreatedAtDate} = date(?)
           ''',
           [companyId, todayStr],
         );
