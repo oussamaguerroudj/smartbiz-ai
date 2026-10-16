@@ -100,6 +100,7 @@ class RevenueBreakdown {
 }
 
 class ExpensesBreakdown {
+  final double productPurchases;
   final double operatingExpenses;
   final double employeeSalaries;
   final double costOfGoodsSold;
@@ -108,6 +109,7 @@ class ExpensesBreakdown {
   final List<EmployeeSalaryItem> byEmployee;
 
   ExpensesBreakdown({
+    this.productPurchases = 0.0,
     required this.operatingExpenses,
     required this.employeeSalaries,
     required this.costOfGoodsSold,
@@ -118,6 +120,8 @@ class ExpensesBreakdown {
 
   factory ExpensesBreakdown.fromJson(Map<String, dynamic> json) =>
       ExpensesBreakdown(
+        productPurchases:
+            (json['productPurchases'] as num?)?.toDouble() ?? 0.0,
         operatingExpenses:
             (json['operatingExpenses'] as num?)?.toDouble() ?? 0.0,
         employeeSalaries: (json['employeeSalaries'] as num?)?.toDouble() ?? 0.0,

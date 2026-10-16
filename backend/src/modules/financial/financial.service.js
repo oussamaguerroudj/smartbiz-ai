@@ -153,6 +153,7 @@ async function calculateFinancials(companyId, params = {}) {
     globalExpensesRes,
     globalInventoryRes,
     globalRestInventoryVal,
+    globalPurchasesRes,
   ] = await Promise.all([
     query(
       `SELECT
@@ -191,6 +192,12 @@ async function calculateFinancials(companyId, params = {}) {
     (typeof restaurantRepo.totalInventoryValue === 'function'
       ? restaurantRepo.totalInventoryValue(companyId)
       : Promise.resolve(0)).catch(() => 0),
+    query(
+      `SELECT COALESCE(SUM(total_amount), 0) AS total
+       FROM supplier_purchases
+       WHERE company_id = $1 AND deleted_at IS NULL`,
+      [companyId],
+    ).catch(() => ({ rows: [{ total: 0 }] })),
   ]);
 
   const allRevenue =
@@ -205,10 +212,10 @@ async function calculateFinancials(companyId, params = {}) {
     : Number(globalInventoryRes.rows[0]?.inventory_value || 0);
 
   const globalCogs = isRestaurant ? 0 : Number(globalSalesRes.rows[0]?.cogs || 0);
-  const allExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
-  const globalNetProfit = isRestaurant
-    ? allRevenue - inventoryValue - allExpenses
-    : allRevenue - globalCogs - allExpenses;
+  const allProductPurchases = Number(globalPurchasesRes.rows[0]?.total || 0);
+  const allRecordedExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
+  const allExpenses = allProductPurchases + allRecordedExpenses;
+  const globalNetProfit = allRevenue - allExpenses;
 
   // 2. Period Calculations (Aggregating actual transactions within rangeStart..rangeEnd)
   const [
@@ -223,6 +230,7 @@ async function calculateFinancials(companyId, params = {}) {
     employeesRes,
     invoicesCountRes,
     salaryBreakdownList,
+    purchasesResult,
   ] = await Promise.all([
     query(
       `SELECT
@@ -289,6 +297,13 @@ async function calculateFinancials(companyId, params = {}) {
     typeof expensesRepo.salariesBreakdownForRange === 'function'
       ? expensesRepo.salariesBreakdownForRange(companyId, rangeStart, rangeEnd).catch(() => [])
       : Promise.resolve([]),
+    query(
+      `SELECT COALESCE(SUM(total_amount), 0) AS total
+       FROM supplier_purchases
+       WHERE company_id = $1 AND deleted_at IS NULL
+         AND purchase_date::date BETWEEN $2::date AND $3::date`,
+      [companyId, rangeStart, rangeEnd],
+    ).catch(() => ({ rows: [{ total: 0 }] })),
   ]);
 
 
@@ -317,8 +332,6 @@ async function calculateFinancials(companyId, params = {}) {
       units_sold: Number(d.units_sold || 0),
       total: Number(d.revenue || 0),
     }));
-    // In the agreed restaurant model, dishes do not carry retail-style purchase costs (COGS = 0).
-    // Gross Profit equals recorded revenue. Inventory purchases affect Net Profit as expenses.
     cogsTotal = 0;
   } else if (businessType === 'clinic') {
     const visitsCountRes = await query(
@@ -338,15 +351,17 @@ async function calculateFinancials(companyId, params = {}) {
   const restaurantRev = Number(restaurantRevenueTotal || 0);
   const revenue = coreSalesRevenue + creditRev + clinicRev + restaurantRev;
 
+  const productPurchases = Number(purchasesResult.rows[0]?.total || 0);
   const operatingExpenses = Number(operatingExpensesTotal || 0);
   const employeeSalaries = Number(salaryTotal || 0);
-  // Strict formula: TOTAL EXPENSES = ALL BUSINESS EXPENSES + ACTUAL SALARY TRANSACTIONS
-  const totalExpenses = operatingExpenses + employeeSalaries;
+  // Mandatory formula: TOTAL EXPENSES = ALL RECORDED PRODUCT PURCHASES + SALARIES + OPERATING EXPENSES
+  const totalExpenses = productPurchases + operatingExpenses + employeeSalaries;
 
+  // Mandatory formula: GROSS PROFIT = REVENUE FROM SOLD PRODUCTS - PURCHASE COST OF SOLD PRODUCTS
   const grossProfit = revenue - cogsTotal;
-  const netProfit = isRestaurant
-    ? revenue - inventoryValue - totalExpenses
-    : grossProfit - totalExpenses;
+
+  // Mandatory formula: NET PROFIT = TOTAL REVENUE - TOTAL EXPENSES (without double-deducting COGS)
+  const netProfit = revenue - totalExpenses;
   const profitMargin = revenue > 0 ? Number(((netProfit / revenue) * 100).toFixed(2)) : 0;
 
   // Operating Expenses Breakdown by Category (excluding salary categories)
@@ -361,11 +376,22 @@ async function calculateFinancials(companyId, params = {}) {
     [companyId, rangeStart, rangeEnd],
   );
 
-  const expensesByCategory = catExpensesRes.rows.map((r) => ({
-    category: r.category || 'General Expense',
-    amount: Number(r.total),
-    total: Number(r.total),
-  }));
+  const expensesByCategory = [
+    ...(productPurchases > 0
+      ? [
+          {
+            category: 'Product Purchases',
+            amount: productPurchases,
+            total: productPurchases,
+          },
+        ]
+      : []),
+    ...catExpensesRes.rows.map((r) => ({
+      category: r.category || 'General Expense',
+      amount: Number(r.total),
+      total: Number(r.total),
+    })),
+  ];
 
   // Employee Salaries Breakdown: based on ACTUAL salary transactions in this period
   const employeeSalariesBreakdown = (salaryBreakdownList && salaryBreakdownList.length > 0)
@@ -463,7 +489,7 @@ async function calculateFinancials(companyId, params = {}) {
   let monthlyBreakdown = [];
   if (period === 'yearly') {
     const targetYear = new Date(rangeStart).getUTCFullYear();
-    const [salesByMonthRes, creditByMonthRes, clinicByMonthRes, restByMonthRes, expByMonthRes] =
+    const [salesByMonthRes, creditByMonthRes, clinicByMonthRes, restByMonthRes, expByMonthRes, purchasesByMonthRes] =
       await Promise.all([
         query(
           `SELECT EXTRACT(MONTH FROM s.sold_at)::int AS month,
@@ -510,11 +536,15 @@ async function calculateFinancials(companyId, params = {}) {
            GROUP BY month`,
           [companyId, targetYear],
         ),
+        query(
+          `SELECT EXTRACT(MONTH FROM purchase_date)::int AS month,
+                  COALESCE(SUM(total_amount), 0) AS purchase_expenses
+           FROM supplier_purchases
+           WHERE company_id = $1 AND deleted_at IS NULL AND EXTRACT(YEAR FROM purchase_date) = $2
+           GROUP BY month`,
+          [companyId, targetYear],
+        ).catch(() => ({ rows: [] })),
       ]);
-
-    const restCogsByMonthRes = businessType === 'restaurant' || businessType === 'cafe'
-      ? { rows: [] }
-      : { rows: [] };
 
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -529,16 +559,18 @@ async function calculateFinancials(companyId, params = {}) {
       const rRev = Number(restByMonthRes.rows.find((r) => r.month === m)?.revenue || 0);
       const mRevenue = sRev + cRev + clRev + rRev;
 
+      const pPurchases = Number(purchasesByMonthRes.rows.find((r) => r.month === m)?.purchase_expenses || 0);
       const expRow = expByMonthRes.rows.find((r) => r.month === m);
-      const mExpenses = Number(expRow?.total_expenses || 0);
       const mSalary = Number(expRow?.salary_expenses || 0);
       const mOperating = Number(expRow?.operating_expenses || 0);
+      const mExpenses = pPurchases + mSalary + mOperating;
 
       return {
         month: m,
         monthName: monthNames[i],
         revenue: mRevenue,
         expenses: mExpenses,
+        productPurchases: pPurchases,
         salaryExpenses: mSalary,
         operatingExpenses: mOperating,
         costOfGoodsSold: 0,
@@ -567,6 +599,7 @@ async function calculateFinancials(companyId, params = {}) {
     revenue,
     inventoryValue,
     expenses: totalExpenses,
+    productPurchases,
     operatingExpenses,
     employeeSalaries,
     costOfGoodsSold: cogsTotal,
@@ -585,9 +618,10 @@ async function calculateFinancials(companyId, params = {}) {
       totalRevenue: revenue,
     },
     expensesBreakdown: {
+      productPurchases,
       operatingExpenses,
       employeeSalaries,
-      costOfGoodsSold: businessType === 'restaurant' ? cogsTotal : 0,
+      costOfGoodsSold: cogsTotal,
       totalExpenses,
       byCategory: expensesByCategory,
       byEmployee: employeeSalariesBreakdown,

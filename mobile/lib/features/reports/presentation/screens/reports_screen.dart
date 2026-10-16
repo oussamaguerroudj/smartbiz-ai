@@ -1098,7 +1098,7 @@ class _ProfitCalculationCard extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(
                     '—',
                     style: TextStyle(
@@ -1108,28 +1108,6 @@ class _ProfitCalculationCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (report.costOfGoodsSold > 0) ...[
-                  Expanded(
-                    child: _FormulaBlock(
-                      label: l10n.localeName.startsWith('ar')
-                          ? 'تكلفة السلع'
-                          : (l10n.localeName.startsWith('fr') ? 'Coût march.' : 'COGS'),
-                      amount: report.costOfGoodsSold,
-                      color: AppColors.warning,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Text(
-                      '—',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ),
-                ],
                 Expanded(
                   child: _FormulaBlock(
                     label: l10n.totalExpensesLabel,
@@ -1138,7 +1116,7 @@ class _ProfitCalculationCard extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(
                     '=',
                     style: TextStyle(
@@ -1160,13 +1138,7 @@ class _ProfitCalculationCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            report.costOfGoodsSold > 0
-                ? (l10n.localeName.startsWith('ar')
-                    ? 'صافي الربح = إجمالي الإيرادات - تكلفة السلع - إجمالي المصاريف'
-                    : (l10n.localeName.startsWith('fr')
-                        ? 'Bénéfice Net = Revenus - Coût des Marchandises - Dépenses'
-                        : 'Net Profit = Revenue - COGS - Expenses'))
-                : l10n.profitFormulaExplanation,
+            l10n.profitFormulaExplanation,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),

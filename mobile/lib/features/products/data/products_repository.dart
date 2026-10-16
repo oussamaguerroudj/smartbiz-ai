@@ -17,7 +17,7 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
   /// Returns the active company ID from the session.
   /// If null (not logged in), all local reads return empty — preventing any
   /// data from leaking to an unauthenticated state.
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId => _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load({String? search}) async {
     // 1. Immediately read from local SQLite (instant startup & offline support)
@@ -415,7 +415,8 @@ class ProductsRepository extends StateNotifier<AsyncValue<List<Product>>> {
 final productsRepositoryProvider =
     StateNotifierProvider.autoDispose<ProductsRepository, AsyncValue<List<Product>>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return ProductsRepository(ref);
   },
 );
+

@@ -132,6 +132,16 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> with SingleTick
             );
           }
           return;
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppColors.warning,
+                content: Text(l10n.paymentNotYetReceived),
+              ),
+            );
+          }
+          return;
         }
       }
 

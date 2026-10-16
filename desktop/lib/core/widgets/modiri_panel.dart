@@ -2,10 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-class GlassPanel extends StatelessWidget {
+class ModiriPanel extends StatelessWidget {
   final Widget child;
   final double blur;
-  final double opacity;
+  final double? opacity;
   final Color? color;
   final BorderRadius? borderRadius;
   final Border? border;
@@ -14,11 +14,11 @@ class GlassPanel extends StatelessWidget {
   final double? width;
   final double? height;
 
-  const GlassPanel({
+  const ModiriPanel({
     super.key,
     required this.child,
     this.blur = 16.0,
-    this.opacity = 0.65,
+    this.opacity,
     this.color,
     this.borderRadius,
     this.border,
@@ -30,13 +30,37 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final r = borderRadius ?? BorderRadius.circular(12);
-    final bg = (color ?? AppColors.surfaceDark).withOpacity(opacity);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final r = borderRadius ?? BorderRadius.circular(16);
+
+    final bg = color ??
+        (isDark
+            ? ModiriColors.ink800.withOpacity(opacity ?? 0.75)
+            : ModiriColors.lightInk900);
+
     final b = border ??
         Border.all(
-          color: AppColors.borderDark.withOpacity(0.6),
+          color: isDark ? ModiriColors.lineDark : ModiriColors.lineLight,
           width: 1,
         );
+
+    final shadow = isDark
+        ? [
+            const BoxShadow(
+              color: Color(0x66000000),
+              offset: Offset(0, 20),
+              blurRadius: 40,
+              spreadRadius: -20,
+            ),
+          ]
+        : [
+            const BoxShadow(
+              color: Color(0x0D000000),
+              offset: Offset(0, 10),
+              blurRadius: 25,
+              spreadRadius: -5,
+            ),
+          ];
 
     return Container(
       width: width,
@@ -44,20 +68,14 @@ class GlassPanel extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         borderRadius: r,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: shadow,
       ),
       child: ClipRRect(
         borderRadius: r,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           child: Container(
-            padding: padding ?? const EdgeInsets.all(16),
+            padding: padding,
             decoration: BoxDecoration(
               color: bg,
               borderRadius: r,

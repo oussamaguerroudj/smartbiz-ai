@@ -209,8 +209,11 @@ class Session {
             : <String, dynamic>{});
 
     final userId = userMap['id']?.toString();
-    final companyId =
-        companyMap['id']?.toString() ?? userMap['companyId']?.toString();
+    final companyId = companyMap['id']?.toString() ??
+        companyMap['company_id']?.toString() ??
+        userMap['companyId']?.toString() ??
+        userMap['company_id']?.toString() ??
+        userId;
 
     final businessType = (companyMap['businessType'] ??
             companyMap['business_type'] ??

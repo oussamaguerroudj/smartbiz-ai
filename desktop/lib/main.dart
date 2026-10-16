@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/database/desktop_database.dart';
 import 'core/localization/desktop_localizations.dart';
@@ -13,15 +14,22 @@ import 'features/shell/presentation/desktop_navigation_shell.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Enforce Western/Latin ASCII digits (0-9) globally
+  Intl.defaultLocale = 'en_US';
+
   // Initialize native Windows SQLite via FFI
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
   // Pre-load custom API URL if configured
-  await ApiClient.loadPersistedUrl();
+  try {
+    await ApiClient.loadPersistedUrl();
+  } catch (_) {}
 
-  // Ensure local database schema is ready
-  await DesktopDatabase.instance.database;
+  // Initialize local desktop database
+  try {
+    await ModiriDesktopDatabase.instance.database;
+  } catch (_) {}
 
   runApp(
     const ProviderScope(
@@ -30,31 +38,24 @@ void main() async {
   );
 }
 
-class ModiriDesktopApp extends ConsumerStatefulWidget {
+class ModiriDesktopApp extends ConsumerWidget {
   const ModiriDesktopApp({super.key});
 
   @override
-  ConsumerState<ModiriDesktopApp> createState() => _ModiriDesktopAppState();
-}
-
-class _ModiriDesktopAppState extends ConsumerState<ModiriDesktopApp> {
-  Locale _locale = const Locale('en');
-
-  void setLocale(Locale loc) {
-    setState(() => _locale = loc);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
+    final locale = ref.watch(desktopLocaleProvider);
 
     return MaterialApp(
       title: 'Modiri AI — Enterprise Windows Desktop',
       debugShowCheckedModeBanner: false,
-      theme: DesktopTheme.darkTheme,
-      locale: _locale,
-      supportedLocales: DesktopLocalizations.supportedLocales,
+      theme: ModiriTheme.lightTheme,
+      darkTheme: ModiriTheme.darkTheme,
+      themeMode: ref.watch(desktopThemeModeProvider),
+      locale: locale,
+      supportedLocales: ModiriLocalizations.supportedLocales,
       localizationsDelegates: const [
+        ModiriLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

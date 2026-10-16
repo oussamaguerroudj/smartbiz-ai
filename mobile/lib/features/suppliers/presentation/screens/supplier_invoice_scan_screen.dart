@@ -853,203 +853,348 @@ class _SupplierInvoiceScanScreenState extends ConsumerState<SupplierInvoiceScanS
     final calcTotal = _calculatedTotal;
     final bool hasDiscrepancy = _detectedTotal != null && (_detectedTotal! - calcTotal).abs() > 0.5;
 
-    return Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: [
-              // Header Summary Card
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                  boxShadow: AppSpacing.cardElevation,
-                ),
-                child: Column(
-                  children: [
-                    Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 1024;
+
+        Widget invoiceImageWidget({double? height}) {
+          if (_imageBase64 == null) return const SizedBox.shrink();
+          return Card(
+            clipBehavior: Clip.antiAlias,
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusCard)),
+            child: InkWell(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (dCtx) => Dialog(
+                    insetPadding: const EdgeInsets.all(16),
+                    child: Stack(
+                      alignment: Alignment.topRight,
                       children: [
-                        const Icon(Icons.receipt, color: AppColors.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Text(widget.supplier.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        const Spacer(),
-                        TextButton.icon(
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: Text(l10n.retakePhoto),
-                          onPressed: () => setState(() => _step = _ScanStep.capture),
+                        InteractiveViewer(
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: Image.memory(base64Decode(_imageBase64!)),
+                        ),
+                        IconButton(
+                          icon: const CircleAvatar(
+                            radius: 14,
+                            backgroundColor: Colors.black54,
+                            child: Icon(Icons.close, color: Colors.white, size: 16),
+                          ),
+                          onPressed: () => Navigator.of(dCtx).pop(),
                         ),
                       ],
                     ),
-                    const Divider(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _invoiceNumberCtrl,
-                            decoration: InputDecoration(
-                              labelText: l10n.invoiceNumberLabel,
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: TextField(
-                            controller: _invoiceDateCtrl,
-                            decoration: InputDecoration(
-                              labelText: l10n.invoiceDateLabel,
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-
-              // Discrepancy warning banner if detected total != calculated total
-              if (hasDiscrepancy)
-                Container(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${l10n.totalDiscrepancyWarning} (${l10n.detectedTotalLabel}: ${_detectedTotal!.toStringAsFixed(0)} DZD vs ${l10n.calculatedTotalLabel}: ${calcTotal.toStringAsFixed(0)} DZD)',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8A5A00)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Items Section Title & Add Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${l10n.invoiceLinesTitle(_activeItems.length)} (${_activeItems.length})',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.add, size: 16),
-                    label: Text(l10n.addLineItemButton),
-                    onPressed: _addNewLineItem,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-
-              // Review Items List
-              ..._items.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final it = entry.value;
-                return _buildItemCard(context, l10n, idx, it);
-              }),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // Down Payment & Notes Card
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-                  border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
-                ),
-                child: Column(
+                );
+              },
+              child: Container(
+                height: height ?? 120,
+                width: double.infinity,
+                decoration: const BoxDecoration(color: Colors.black12),
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    TextField(
-                      controller: _paidAmountCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: l10n.downPaymentLabel,
-                        suffixText: 'DZD',
-                        border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    Image.memory(
+                      base64Decode(_imageBase64!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 36),
                       ),
-                      onChanged: (_) => setState(() {}),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextField(
-                      controller: _notesCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n.purchaseNotesOptional,
-                        border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Colors.black87],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 8,
+                      left: 12,
+                      right: 12,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.zoom_in, color: Colors.white, size: 18),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l10n.pointCameraAtInvoice,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        }
 
-        // Sticky Bottom Confirmation Bar
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                offset: const Offset(0, -2),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
+        Widget invoiceHeaderCard() {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+              boxShadow: AppSpacing.cardElevation,
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.receipt, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(widget.supplier.name, style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: Text(l10n.retakePhoto),
+                      onPressed: () => setState(() => _step = _ScanStep.capture),
+                    ),
+                  ],
+                ),
+                const Divider(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _invoiceNumberCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.invoiceNumberLabel,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextField(
+                        controller: _invoiceDateCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.invoiceDateLabel,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+
+        Widget discrepancyBanner() {
+          if (!hasDiscrepancy) return const SizedBox.shrink();
+          return Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.warning),
+            ),
             child: Row(
               children: [
+                const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  child: Text(
+                    '${l10n.totalDiscrepancyWarning} (${l10n.detectedTotalLabel}: ${_detectedTotal!.toStringAsFixed(0)} DZD vs ${l10n.calculatedTotalLabel}: ${calcTotal.toStringAsFixed(0)} DZD)',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8A5A00)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        Widget itemsHeader() {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${l10n.invoiceLinesTitle(_activeItems.length)} (${_activeItems.length})',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.add, size: 16),
+                label: Text(l10n.addLineItemButton),
+                onPressed: _addNewLineItem,
+              ),
+            ],
+          );
+        }
+
+        Widget downPaymentAndNotesCard() {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+              border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _paidAmountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.downPaymentLabel,
+                    suffixText: 'DZD',
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _notesCtrl,
+                  decoration: InputDecoration(
+                    labelText: l10n.purchaseNotesOptional,
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        Widget bottomStickyBar() {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  offset: const Offset(0, -2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Expanded(
+                        child: Text(
+                          l10n.itemsToReceiveCount(_activeItems.length),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         '${calcTotal.toStringAsFixed(0)} DZD',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary),
                       ),
-                      Text(
-                        l10n.itemsToReceiveCount(_activeItems.length),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
                     ],
                   ),
-                ),
-                ElevatedButton.icon(
-                  icon: _isSaving
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.check_circle_outline),
-                  label: Text(l10n.confirmAndReceiveInventory),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: _isSaving
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.check_circle_outline),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(l10n.confirmAndReceiveInventory),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      ),
+                      onPressed: _isSaving ? null : _handleConfirmReceipt,
+                    ),
                   ),
-                  onPressed: _isSaving ? null : _handleConfirmReceipt,
-                ),
-              ],
+                ],
+              ),
             ),
+          );
+        }
+
+        Widget content;
+        if (isWide) {
+          content = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_imageBase64 != null)
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: invoiceImageWidget(height: double.infinity),
+                  ),
+                ),
+              Expanded(
+                flex: 6,
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  children: [
+                    invoiceHeaderCard(),
+                    discrepancyBanner(),
+                    itemsHeader(),
+                    const SizedBox(height: AppSpacing.xs),
+                    ..._items.asMap().entries.map((entry) {
+                      return _buildItemCard(context, l10n, entry.key, entry.value);
+                    }),
+                    downPaymentAndNotesCard(),
+                  ],
+                ),
+              ),
+            ],
+          );
+        } else {
+          content = ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              invoiceHeaderCard(),
+              invoiceImageWidget(),
+              discrepancyBanner(),
+              itemsHeader(),
+              const SizedBox(height: AppSpacing.xs),
+              ..._items.asMap().entries.map((entry) {
+                return _buildItemCard(context, l10n, entry.key, entry.value);
+              }),
+              downPaymentAndNotesCard(),
+            ],
+          );
+        }
+
+        return SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Column(
+            children: [
+              Expanded(child: content),
+              bottomStickyBar(),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -1105,7 +1250,7 @@ class _SupplierInvoiceScanScreenState extends ConsumerState<SupplierInvoiceScanS
               controller: item.nameCtrl,
               enabled: !isSkipped,
               decoration: InputDecoration(
-                labelText: l10n.dishNameLabel,
+                labelText: l10n.productNameFieldLabel,
                 border: const OutlineInputBorder(),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               ),

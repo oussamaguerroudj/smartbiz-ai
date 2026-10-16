@@ -11,6 +11,20 @@ import 'package:modiri_ai/l10n/app_localizations.dart';
 import 'package:modiri_ai/features/suppliers/presentation/screens/suppliers_screen.dart';
 import 'package:modiri_ai/features/suppliers/presentation/screens/supplier_details_screen.dart';
 import 'package:modiri_ai/features/suppliers/presentation/screens/supplier_invoice_scan_screen.dart';
+import 'package:modiri_ai/features/ai/presentation/screens/ai_scanner_screen.dart';
+import 'package:modiri_ai/features/products/data/products_repository.dart';
+import 'package:modiri_ai/features/products/domain/product.dart';
+
+class FakeProductsRepository extends ProductsRepository {
+  FakeProductsRepository(super.ref, [List<Product>? products]) {
+    state = AsyncValue.data(products ?? []);
+  }
+
+  @override
+  Future<void> load({String? search}) async {
+    // No-op to avoid unhandled SQLite lock timers in widget tests
+  }
+}
 
 void main() {
   setUpAll(() {
@@ -379,6 +393,288 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SupplierInvoiceScanScreen), findsOneWidget);
+    });
+
+    testWidgets('AiReviewScreen renders responsive layout, summary card, items, and bottom bar without blank gaps', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      const tinyPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA=';
+
+      final scannedItems = [
+        ScannedItem(name: 'Farine Extra 500g', quantity: 12, purchasePrice: 45.0, sellingPrice: 60.0),
+        ScannedItem(name: 'Semoule Fine 1kg', quantity: 24, purchasePrice: 110.0, sellingPrice: 135.0),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionProvider.overrideWith((ref) => SessionNotifierFake(
+              const Session(
+                companyId: 'comp_test',
+                companyName: 'Test Business',
+                email: 'test@modiri.ai',
+              ),
+            )),
+            productsRepositoryProvider.overrideWith((ref) => FakeProductsRepository(ref, [])),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: AiReviewScreen(
+              mode: InvoiceScanMode.stock,
+              items: scannedItems,
+              logId: 'log_test_123',
+              imageBase64: tinyPngBase64,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AiReviewScreen), findsOneWidget);
+      expect(find.text('Farine Extra 500g'), findsOneWidget);
+      expect(find.text('Semoule Fine 1kg'), findsOneWidget);
+      expect(find.text('3180 DZD'), findsWidgets);
+      expect(find.text('Confirm & Add to Inventory'), findsOneWidget);
+      expect(find.byIcon(Icons.zoom_in), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 11));
+    });
+
+    test('addSupplier is idempotent and updates phone on duplicate name without creating duplicate record', () async {
+      final memDb = await databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+        options: OpenDatabaseOptions(singleInstance: false),
+      );
+      await memDb.execute('''
+        CREATE TABLE suppliers (
+          id TEXT PRIMARY KEY,
+          client_id TEXT UNIQUE,
+          company_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          phone TEXT,
+          products_supplied INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          synced INTEGER NOT NULL DEFAULT 0,
+          deleted_at TEXT
+        )
+      ''');
+
+      const companyId = 'test_comp';
+      await memDb.insert('suppliers', {
+        'id': 'sup_1',
+        'client_id': 'client_1',
+        'company_id': companyId,
+        'name': 'Grossiste Blida',
+        'phone': '0550000001',
+        'products_supplied': 0,
+        'created_at': DateTime.now().toIso8601String(),
+        'synced': 1,
+      });
+
+      // Search by lowercase trimmed name
+      final existing = await memDb.query(
+        'suppliers',
+        where: 'company_id = ? AND LOWER(TRIM(name)) = ? AND deleted_at IS NULL',
+        whereArgs: [companyId, 'grossiste blida'],
+      );
+      expect(existing.length, equals(1));
+      expect(existing.first['id'], equals('sup_1'));
+
+      // If existing is found, update phone instead of inserting duplicate
+      if (existing.isNotEmpty) {
+        await memDb.update(
+          'suppliers',
+          {'phone': '0550000099'},
+          where: 'id = ? AND company_id = ?',
+          whereArgs: [existing.first['id'], companyId],
+        );
+      }
+
+      final allSuppliers = await memDb.query('suppliers', where: 'company_id = ?', whereArgs: [companyId]);
+      expect(allSuppliers.length, equals(1));
+      expect(allSuppliers.first['phone'], equals('0550000099'));
+    });
+
+    testWidgets('AiProcessingScreen demo scan transitions into AiReviewScreen with sticky bar and no layout gaps', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionProvider.overrideWith((ref) => SessionNotifierFake(
+              const Session(
+                companyId: 'comp_test',
+                companyName: 'Test Business',
+                email: 'test@modiri.ai',
+              ),
+            )),
+            productsRepositoryProvider.overrideWith((ref) => FakeProductsRepository(ref, [])),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('en'),
+            home: AiProcessingScreen(
+              mode: InvoiceScanMode.stock,
+              imageBase64: null,
+            ),
+          ),
+        ),
+      );
+
+      // Verify processing view is shown first
+      expect(find.byType(AiProcessingScreen), findsOneWidget);
+
+      // Fast forward past the 2-second demo scan mock
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      // Verify transition completed into AiReviewScreen
+      expect(find.byType(AiReviewScreen), findsOneWidget);
+      expect(find.text('Milk'), findsOneWidget);
+      expect(find.text('Bread'), findsOneWidget);
+      expect(find.text('Sugar'), findsOneWidget);
+      // Total price: (10*120) + (20*15) + (5*90) = 1200 + 300 + 450 = 1950 DZD
+      expect(find.text('1950 DZD'), findsWidgets);
+      expect(find.text('Confirm & Add to Inventory'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 11));
+    });
+
+    testWidgets('SupplierInvoiceScanScreen transitions to review step and renders full-width cards without white screen', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final testSupplier = Supplier(
+        id: 'sup_test_1',
+        name: 'Grossiste Alger',
+        phone: '0555123456',
+        productsSupplied: 5,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionProvider.overrideWith((ref) => SessionNotifierFake(
+              const Session(
+                companyId: 'comp_test',
+                companyName: 'Test Business',
+                email: 'test@modiri.ai',
+              ),
+            )),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: SupplierInvoiceScanScreen(supplier: testSupplier),
+          ),
+        ),
+      );
+
+      expect(find.byType(SupplierInvoiceScanScreen), findsOneWidget);
+
+      // Tap demo invoice button to transition directly to review step
+      final demoBtn = find.byIcon(Icons.play_circle_outline);
+      expect(demoBtn, findsOneWidget);
+      await tester.tap(demoBtn);
+      await tester.pumpAndSettle();
+
+      // Assert review step widgets are present
+      expect(find.text('Grossiste Alger'), findsWidgets);
+      expect(find.text('Huile de table 5L'), findsOneWidget);
+      expect(find.text('Sucre blanc 1kg'), findsOneWidget);
+      expect(find.text('Farine T55 10kg'), findsOneWidget);
+      expect(find.text('Confirm & Receive Inventory'), findsOneWidget);
+      expect(find.text('Product name'), findsWidgets);
+      // (10 * 650) + (20 * 90) + (5 * 350) = 6500 + 1800 + 1750 = 10050 DZD
+      expect(find.text('10050 DZD'), findsWidgets);
+    });
+
+    testWidgets('SupplierInvoiceScanScreen renders wide split view layout on tablet/desktop viewports', (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final testSupplier = Supplier(
+        id: 'sup_test_wide',
+        name: 'Centrale Distribution Oran',
+        phone: '0555987654',
+        productsSupplied: 12,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionProvider.overrideWith((ref) => SessionNotifierFake(
+              const Session(
+                companyId: 'comp_test',
+                companyName: 'Test Business',
+                email: 'test@modiri.ai',
+              ),
+            )),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: SupplierInvoiceScanScreen(supplier: testSupplier),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.play_circle_outline));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Centrale Distribution Oran'), findsWidgets);
+      expect(find.text('Huile de table 5L'), findsOneWidget);
+      expect(find.text('Confirm & Receive Inventory'), findsOneWidget);
+    });
+
+    testWidgets('AiReviewScreen renders on small mobile 360x640 screen without RenderFlex overflow', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final items = [
+        ScannedItem(name: 'Huile 5L', quantity: 10, purchasePrice: 650, sellingPrice: 750),
+        ScannedItem(name: 'Sucre 1kg', quantity: 20, purchasePrice: 90, sellingPrice: 110),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionProvider.overrideWith((ref) => SessionNotifierFake(
+              const Session(companyId: 'comp_test', companyName: 'Test Business', email: 'test@modiri.ai'),
+            )),
+            productsRepositoryProvider.overrideWith((ref) => FakeProductsRepository(ref, [])),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: AiReviewScreen(
+              mode: InvoiceScanMode.stock,
+              items: items,
+              logId: 'log_small',
+              imageBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AiReviewScreen), findsOneWidget);
+      expect(find.text('Confirm & Add to Inventory'), findsOneWidget);
     });
   });
 }

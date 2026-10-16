@@ -41,7 +41,7 @@ class CustomersRepository extends StateNotifier<AsyncValue<List<Customer>>> {
 
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId => _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load({String? query}) async {
     // 1. Read from local SQLite first (always sets data, even if empty)
@@ -272,7 +272,8 @@ class CustomersRepository extends StateNotifier<AsyncValue<List<Customer>>> {
 final customersRepositoryProvider =
     StateNotifierProvider<CustomersRepository, AsyncValue<List<Customer>>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return CustomersRepository(ref);
   },
 );
+

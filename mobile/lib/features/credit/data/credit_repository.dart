@@ -178,7 +178,7 @@ class CreditRepository {
   CreditRepository(this._ref);
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId => _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<CreditPurchase> createPurchase({
     required String customerId,
@@ -801,6 +801,7 @@ class CreditRepository {
 }
 
 final creditRepositoryProvider = Provider<CreditRepository>((ref) {
-  ref.watch(sessionProvider.select((s) => s.companyId));
+  ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
   return CreditRepository(ref);
 });
+

@@ -39,3 +39,4 @@ flutter:
     - assets/fonts/Cairo-Regular.ttf
     - assets/fonts/Cairo-Bold.ttf
     - assets/images/app_icon.png
+    - assets/images/logo.png

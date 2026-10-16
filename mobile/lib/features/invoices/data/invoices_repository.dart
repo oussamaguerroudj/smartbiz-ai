@@ -17,7 +17,7 @@ class InvoicesRepository extends StateNotifier<AsyncValue<List<Invoice>>> {
 
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId => _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load() async {
     // 1. Read from local SQLite first

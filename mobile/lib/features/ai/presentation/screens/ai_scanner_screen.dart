@@ -379,6 +379,7 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
               mode: widget.mode,
               items: [ScannedItem(name: '', quantity: 1, purchasePrice: 0)],
               logId: logId,
+              imageBase64: widget.imageBase64,
             ),
           ),
         );
@@ -393,7 +394,12 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => AiReviewScreen(mode: widget.mode, items: items, logId: logId),
+          builder: (_) => AiReviewScreen(
+            mode: widget.mode,
+            items: items,
+            logId: logId,
+            imageBase64: widget.imageBase64,
+          ),
         ),
       );
     } on ApiException catch (e) {
@@ -623,6 +629,7 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
                         mode: widget.mode,
                         items: [ScannedItem(name: '', quantity: 1, purchasePrice: 0)],
                         logId: null,
+                        imageBase64: widget.imageBase64,
                       ),
                     ),
                   );
@@ -642,10 +649,17 @@ class _AiProcessingScreenState extends ConsumerState<AiProcessingScreen> {
 }
 
 class AiReviewScreen extends ConsumerStatefulWidget {
-  const AiReviewScreen({super.key, required this.mode, required this.items, required this.logId});
+  const AiReviewScreen({
+    super.key,
+    required this.mode,
+    required this.items,
+    required this.logId,
+    this.imageBase64,
+  });
   final InvoiceScanMode mode;
   final List<ScannedItem> items;
   final String? logId;
+  final String? imageBase64;
 
   @override
   ConsumerState<AiReviewScreen> createState() => _AiReviewScreenState();
@@ -916,6 +930,15 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
       }
     }
 
+    final totalPurchaseAmount = _items.fold<double>(
+      0.0,
+      (sum, item) => sum + (item.quantity * item.purchasePrice),
+    );
+    final totalSellingAmount = _items.fold<double>(
+      0.0,
+      (sum, item) => sum + (item.quantity * (item.sellingPrice ?? 0.0)),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(isSales ? l10n.salesInvoiceReviewTitle : l10n.reviewItemsTitle),
@@ -927,73 +950,268 @@ class _AiReviewScreenState extends ConsumerState<AiReviewScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(
-          children: [
-            Expanded(
-              child: _items.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+      body: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: _items.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt_long_outlined, size: 64, color: AppColors.primary.withValues(alpha: 0.4)),
+                      const SizedBox(height: 12),
+                      Text(l10n.noItemsDetected, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add_rounded),
+                        label: Text(l10n.addProductTitle),
+                        onPressed: _addNewItem,
+                      ),
+                    ],
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  children: [
+                    // Summary Header Card
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                        boxShadow: AppSpacing.cardElevation,
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
                         children: [
-                          Icon(Icons.receipt_long_outlined, size: 64, color: AppColors.primary.withValues(alpha: 0.4)),
-                          const SizedBox(height: 12),
-                          Text(l10n.noItemsDetected, style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.add_rounded),
-                            label: Text(l10n.addProductTitle),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 24),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.invoiceLinesTitle(_items.length),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isSales
+                                      ? '${totalSellingAmount.toStringAsFixed(0)} DZD'
+                                      : '${totalPurchaseAmount.toStringAsFixed(0)} DZD',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(Icons.add, size: 16),
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(l10n.addProductTitle),
+                            ),
                             onPressed: _addNewItem,
                           ),
                         ],
                       ),
-                    )
-                  : ListView.separated(
-                      itemCount: _items.length + 1,
-                      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (context, i) {
-                        if (i == _items.length) {
-                          return OutlinedButton.icon(
-                            icon: const Icon(Icons.add_rounded),
-                            label: Text(l10n.addProductTitle),
-                            onPressed: _addNewItem,
-                          );
-                        }
-                        return isSales
+                    ),
+
+                    // Scanned Invoice Image Preview (if image available)
+                    if (widget.imageBase64 != null) ...[
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusCard)),
+                        child: InkWell(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (dCtx) => Dialog(
+                                insetPadding: const EdgeInsets.all(16),
+                                child: Stack(
+                                  alignment: Alignment.topRight,
+                                  children: [
+                                    InteractiveViewer(
+                                      minScale: 0.5,
+                                      maxScale: 4.0,
+                                      child: Image.memory(base64Decode(widget.imageBase64!)),
+                                    ),
+                                    IconButton(
+                                      icon: const CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: Colors.black54,
+                                        child: Icon(Icons.close, color: Colors.white, size: 16),
+                                      ),
+                                      onPressed: () => Navigator.of(dCtx).pop(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            height: 110,
+                            width: double.infinity,
+                            decoration: const BoxDecoration(color: Colors.black12),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.memory(
+                                  base64Decode(widget.imageBase64!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(
+                                    child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 36),
+                                  ),
+                                ),
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [Colors.transparent, Colors.black87],
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  left: 12,
+                                  right: 12,
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.zoom_in, color: Colors.white, size: 18),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          l10n.pointCameraAtInvoice,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // List of scanned items
+                    ..._items.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final item = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: isSales
                             ? _SalesReviewCard(
-                                item: _items[i],
+                                item: item,
                                 onRemove: () => setState(() => _items.removeAt(i)),
                                 onMatchedProductChanged: (productId) =>
-                                    setState(() => _items[i].matchedProductId = productId),
-                                onQuantityChanged: (qty) => setState(() => _items[i].quantity = qty),
+                                    setState(() => item.matchedProductId = productId),
+                                onQuantityChanged: (qty) => setState(() => item.quantity = qty),
                               )
                             : _StockReviewCard(
-                                key: ValueKey(_items[i]),
-                                item: _items[i],
+                                key: ValueKey(item),
+                                item: item,
                                 showSalePrice: widget.mode != InvoiceScanMode.restaurantInventory,
                                 showExpirationDate: businessType == 'pharmacy',
                                 showClothingAttributes: businessType == 'clothing',
                                 onRemove: () => setState(() => _items.removeAt(i)),
                                 onChanged: () => setState(() {}),
-                              );
-                      },
+                              ),
+                      );
+                    }),
+
+                    const SizedBox(height: AppSpacing.xs),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.add_rounded),
+                      label: Text(l10n.addProductTitle),
+                      onPressed: _addNewItem,
                     ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            ElevatedButton(
-              onPressed: _isSubmitting || _items.isEmpty
-                  ? null
-                  : (isSales ? _confirmAndRecordSale : _confirmAndAddToInventory),
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(isSales ? l10n.confirmRecordSale : l10n.confirmAddToInventory),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              offset: const Offset(0, -2),
+              blurRadius: 8,
             ),
           ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.invoiceLinesTitle(_items.length),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    isSales
+                        ? '${totalSellingAmount.toStringAsFixed(0)} DZD'
+                        : '${totalPurchaseAmount.toStringAsFixed(0)} DZD',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isSubmitting || _items.isEmpty
+                      ? null
+                      : (isSales ? _confirmAndRecordSale : _confirmAndAddToInventory),
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_circle_outline),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(isSales ? l10n.confirmRecordSale : l10n.confirmAddToInventory),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

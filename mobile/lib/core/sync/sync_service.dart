@@ -11,6 +11,14 @@ import '../../features/reports/data/reports_repository.dart' show invalidateAllR
 import '../../features/dashboard/data/dashboard_repository.dart' show dashboardRepositoryProvider;
 import '../../features/expenses/data/expenses_repository.dart' show expensesRepositoryProvider;
 import '../../features/sales/data/sales_repository.dart' show salesRepositoryProvider;
+import '../../features/products/data/products_repository.dart' show productsRepositoryProvider;
+import '../../features/customers/data/customers_repository.dart' show customersRepositoryProvider;
+import '../../features/suppliers/presentation/screens/suppliers_screen.dart' show suppliersRepositoryProvider;
+import '../../features/employees/data/employees_repository.dart' show employeesRepositoryProvider;
+import '../../features/appointments/data/appointments_repository.dart' show appointmentsRepositoryProvider;
+import '../../features/invoices/data/invoices_repository.dart' show invoicesRepositoryProvider;
+import '../../features/credit/data/credit_repository.dart' show creditRepositoryProvider;
+import '../../features/auth/data/companies_repository.dart' show companyInfoProvider;
 
 class SyncState {
   final int pendingCount;
@@ -84,9 +92,11 @@ class SyncService extends StateNotifier<SyncState> {
         Future.microtask(() async {
           if (!mounted) return;
           await syncPending();
+          await pullInitialData();
         });
       }
     }
+
 
     // Periodic check every 45 seconds if online
     if (enablePeriodicTimer) {
@@ -705,17 +715,16 @@ class SyncService extends StateNotifier<SyncState> {
   }
 
   /// Downloads existing backend data into local SQLite so app is immediately
-  /// usable offline after first login.
+  /// usable offline after login and restored when logging back in.
   Future<void> pullInitialData() async {
     final session = _ref.read(sessionProvider);
-    if (!session.isLoggedIn || session.isSuspendedLocked || session.isTrialOrLicenseExpired) {
+    if (!session.isLoggedIn || session.isSuspendedLocked) {
       return;
     }
-    final status = _ref.read(connectionStatusProvider);
-    if (status != ConnectionStatus.online) return;
 
     final companyId = _companyId;
     if (companyId == null) return;
+
 
     try {
       final client = _ref.read(apiClientProvider);
@@ -874,9 +883,95 @@ class SyncService extends StateNotifier<SyncState> {
         }
       } catch (_) {}
 
+      // 6.b Supplier Purchases & Purchase Items
+      try {
+        final res = await client.get('/suppliers/purchases');
+        if (res is Map && res['data'] is List) {
+          final batch = db.batch();
+          for (final sp in res['data']) {
+            final spId = sp['id']?.toString() ?? '';
+            if (spId.isEmpty) continue;
+            batch.insert(
+              'supplier_purchases',
+              {
+                'id': spId,
+                'company_id': companyId,
+                'supplier_id': sp['supplier_id']?.toString() ?? sp['supplierId']?.toString() ?? '',
+                'invoice_number': sp['invoice_number']?.toString() ?? sp['invoiceNumber']?.toString(),
+                'purchase_date': (sp['purchase_date'] ?? sp['purchaseDate'] ?? sp['created_at'] ?? DateTime.now().toIso8601String()).toString(),
+                'total_amount': (sp['total_amount'] as num?)?.toDouble() ?? (sp['totalAmount'] as num?)?.toDouble() ?? 0.0,
+                'amount_paid': (sp['amount_paid'] as num?)?.toDouble() ?? (sp['amountPaid'] as num?)?.toDouble() ?? 0.0,
+                'outstanding_balance': (sp['outstanding_balance'] as num?)?.toDouble() ?? (sp['outstandingBalance'] as num?)?.toDouble() ?? 0.0,
+                'payment_status': sp['payment_status']?.toString() ?? sp['paymentStatus']?.toString() ?? 'unpaid',
+                'notes': sp['notes']?.toString(),
+                'client_transaction_id': sp['client_transaction_id']?.toString() ?? sp['clientTransactionId']?.toString(),
+                'created_at': sp['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+                'synced': 1,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+
+            if (sp['items'] is List) {
+              for (final it in sp['items']) {
+                final itId = it['id']?.toString() ?? '';
+                if (itId.isEmpty) continue;
+                batch.insert(
+                  'supplier_purchase_items',
+                  {
+                    'id': itId,
+                    'purchase_id': spId,
+                    'company_id': companyId,
+                    'product_id': it['product_id']?.toString() ?? it['productId']?.toString(),
+                    'product_name': it['product_name']?.toString() ?? it['productName']?.toString() ?? 'Item',
+                    'quantity': (it['quantity'] as num?)?.toDouble() ?? 1.0,
+                    'unit_cost': (it['unit_cost'] as num?)?.toDouble() ?? (it['unitCost'] as num?)?.toDouble() ?? 0.0,
+                    'line_total': (it['line_total'] as num?)?.toDouble() ?? (it['lineTotal'] as num?)?.toDouble() ?? 0.0,
+                    'created_at': sp['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+              }
+            }
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
+      // 6.c Supplier Payments
+      try {
+        final res = await client.get('/suppliers/payments');
+        if (res is Map && res['data'] is List) {
+          final batch = db.batch();
+          for (final sp in res['data']) {
+            final spId = sp['id']?.toString() ?? '';
+            if (spId.isEmpty) continue;
+            batch.insert(
+              'supplier_payments',
+              {
+                'id': spId,
+                'company_id': companyId,
+                'supplier_id': sp['supplier_id']?.toString() ?? sp['supplierId']?.toString() ?? '',
+                'purchase_id': sp['purchase_id']?.toString() ?? sp['purchaseId']?.toString(),
+                'amount': (sp['amount'] as num?)?.toDouble() ?? 0.0,
+                'payment_date': (sp['payment_date'] ?? sp['paymentDate'] ?? sp['created_at'] ?? DateTime.now().toIso8601String()).toString(),
+                'payment_method': sp['payment_method']?.toString() ?? sp['paymentMethod']?.toString() ?? 'cash',
+                'reference': sp['reference']?.toString(),
+                'notes': sp['notes']?.toString(),
+                'client_id': sp['client_id']?.toString() ?? sp['clientId']?.toString(),
+                'created_at': sp['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+                'synced': 1,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
       // 7. Sales & Sale items (critical for offline revenue accuracy)
       try {
         final res = await client.get('/sales');
+
         if (res is Map && res['data'] is List) {
           final batch = db.batch();
           final existingItemSaleIds = (await db.rawQuery(
@@ -953,6 +1048,27 @@ class SyncService extends StateNotifier<SyncState> {
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
 
+            if (s['invoice_number'] != null) {
+              final invId = s['invoice_id']?.toString() ?? 'inv-$saleId';
+              final invNumber = s['invoice_number']?.toString() ?? '';
+              final invStatus = s['invoice_status']?.toString() ?? paymentStatus;
+              batch.insert(
+                'invoices',
+                {
+                  'id': invId,
+                  'sale_id': saleId,
+                  'company_id': companyId,
+                  'invoice_number': invNumber,
+                  'status': invStatus,
+                  'customer_name': customerName,
+                  'total': total,
+                  'sold_at': soldAtStr,
+                  'created_at': soldAtStr,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+
             if (!existingItemSaleIds.contains(saleId)) {
               final lineProfit = margin ?? 0.0;
               final cogs = (total - lineProfit).clamp(0.0, double.infinity);
@@ -973,6 +1089,38 @@ class SyncService extends StateNotifier<SyncState> {
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
             }
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
+      // 7.b Invoices (dedicated endpoint to ensure complete invoice restoration)
+      try {
+        final res = await client.get('/invoices');
+        if (res is Map && res['data'] is List) {
+          final batch = db.batch();
+          for (final inv in res['data']) {
+            final invId = inv['id']?.toString() ?? '';
+            final saleId = inv['sale_id']?.toString() ?? inv['saleId']?.toString() ?? invId;
+            final invoiceNumber = inv['invoice_number']?.toString() ?? inv['invoiceNumber']?.toString() ?? '';
+            if (invId.isEmpty || invoiceNumber.isEmpty) continue;
+            final total = (inv['total'] as num?)?.toDouble() ?? 0.0;
+            final soldAtStr = (inv['sold_at'] ?? inv['soldAt'] ?? inv['created_at'] ?? inv['createdAt'] ?? DateTime.now().toIso8601String()).toString();
+            batch.insert(
+              'invoices',
+              {
+                'id': invId,
+                'sale_id': saleId,
+                'company_id': companyId,
+                'invoice_number': invoiceNumber,
+                'status': inv['status']?.toString() ?? 'paid',
+                'customer_name': inv['customer_name']?.toString() ?? inv['customerName']?.toString(),
+                'total': total,
+                'sold_at': soldAtStr,
+                'created_at': soldAtStr,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
           }
           await batch.commit(noResult: true);
         }
@@ -1011,6 +1159,10 @@ class SyncService extends StateNotifier<SyncState> {
 
             final dateStr = (exp['expense_date'] ?? exp['expenseDate'] ?? exp['created_at'] ?? exp['createdAt'] ?? DateTime.now().toIso8601String()).toString().substring(0, 10);
             final amount = (exp['amount'] as num?)?.toDouble() ?? 0.0;
+            final empId = exp['employee_id']?.toString() ?? exp['employeeId']?.toString();
+            final salaryPeriod = exp['salary_period']?.toString() ?? exp['salaryPeriod']?.toString();
+            final duration = exp['duration']?.toString();
+
             batch.insert(
               'expenses',
               {
@@ -1022,14 +1174,34 @@ class SyncService extends StateNotifier<SyncState> {
                 'amount': amount,
                 'expense_date': dateStr,
                 'period_type': exp['period_type'] ?? exp['periodType'] ?? 'daily',
-                'employee_id': exp['employee_id'] ?? exp['employeeId'],
-                'salary_period': exp['salary_period'] ?? exp['salaryPeriod'],
-                'duration': exp['duration'],
+                'employee_id': empId,
+                'salary_period': salaryPeriod,
+                'duration': duration,
                 'created_at': exp['created_at'] ?? exp['createdAt'] ?? DateTime.now().toIso8601String(),
                 'synced': 1,
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
+
+            // If this expense is a salary payment, also restore into local salary_payments table
+            if (empId != null && empId.isNotEmpty) {
+              batch.insert(
+                'salary_payments',
+                {
+                  'id': 'sal-$expId',
+                  if (expClientId != null) 'client_id': expClientId,
+                  'employee_id': empId,
+                  'amount': amount,
+                  'payment_date': dateStr,
+                  'salary_period': salaryPeriod ?? (dateStr.length >= 7 ? dateStr.substring(0, 7) : dateStr),
+                  'duration': duration,
+                  'note': exp['description']?.toString(),
+                  'created_at': exp['created_at'] ?? exp['createdAt'] ?? DateTime.now().toIso8601String(),
+                  'synced': 1,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
           }
           await batch.commit(noResult: true);
         }
@@ -1091,12 +1263,60 @@ class SyncService extends StateNotifier<SyncState> {
         }
       } catch (_) {}
 
-      // Invalidate reports and providers once data is populated locally
+      // 9.b Credit Purchases (customer debt records restoration)
+      try {
+        final res = await client.get('/credit/purchases');
+        if (res is Map && res['data'] is List) {
+          final batch = db.batch();
+          for (final cp in res['data']) {
+            final cpId = cp['id']?.toString() ?? '';
+            final custId = cp['customer_id']?.toString() ?? cp['customerId']?.toString() ?? '';
+            if (cpId.isEmpty || custId.isEmpty) continue;
+
+            final subtotal = (cp['subtotal'] as num?)?.toDouble() ?? 0.0;
+            final amountPaidNow = (cp['amount_paid_now'] as num?)?.toDouble() ?? (cp['amountPaidNow'] as num?)?.toDouble() ?? 0.0;
+            final remainingCredit = (cp['remaining_credit'] as num?)?.toDouble() ?? (cp['remainingCredit'] as num?)?.toDouble() ?? (subtotal - amountPaidNow);
+            final status = cp['status']?.toString() ?? 'unpaid';
+            final createdAt = (cp['created_at'] ?? cp['createdAt'] ?? DateTime.now().toIso8601String()).toString();
+
+            batch.insert(
+              'credit_purchases',
+              {
+                'id': cpId,
+                'client_id': cp['client_id']?.toString() ?? cp['clientId']?.toString() ?? cpId,
+                'company_id': companyId,
+                'customer_id': custId,
+                'customer_name': cp['customer_name']?.toString() ?? cp['customerName']?.toString(),
+                'subtotal': subtotal,
+                'amount_paid_now': amountPaidNow,
+                'remaining_credit': remainingCredit,
+                'status': status,
+                'note': cp['note']?.toString(),
+                'created_at': createdAt,
+                'synced': 1,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
+      // Invalidate all business providers once data is populated locally
       invalidateAllReports(_ref);
       _ref.invalidate(dashboardRepositoryProvider);
       _ref.invalidate(expensesRepositoryProvider);
       _ref.invalidate(salesRepositoryProvider);
+      _ref.invalidate(productsRepositoryProvider);
+      _ref.invalidate(customersRepositoryProvider);
+      _ref.invalidate(suppliersRepositoryProvider);
+      _ref.invalidate(employeesRepositoryProvider);
+      _ref.invalidate(appointmentsRepositoryProvider);
+      _ref.invalidate(invoicesRepositoryProvider);
+      _ref.invalidate(creditRepositoryProvider);
+      _ref.invalidate(companyInfoProvider);
     } catch (_) {}
+
   }
 
   @override

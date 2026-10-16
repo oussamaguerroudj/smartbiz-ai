@@ -1,52 +1,55 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-class AmbientBackground extends StatelessWidget {
+class ModiriBackground extends StatelessWidget {
   final Widget child;
 
-  const AmbientBackground({super.key, required this.child});
+  const ModiriBackground({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.cyberNavy,
-        gradient: AppColors.ambientGradient,
+      decoration: BoxDecoration(
+        color: isDark ? ModiriColors.ink950 : ModiriColors.lightInk950,
       ),
       child: Stack(
         children: [
-          // Ambient soft glow 1: top-left cyan
+          // Top-right radial glow
           Positioned(
             top: -120,
-            left: -100,
+            right: -100,
             child: Container(
-              width: 450,
-              height: 450,
+              width: 900,
+              height: 600,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.electricBlue.withOpacity(0.06),
+                    ModiriColors.brandIndigo.withOpacity(isDark ? 0.16 : 0.06),
                     Colors.transparent,
                   ],
+                  stops: const [0.0, 0.65],
                 ),
               ),
             ),
           ),
-          // Ambient soft glow 2: bottom-right purple
+          // Bottom-left radial glow
           Positioned(
             bottom: -100,
-            right: -80,
+            left: -80,
             child: Container(
-              width: 500,
+              width: 800,
               height: 500,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.neonPurple.withOpacity(0.04),
+                    ModiriColors.brandBlue.withOpacity(isDark ? 0.12 : 0.05),
                     Colors.transparent,
                   ],
+                  stops: const [0.0, 0.60],
                 ),
               ),
             ),

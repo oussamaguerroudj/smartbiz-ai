@@ -245,6 +245,42 @@ async function getSupplierApBalance(companyId, supplierId) {
   };
 }
 
+async function findAllPurchases(companyId) {
+  const res = await query(
+    `SELECT sp.*,
+            COALESCE(json_agg(
+              json_build_object(
+                'id', spi.id,
+                'product_id', spi.product_id,
+                'product_name', spi.product_name,
+                'quantity', spi.quantity,
+                'unit_cost', spi.unit_cost,
+                'line_total', spi.line_total
+              )
+            ) FILTER (WHERE spi.id IS NOT NULL), '[]'::json) AS items
+     FROM supplier_purchases sp
+     LEFT JOIN supplier_purchase_items spi ON spi.purchase_id = sp.id
+     WHERE sp.company_id = $1 AND sp.deleted_at IS NULL
+     GROUP BY sp.id
+     ORDER BY sp.purchase_date DESC, sp.created_at DESC`,
+    [companyId],
+  );
+  return res.rows;
+}
+
+async function findAllPayments(companyId) {
+  const res = await query(
+    `SELECT sp.*,
+            pur.invoice_number AS purchase_invoice_number
+     FROM supplier_payments sp
+     LEFT JOIN supplier_purchases pur ON pur.id = sp.purchase_id
+     WHERE sp.company_id = $1 AND sp.deleted_at IS NULL
+     ORDER BY sp.payment_date DESC, sp.created_at DESC`,
+    [companyId],
+  );
+  return res.rows;
+}
+
 module.exports = {
   findPurchaseByClientTransactionId,
   findPurchaseById,
@@ -259,4 +295,7 @@ module.exports = {
   insertPayment,
   findPaymentsBySupplier,
   getSupplierApBalance,
+  findAllPurchases,
+  findAllPayments,
 };
+

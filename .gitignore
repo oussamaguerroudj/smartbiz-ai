@@ -85,3 +85,7 @@ coverage/
 *.pfx
 service-account*.json
 google-services*.json
+
+# Scratch directories
+desktop/scratch/
+scratch/

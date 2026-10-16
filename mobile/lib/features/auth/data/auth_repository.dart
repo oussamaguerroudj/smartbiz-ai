@@ -13,7 +13,15 @@ import '../../reports/data/reports_repository.dart' show invalidateAllReports;
 import '../../dashboard/data/dashboard_repository.dart' show dashboardRepositoryProvider;
 import '../../expenses/data/expenses_repository.dart' show expensesRepositoryProvider;
 import '../../sales/data/sales_repository.dart' show salesRepositoryProvider;
+import '../../products/data/products_repository.dart' show productsRepositoryProvider;
+import '../../customers/data/customers_repository.dart' show customersRepositoryProvider;
+import '../../suppliers/presentation/screens/suppliers_screen.dart' show suppliersRepositoryProvider;
+import '../../employees/data/employees_repository.dart' show employeesRepositoryProvider;
+import '../../appointments/data/appointments_repository.dart' show appointmentsRepositoryProvider;
+import '../../invoices/data/invoices_repository.dart' show invoicesRepositoryProvider;
+import '../../credit/data/credit_repository.dart' show creditRepositoryProvider;
 import 'companies_repository.dart';
+
 
 class AuthRepository {
   AuthRepository(this._ref);
@@ -217,6 +225,13 @@ class AuthRepository {
     _ref.invalidate(dashboardRepositoryProvider);
     _ref.invalidate(expensesRepositoryProvider);
     _ref.invalidate(salesRepositoryProvider);
+    _ref.invalidate(productsRepositoryProvider);
+    _ref.invalidate(customersRepositoryProvider);
+    _ref.invalidate(suppliersRepositoryProvider);
+    _ref.invalidate(employeesRepositoryProvider);
+    _ref.invalidate(appointmentsRepositoryProvider);
+    _ref.invalidate(invoicesRepositoryProvider);
+    _ref.invalidate(creditRepositoryProvider);
   }
 
   /// Backward-compatible alias for existing code
@@ -245,19 +260,20 @@ class AuthRepository {
   Future<void> logout() async {
     await _ref.read(notificationServiceProvider).unregisterOnLogout();
     await _ref.read(sessionProvider.notifier).clear();
-    _ref.invalidate(companyInfoProvider);
+    _invalidateBusinessProviders();
     // DO NOT call AppDatabase.instance.clearAllData() here.
     // Isolation is enforced by company_id scoping in all repository reads.
   }
 
   Future<void> _applySession(Map<String, dynamic> data) async {
     await _ref.read(sessionProvider.notifier).apply(data);
-    _ref.invalidate(companyInfoProvider);
+    _invalidateBusinessProviders();
     // Background pull all company data into local SQLite so app is instantly ready offline!
     unawaited(_ref.read(syncServiceProvider.notifier).pullInitialData());
     // Register FCM device token with newly authenticated session
     unawaited(_ref.read(notificationServiceProvider).initialize());
   }
+
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository(ref));

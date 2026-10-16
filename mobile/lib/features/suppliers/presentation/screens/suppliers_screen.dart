@@ -48,7 +48,7 @@ class SuppliersRepository extends StateNotifier<AsyncValue<List<Supplier>>> {
   }
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId => _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load({String? search}) async {
     // 1. Immediately read from local SQLite
@@ -170,39 +170,75 @@ class SuppliersRepository extends StateNotifier<AsyncValue<List<Supplier>>> {
     final companyId = _companyId;
     if (companyId == null) return;
 
-    final newId = const Uuid().v4();
-    final clientId = const Uuid().v4();
-    final db = await AppDatabase.instance.database;
-    final nowIso = DateTime.now().toIso8601String();
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) return;
+    final trimmedPhone = (phone != null && phone.trim().isNotEmpty) ? phone.trim() : null;
 
-    await db.insert('suppliers', {
-      'id': newId,
-      'client_id': clientId,
-      'company_id': companyId,
-      'name': name,
-      'phone': phone,
-      'products_supplied': 0,
-      'created_at': nowIso,
-      'synced': 0,
+    final db = await AppDatabase.instance.database;
+    bool inserted = false;
+    String? supplierIdToEnqueue;
+    String? clientIdToEnqueue;
+
+    await db.transaction((txn) async {
+      // Check if supplier with identical name already exists in this company (case-insensitive)
+      final existing = await txn.query(
+        'suppliers',
+        where: 'company_id = ? AND LOWER(TRIM(name)) = ? AND deleted_at IS NULL',
+        whereArgs: [companyId, trimmedName.toLowerCase()],
+      );
+
+      if (existing.isNotEmpty) {
+        final existingId = existing.first['id'] as String;
+        if (trimmedPhone != null && existing.first['phone'] != trimmedPhone) {
+          await txn.update(
+            'suppliers',
+            {'phone': trimmedPhone, 'synced': 0},
+            where: 'id = ? AND company_id = ?',
+            whereArgs: [existingId, companyId],
+          );
+        }
+        return;
+      }
+
+      final newId = const Uuid().v4();
+      final clientId = const Uuid().v4();
+      final nowIso = DateTime.now().toIso8601String();
+
+      await txn.insert('suppliers', {
+        'id': newId,
+        'client_id': clientId,
+        'company_id': companyId,
+        'name': trimmedName,
+        'phone': trimmedPhone,
+        'products_supplied': 0,
+        'created_at': nowIso,
+        'synced': 0,
+      });
+
+      inserted = true;
+      supplierIdToEnqueue = newId;
+      clientIdToEnqueue = clientId;
     });
 
     final fresh = await _fetchFromLocal();
     state = AsyncValue.data(fresh);
 
-    await _ref.read(syncServiceProvider.notifier).enqueueOperation(
-      id: const Uuid().v4(),
-      clientTransactionId: clientId,
-      entityType: 'supplier',
-      entityId: newId,
-      operationType: 'CREATE',
-      payload: {
-        'id': newId,
-        'name': name,
-        if (phone != null && phone.isNotEmpty) 'phone': phone,
-      },
-    );
+    if (inserted && supplierIdToEnqueue != null && clientIdToEnqueue != null) {
+      await _ref.read(syncServiceProvider.notifier).enqueueOperation(
+        id: const Uuid().v4(),
+        clientTransactionId: clientIdToEnqueue!,
+        entityType: 'supplier',
+        entityId: supplierIdToEnqueue!,
+        operationType: 'CREATE',
+        payload: {
+          'id': supplierIdToEnqueue,
+          'name': trimmedName,
+          if (trimmedPhone != null) 'phone': trimmedPhone,
+        },
+      );
 
-    unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
+      unawaited(_ref.read(syncServiceProvider.notifier).syncPending());
+    }
   }
 
   Future<void> updateSupplier(String id, String name, String? phone) async {
@@ -270,10 +306,11 @@ class SuppliersRepository extends StateNotifier<AsyncValue<List<Supplier>>> {
 final suppliersRepositoryProvider =
     StateNotifierProvider.autoDispose<SuppliersRepository, AsyncValue<List<Supplier>>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return SuppliersRepository(ref);
   },
 );
+
 
 /// Suppliers — Spec Ch. 21.2. Real API-backed with full CRUD support.
 class SuppliersScreen extends ConsumerWidget {

@@ -74,7 +74,7 @@ class AppointmentsRepository extends StateNotifier<AsyncValue<List<Appointment>>
 
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId => _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<List<Appointment>> _fetchFromLocal({String? query}) async {
     final companyId = _companyId;
@@ -320,7 +320,8 @@ class AppointmentsRepository extends StateNotifier<AsyncValue<List<Appointment>>
 final appointmentsRepositoryProvider =
     StateNotifierProvider.autoDispose<AppointmentsRepository, AsyncValue<List<Appointment>>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return AppointmentsRepository(ref);
   },
 );
+

@@ -18,12 +18,15 @@ class LocalFinancialCalculator {
       "(COALESCE(CASE WHEN scheduled_at LIKE '%Z' OR scheduled_at LIKE '%+%' THEN date(scheduled_at, 'localtime') ELSE date(scheduled_at) END, date(substr(scheduled_at, 1, 10)), substr(scheduled_at, 1, 10)))";
   static const String _safeCreatedAtDate =
       "(COALESCE(CASE WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime') ELSE date(created_at) END, date(substr(created_at, 1, 10)), substr(created_at, 1, 10)))";
+  static const String _safePurchaseDate =
+      "(COALESCE(CASE WHEN purchase_date LIKE '%Z' OR purchase_date LIKE '%+%' THEN date(purchase_date, 'localtime') ELSE date(purchase_date) END, date(substr(purchase_date, 1, 10)), substr(purchase_date, 1, 10)))";
 
   static const String safeSoldAtDate = _safeSoldAtDate;
   static const String safeSSoldAtDate = _safeSSoldAtDate;
   static const String safeExpenseDate = _safeExpenseDate;
   static const String safeScheduledAtDate = _safeScheduledAtDate;
   static const String safeCreatedAtDate = _safeCreatedAtDate;
+  static const String safePurchaseDate = _safePurchaseDate;
   static const String safeDateSoldAt = _safeSoldAtDate;
   static const String safeDateExpenseDate = _safeExpenseDate;
 
@@ -93,15 +96,22 @@ class LocalFinancialCalculator {
       [companyId],
     );
 
+    double globalProductPurchases = 0.0;
+    try {
+      final suppPurchRes = await activeDb.rawQuery(
+        'SELECT COALESCE(SUM(total_amount), 0) AS total FROM supplier_purchases WHERE company_id = ?',
+        [companyId],
+      );
+      globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
     final isRestaurant = (businessType == 'restaurant' || businessType == 'cafe');
     final allCoreRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
     final allRevenue = allCoreRevenue + globalCreditPayments + globalRestRevenue;
-    final globalCogs = isRestaurant ? 0.0 : ((globalSalesRes.first['cogs'] as num?)?.toDouble() ?? 0.0);
-    final allExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    final allRecordedExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    final allExpenses = globalProductPurchases + allRecordedExpenses;
     final inventoryValue = (globalInventoryRes.first['inventory_value'] as num?)?.toDouble() ?? 0.0;
-    final globalNetProfit = isRestaurant
-        ? allRevenue - inventoryValue - allExpenses
-        : allRevenue - globalCogs - allExpenses;
+    final globalNetProfit = allRevenue - allExpenses;
 
     // 2. Period Revenue (Sales revenue in period) — scoped to this company
     final periodSalesRes = await activeDb.rawQuery(
@@ -169,7 +179,7 @@ class LocalFinancialCalculator {
       FROM expenses
       WHERE company_id = ?
         AND $_safeExpenseDate BETWEEN date(?) AND date(?)
-        AND NOT (category LIKE '%salary%' OR category LIKE '%salair%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
+        AND NOT (category LIKE '%salar%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
       ''',
       [companyId, rangeStart, rangeEnd],
     );
@@ -182,19 +192,31 @@ class LocalFinancialCalculator {
       FROM expenses
       WHERE company_id = ?
         AND $_safeExpenseDate BETWEEN date(?) AND date(?)
-        AND (category LIKE '%salary%' OR category LIKE '%salair%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
+        AND (category LIKE '%salar%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
       ''',
       [companyId, rangeStart, rangeEnd],
     );
     final employeeSalaries = (salaryExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
 
-    final totalExpenses = operatingExpenses + employeeSalaries;
+    // 4b. Product Purchases in period — scoped to this company
+    double periodProductPurchases = 0.0;
+    try {
+      final suppPurchRes = await activeDb.rawQuery(
+        '''
+        SELECT COALESCE(SUM(total_amount), 0) AS total
+        FROM supplier_purchases
+        WHERE company_id = ? AND $_safePurchaseDate BETWEEN date(?) AND date(?)
+        ''',
+        [companyId, rangeStart, rangeEnd],
+      );
+      periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
+    final totalExpenses = periodProductPurchases + operatingExpenses + employeeSalaries;
     final revenue = coreRevenue + periodCreditPayments + periodRestRevenue;
     final costOfGoodsSold = isRestaurant ? 0.0 : periodCogs;
     final grossProfit = revenue - costOfGoodsSold;
-    final netProfit = isRestaurant
-        ? revenue - inventoryValue - totalExpenses
-        : grossProfit - totalExpenses;
+    final netProfit = revenue - totalExpenses;
     final profitMargin = revenue > 0 ? ((netProfit / revenue) * 100) : 0.0;
 
     // 5. Top Products — scoped to this company
@@ -230,7 +252,7 @@ class LocalFinancialCalculator {
       FROM expenses
       WHERE company_id = ?
         AND $_safeExpenseDate BETWEEN date(?) AND date(?)
-        AND NOT (category LIKE '%salary%' OR category LIKE '%salair%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
+        AND NOT (category LIKE '%salar%' OR category LIKE '%payroll%' OR category LIKE '%paie%' OR category LIKE '%wage%' OR employee_id IS NOT NULL)
       GROUP BY category
       ORDER BY total DESC
       ''',
@@ -245,6 +267,17 @@ class LocalFinancialCalculator {
         total: amt,
       );
     }).toList();
+
+    if (periodProductPurchases > 0) {
+      expensesByCategory.insert(
+        0,
+        ExpenseCategoryItem(
+          category: 'Product Purchases',
+          amount: periodProductPurchases,
+          total: periodProductPurchases,
+        ),
+      );
+    }
 
     // 7. Activity Counts — scoped to this company
     final expCountRes = await activeDb.rawQuery(
@@ -368,21 +401,29 @@ class LocalFinancialCalculator {
         }
 
         final mOpExp = await activeDb.rawQuery(
-          '''SELECT COALESCE(SUM(amount), 0) AS exp FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND NOT (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
+          '''SELECT COALESCE(SUM(amount), 0) AS exp FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND NOT (category LIKE '%salar%' OR employee_id IS NOT NULL)''',
           [companyId, mStart, mEnd],
         );
         final mSalExp = await activeDb.rawQuery(
-          '''SELECT COALESCE(SUM(amount), 0) AS sal FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND (category LIKE '%salary%' OR employee_id IS NOT NULL)''',
+          '''SELECT COALESCE(SUM(amount), 0) AS sal FROM expenses WHERE company_id = ? AND $_safeExpenseDate BETWEEN date(?) AND date(?) AND (category LIKE '%salar%' OR employee_id IS NOT NULL)''',
           [companyId, mStart, mEnd],
         );
 
+        double mPurch = 0.0;
+        try {
+          final mPurchRes = await activeDb.rawQuery(
+            '''SELECT COALESCE(SUM(total_amount), 0) AS total FROM supplier_purchases WHERE company_id = ? AND $_safePurchaseDate BETWEEN date(?) AND date(?)''',
+            [companyId, mStart, mEnd],
+          );
+          mPurch = (mPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        } catch (_) {}
+
         final mSalesRev = (mSales.first['rev'] as num?)?.toDouble() ?? 0.0;
         final mRev = mSalesRev + mCredit + mRest;
-        final mCogs = (mSales.first['cogs'] as num?)?.toDouble() ?? 0.0;
-        final mGross = mRev - mCogs;
         final mOp = (mOpExp.first['exp'] as num?)?.toDouble() ?? 0.0;
         final mSal = (mSalExp.first['sal'] as num?)?.toDouble() ?? 0.0;
-        final mTotExp = mOp + mSal;
+        final mTotExp = mPurch + mOp + mSal;
+        final mNet = mRev - mTotExp;
 
         monthlyBreakdown.add(
           MonthlyBreakdownItem(
@@ -392,7 +433,7 @@ class LocalFinancialCalculator {
             expenses: mTotExp,
             salaryExpenses: mSal,
             operatingExpenses: mOp,
-            netProfit: mGross - mTotExp,
+            netProfit: mNet,
           ),
         );
       }
@@ -428,6 +469,7 @@ class LocalFinancialCalculator {
         totalRevenue: revenue,
       ),
       expensesBreakdown: ExpensesBreakdown(
+        productPurchases: periodProductPurchases,
         operatingExpenses: operatingExpenses,
         employeeSalaries: employeeSalaries,
         costOfGoodsSold: costOfGoodsSold,

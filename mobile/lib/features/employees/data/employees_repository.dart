@@ -18,7 +18,7 @@ class EmployeesRepository extends StateNotifier<AsyncValue<List<Employee>>> {
 
   final Ref _ref;
 
-  String? get _companyId => _ref.read(sessionProvider).companyId;
+  String? get _companyId => _ref.read(sessionProvider).companyId ?? _ref.read(sessionProvider).userId;
 
   Future<void> load({String? query}) async {
     // 1. Read from local SQLite immediately
@@ -445,10 +445,11 @@ class EmployeesRepository extends StateNotifier<AsyncValue<List<Employee>>> {
 final employeesRepositoryProvider =
     StateNotifierProvider<EmployeesRepository, AsyncValue<List<Employee>>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return EmployeesRepository(ref);
   },
 );
+
 
 final employeeDetailsProvider =
     FutureProvider.autoDispose.family<EmployeeDetails, String>((ref, id) {

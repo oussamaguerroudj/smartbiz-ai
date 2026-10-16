@@ -256,7 +256,7 @@ async function totalSalaryCostForRange(companyId, rangeStart, rangeEnd) {
      FROM expenses
      WHERE company_id = $1
        AND deleted_at IS NULL
-       AND (category ILIKE '%salary%' OR category ILIKE '%salair%' OR category ILIKE '%payroll%' OR category ILIKE '%paie%' OR category ILIKE '%wage%' OR employee_id IS NOT NULL)
+       AND (category ILIKE '%salar%' OR category ILIKE '%payroll%' OR category ILIKE '%paie%' OR category ILIKE '%wage%' OR employee_id IS NOT NULL)
        AND expense_date BETWEEN $2::date AND $3::date`,
     [companyId, rangeStart, rangeEnd],
   );

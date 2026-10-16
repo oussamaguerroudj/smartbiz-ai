@@ -98,6 +98,7 @@ describe('Financial Calculation Service - Unit Tests', () => {
       revenue = 0,
       operatingExpenses = 0,
       salaries = 0,
+      productPurchases = 0,
       credit = 0,
       clinic = 0,
       restaurant = 0,
@@ -107,6 +108,9 @@ describe('Financial Calculation Service - Unit Tests', () => {
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies')) {
           return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: productPurchases }] });
         }
         if (sql.includes('SELECT') && sql.includes('AS revenue')) {
           return Promise.resolve({
@@ -394,12 +398,13 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(yearly.rangeEnd).toBe('2026-12-31');
     });
 
-    it('Scenario 24: Standard Accounting Formula Verification (Purchase 100, Sale 150, Qty 10 => Revenue 1500, COGS 1000, Gross Profit 500, Expenses 200 => Net Profit 300)', async () => {
+    it('Scenario 24: Standard Accounting Formula Verification (Purchase 1000, Sale 1500, Qty 10 => Revenue 1500, COGS 1000, Gross Profit 500, Expenses 1200 => Net Profit 300)', async () => {
       const purchasePrice = 100;
       const salePrice = 150;
       const quantitySold = 10;
       const currentStock = 20;
-      const expenses = 200;
+      const operatingExpenses = 200;
+      const productPurchases = 1000;
 
       // REVENUE = SALE PRICE * QUANTITY SOLD = 150 * 10 = 1500
       const expectedRevenue = salePrice * quantitySold;
@@ -417,14 +422,21 @@ describe('Financial Calculation Service - Unit Tests', () => {
       const expectedInventoryValue = (salePrice - purchasePrice) * currentStock;
       expect(expectedInventoryValue).toBe(1000);
 
-      // NET PROFIT = GROSS PROFIT - EXPENSES = 500 - 200 = 300
-      const expectedNetProfit = expectedGrossProfit - expenses;
+      // TOTAL EXPENSES = PRODUCT PURCHASES + OPERATING EXPENSES = 1000 + 200 = 1200
+      const expectedExpenses = productPurchases + operatingExpenses;
+      expect(expectedExpenses).toBe(1200);
+
+      // NET PROFIT = REVENUE - TOTAL EXPENSES = 1500 - 1200 = 300
+      const expectedNetProfit = expectedRevenue - expectedExpenses;
       expect(expectedNetProfit).toBe(300);
 
       // Verify calculateFinancials handles inventoryValue, revenue, cogs, gross profit, and net profit correctly
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies')) {
           return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: productPurchases }] });
         }
         if (sql.includes('SELECT') && sql.includes('AS revenue')) {
           return Promise.resolve({
@@ -449,12 +461,12 @@ describe('Financial Calculation Service - Unit Tests', () => {
           return Promise.resolve({ rows: [{ count: 0 }] });
         }
         if (sql.includes('FROM expenses') && sql.includes('GROUP BY category')) {
-          return Promise.resolve({ rows: [{ category: 'Operating', total: expenses }] });
+          return Promise.resolve({ rows: [{ category: 'Operating', total: operatingExpenses }] });
         }
         return Promise.resolve({ rows: [] });
       });
 
-      expensesRepo.totalForRange.mockResolvedValue(expenses);
+      expensesRepo.totalForRange.mockResolvedValue(operatingExpenses);
       employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
       creditRepo.totalPaymentsForRange.mockResolvedValue(0);
       clinicRepo.revenueForRange.mockResolvedValue(0);
@@ -465,15 +477,18 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.revenue).toBe(1500);
       expect(result.costOfGoodsSold).toBe(1000);
       expect(result.grossProfit).toBe(500);
-      expect(result.expenses).toBe(200);
+      expect(result.expenses).toBe(1200);
       expect(result.netProfit).toBe(300);
       expect(result.inventoryValue).toBe(1000);
     });
 
-    it('Scenario 25: Negative Gross Profit correctly calculates when goods sold below cost (Rev 400, COGS 500, Exp 0 -> GP -100, NP -100)', async () => {
+    it('Scenario 25: Negative Gross Profit correctly calculates when goods sold below cost (Rev 400, COGS 500, Purchases 500, Exp 0 -> GP -100, NP -100)', async () => {
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies')) {
           return Promise.resolve({ rows: [{ business_type: 'retail' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: '500.00' }] });
         }
         if (sql.includes('FROM sales s') && sql.includes('COUNT(*)')) {
           return Promise.resolve({
@@ -509,8 +524,65 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.revenue).toBe(400);
       expect(result.costOfGoodsSold).toBe(500);
       expect(result.grossProfit).toBe(-100);
-      expect(result.expenses).toBe(0);
+      expect(result.expenses).toBe(500);
       expect(result.netProfit).toBe(-100);
+    });
+
+    it('Phase 4: Mandatory Clothing Store Numerical Validation', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 20000 }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({
+            rows: [{ revenue: 18000, cogs: 12000, sales_count: 6 }],
+          });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: 8000 }] });
+        }
+        if (sql.includes('FROM expenses') && sql.includes('COUNT(*)')) {
+          return Promise.resolve({ rows: [{ count: 1 }] });
+        }
+        if (sql.includes('FROM expenses') && sql.includes('GROUP BY category')) {
+          return Promise.resolve({ rows: [{ category: 'Rent & Electricity', total: 2000 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(2000);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(5000);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+
+      // 1. Total Revenue: 18,000 DZD
+      expect(result.revenue).toBe(18000);
+
+      // 2. Cost of Goods Sold (COGS): 12,000 DZD
+      expect(result.costOfGoodsSold).toBe(12000);
+
+      // 3. Gross Profit: 18,000 - 12,000 = 6,000 DZD
+      expect(result.grossProfit).toBe(6000);
+
+      // 4. Product Purchases: 20,000 DZD
+      expect(result.expensesBreakdown.productPurchases).toBe(20000);
+      expect(result.expensesBreakdown.operatingExpenses).toBe(2000);
+      expect(result.expensesBreakdown.employeeSalaries).toBe(5000);
+
+      // 5. Total Expenses: 20,000 + 5,000 + 2,000 = 27,000 DZD
+      expect(result.expenses).toBe(27000);
+
+      // 6. Net Profit: 18,000 - 27,000 = -9,000 DZD
+      expect(result.netProfit).toBe(-9000);
+
+      // 7. Remaining Inventory Value: 8,000 DZD
+      expect(result.inventoryValue).toBe(8000);
     });
 
     it('throws 403 ONBOARDING_INCOMPLETE when company business_type is NULL', async () => {
@@ -527,7 +599,7 @@ describe('Financial Calculation Service - Unit Tests', () => {
       });
     });
 
-    it('Scenario 26: Restaurant Business Rules - Revenue 10,000 DA, Current Inventory Value 3,000 DA, Eligible Paid Expenses 1,000 DA => GP 10,000 DA, NP 6,000 DA', async () => {
+    it('Scenario 26: Restaurant Business Rules - Revenue 10,000 DA, Current Inventory Value 3,000 DA, Eligible Paid Expenses 1,000 DA => GP 10,000 DA, NP 9,000 DA', async () => {
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies')) {
           return Promise.resolve({ rows: [{ business_type: 'restaurant' }] });
@@ -556,7 +628,7 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.grossProfit).toBe(10000); // Equal to revenue
       expect(result.inventoryValue).toBe(3000); // Current inventory value
       expect(result.expenses).toBe(1000);
-      expect(result.netProfit).toBe(6000); // 10,000 - 3,000 - 1,000 = 6,000
+      expect(result.netProfit).toBe(9000); // 10,000 - 1,000 = 9,000
     });
 
     it('Scenario 26b: Restaurant with Empty Inventory (0 DA inventory value) => NP = Revenue - Expenses', async () => {

@@ -423,7 +423,8 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
 final salesRepositoryProvider =
     StateNotifierProvider.autoDispose<SalesRepository, AsyncValue<List<Sale>>>(
   (ref) {
-    ref.watch(sessionProvider.select((s) => s.companyId));
+    ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
     return SalesRepository(ref);
   },
 );
+

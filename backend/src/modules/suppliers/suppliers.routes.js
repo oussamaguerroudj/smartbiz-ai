@@ -454,11 +454,23 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+// Company-wide purchases and payments recovery (declared before /:id so 'purchases'/'payments' are not treated as supplier UUIDs)
+router.get('/purchases', asyncHandler(async (req, res) => {
+  const data = await purchasesService.getAllSupplierPurchases(req.user.companyId);
+  res.json({ data });
+}));
+
+router.get('/payments', asyncHandler(async (req, res) => {
+  const data = await purchasesService.getAllSupplierPayments(req.user.companyId);
+  res.json({ data });
+}));
+
 router.get('/', list);
 router.get('/:id', getByIdHandler);
 router.post('/', createHandler);
 router.put('/:id', updateHandler);
 router.delete('/:id', deleteHandler);
+
 
 // Accounts Payable / Purchases & Payments
 router.get('/:id/purchases', getPurchasesHandler);

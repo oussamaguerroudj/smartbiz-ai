@@ -477,6 +477,20 @@ async function streamSupplierStatementPdf(res, companyId, supplierId) {
   pdfService.streamSupplierStatementPdf(res, { company, supplier, statement });
 }
 
+async function getAllSupplierPurchases(companyId) {
+  if (!companyId) {
+    throw ApiError.badRequest('companyId is required');
+  }
+  return repo.findAllPurchases(companyId);
+}
+
+async function getAllSupplierPayments(companyId) {
+  if (!companyId) {
+    throw ApiError.badRequest('companyId is required');
+  }
+  return repo.findAllPayments(companyId);
+}
+
 module.exports = {
   createSupplierPurchase,
   recordSupplierPayment,
@@ -485,4 +499,7 @@ module.exports = {
   getSupplierBalance,
   getSupplierStatement,
   streamSupplierStatementPdf,
+  getAllSupplierPurchases,
+  getAllSupplierPayments,
 };
+
