@@ -60,12 +60,29 @@ async function createChargilyCheckout({ companyId, userId, successUrl, failureUr
   const fixedAmount = subscriptionConfig.product.priceDzd; // Fixed 15,000 DZD
   const currency = subscriptionConfig.product.currency;
   const apiKey = subscriptionConfig.chargily.apiKey;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const chargilyMode = (subscriptionConfig.chargily.mode || '').trim().toLowerCase();
+  const chargilyBaseUrl = subscriptionConfig.chargily.baseUrl || '';
 
-  if (!apiKey && process.env.NODE_ENV === 'production') {
-    throw ApiError.internal(
-      'Chargily electronic payment service is not configured. Please use manual CCP payment.',
-      'PAYMENT_GATEWAY_NOT_CONFIGURED',
-    );
+  if (isProduction) {
+    if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {
+      throw ApiError.internal(
+        'Chargily electronic payment service is not configured. Please use manual CCP payment.',
+        'PAYMENT_GATEWAY_NOT_CONFIGURED',
+      );
+    }
+    if (apiKey.startsWith('pk_') || apiKey.startsWith('live_pk_') || apiKey.startsWith('test_pk_')) {
+      throw ApiError.internal(
+        'Chargily API key is misconfigured (public key provided instead of secret API key).',
+        'PAYMENT_GATEWAY_MISCONFIGURED',
+      );
+    }
+    if (chargilyMode !== 'live' || chargilyBaseUrl.includes('/test/') || !chargilyBaseUrl.startsWith('https://')) {
+      throw ApiError.internal(
+        'Chargily electronic payment is misconfigured for production mode. Please use manual CCP payment.',
+        'PAYMENT_GATEWAY_MISCONFIGURED',
+      );
+    }
   }
 
   const orderNumber = `ORD-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -266,7 +283,7 @@ async function processChargilyWebhook({ rawBody, signatureHeader, eventData }) {
 
   // 2. Extract Event & Data
   const eventId = eventData?.id || eventData?.event_id || crypto.randomUUID();
-  const eventType = eventData?.type || eventData?.event || 'checkout.paid';
+  const eventType = eventData?.type || eventData?.event || null;
   const checkout = eventData?.data || eventData;
 
   const checkoutId = checkout?.id;
@@ -330,11 +347,41 @@ async function processChargilyWebhook({ rawBody, signatureHeader, eventData }) {
       return { status: 'tenant_mismatch', orderId: order.id };
     }
 
+    if (metadata.user_id && String(metadata.user_id) !== String(order.user_id)) {
+      // eslint-disable-next-line no-console
+      console.error('[CHARGILY WEBHOOK] User mismatch on order:', {
+        expected: order.user_id,
+        received: metadata.user_id,
+      });
+      return { status: 'user_mismatch', orderId: order.id };
+    }
+
+    if (orderId && String(orderId) !== String(order.id)) {
+      // eslint-disable-next-line no-console
+      console.error('[CHARGILY WEBHOOK] Internal order ID mismatch:', {
+        expected: order.id,
+        received: orderId,
+      });
+      return { status: 'order_id_mismatch', orderId: order.id };
+    }
+
+    const matchesProviderId = order.provider_checkout_id && String(order.provider_checkout_id) === String(checkoutId);
+    const matchesOrderId = String(order.id) === String(checkoutId);
+    if (checkoutId && order.provider_checkout_id && !matchesProviderId && !matchesOrderId) {
+      // eslint-disable-next-line no-console
+      console.error('[CHARGILY WEBHOOK] Provider checkout ID mismatch:', {
+        expected: order.provider_checkout_id,
+        received: checkoutId,
+      });
+      return { status: 'checkout_id_mismatch', orderId: order.id };
+    }
+
     // 5. Validate Currency
     const checkoutCurrency = (checkout?.currency || '').toLowerCase();
-    if (checkoutCurrency && checkoutCurrency !== 'dzd') {
+    const expectedCurrency = String(order.currency || 'dzd').toLowerCase();
+    if (!checkoutCurrency || checkoutCurrency !== expectedCurrency) {
       // eslint-disable-next-line no-console
-      console.error('[CHARGILY WEBHOOK] Currency mismatch:', { currency: checkoutCurrency, expected: 'dzd' });
+      console.error('[CHARGILY WEBHOOK] Currency mismatch:', { currency: checkoutCurrency, expected: expectedCurrency });
       await client.query(
         `UPDATE payment_orders SET status = 'under_review', updated_at = now() WHERE id = $1`,
         [order.id],
@@ -342,10 +389,29 @@ async function processChargilyWebhook({ rawBody, signatureHeader, eventData }) {
       return { status: 'currency_mismatch', orderId: order.id };
     }
 
+    // Validate livemode strictly: test events or missing livemode in production must not activate licenses
+    const rawLivemode = checkout?.livemode !== undefined ? checkout.livemode : eventData?.livemode;
+    const isLivemodeTrue = rawLivemode === true || rawLivemode === 'true';
+    const isLiveRequired = process.env.NODE_ENV === 'production' || subscriptionConfig.chargily.mode === 'live';
+
+    if (isLiveRequired) {
+      if (!isLivemodeTrue) {
+        // eslint-disable-next-line no-console
+        console.error('[CHARGILY WEBHOOK] Live mode required but event is sandbox/test or livemode missing:', {
+          orderId: order.id,
+          rawLivemode,
+        });
+        await client.query(
+          `UPDATE payment_orders SET status = 'under_review', updated_at = now() WHERE id = $1`,
+          [order.id],
+        );
+        return { status: 'livemode_mismatch', orderId: order.id };
+      }
+    }
+
     // 6. Check payment outcome
     const isExplicitlyPaid =
-      (status === 'paid' && (eventType === 'checkout.paid' || eventType === 'payment.paid' || !eventType)) ||
-      (eventType === 'checkout.paid' && (!status || status === 'paid'));
+      status === 'paid' && (eventType === 'checkout.paid' || eventType === 'payment.paid');
 
     const isExplicitlyFailed =
       status === 'failed' ||
@@ -356,10 +422,18 @@ async function processChargilyWebhook({ rawBody, signatureHeader, eventData }) {
       eventType === 'checkout.expired';
 
     if (isExplicitlyPaid && !isExplicitlyFailed) {
-      // Validate amount (15,000 DZD)
-      if (amount && Number(amount) < subscriptionConfig.product.priceDzd) {
+      // Exact expected amount comparison against the internal order record
+      const isExactAmount =
+        amount !== undefined &&
+        amount !== null &&
+        Number(amount) === Number(order.amount);
+
+      if (!isExactAmount) {
         // eslint-disable-next-line no-console
-        console.error('[CHARGILY WEBHOOK] Payment amount mismatch:', { amount, expected: subscriptionConfig.product.priceDzd });
+        console.error('[CHARGILY WEBHOOK] Payment amount mismatch:', {
+          amount,
+          expected: Number(order.amount),
+        });
         await client.query(
           `UPDATE payment_orders SET status = 'under_review', updated_at = now() WHERE id = $1`,
           [order.id],
@@ -695,43 +769,81 @@ async function getPaymentOrderStatus(companyId, orderId) {
         const providerStatus = (checkoutData.status || '').toLowerCase();
 
         if (providerStatus === 'paid') {
-          await withTransaction(async (client) => {
-            await client.query(
-              `UPDATE payment_orders
-               SET status = 'paid', paid_at = now(), updated_at = now()
-               WHERE id = $1 AND status != 'paid'`,
+          const checkoutAmount = Number(checkoutData.amount);
+          const checkoutCurrency = String(checkoutData.currency || '').toLowerCase();
+          const checkoutCompanyId = checkoutData.metadata?.company_id;
+          const checkoutUserId = checkoutData.metadata?.user_id;
+          const checkoutOrderId = checkoutData.metadata?.order_id;
+          const isLiveMode = process.env.NODE_ENV === 'production' || subscriptionConfig.chargily.mode === 'live';
+
+          const amountOk = !Number.isNaN(checkoutAmount) && checkoutAmount === Number(order.amount);
+          const currencyOk = checkoutCurrency === String(order.currency || 'dzd').toLowerCase();
+          const companyOk = !checkoutCompanyId || String(checkoutCompanyId) === String(companyId);
+          const userOk = !checkoutUserId || String(checkoutUserId) === String(order.user_id);
+          const orderOk = !checkoutOrderId || String(checkoutOrderId) === String(order.id);
+
+          let livemodeOk = true;
+          if (isLiveMode) {
+            const rawLivemode = checkoutData.livemode;
+            livemodeOk = rawLivemode === true || rawLivemode === 'true';
+          }
+
+          if (!amountOk || !currencyOk || !companyOk || !userOk || !orderOk || !livemodeOk) {
+            // eslint-disable-next-line no-console
+            console.error('[CHARGILY] Active verification mismatch:', {
+              orderId: order.id,
+              amountOk,
+              currencyOk,
+              companyOk,
+              userOk,
+              orderOk,
+              livemodeOk,
+              checkoutData,
+            });
+            await query(
+              `UPDATE payment_orders SET status = 'under_review', updated_at = now() WHERE id = $1`,
               [order.id],
             );
-            await client.query(
-              `UPDATE companies
-               SET entitlement_type = 'lifetime',
-                   entitlement_granted_at = now(),
-                   entitlement_granted_by = $2,
-                   updated_at = now()
-               WHERE id = $1`,
-              [companyId, order.user_id],
-            );
-            await client.query(
-              `INSERT INTO license_audit_logs (
-                 company_id, user_id, actor_id, action, previous_entitlement,
-                 new_entitlement, reason, metadata
-               ) VALUES ($1, $2, $2, 'chargily_reconciled', 'trial', 'lifetime',
-                 'Reconciled directly from Chargily API checkouts verification', $3)`,
-              [companyId, order.user_id, JSON.stringify(checkoutData)],
-            );
-            await client.query(
-              `INSERT INTO notifications (company_id, user_id, type, title, body)
-               VALUES ($1, $2, 'license_granted', $3, $4)`,
-              [
-                companyId,
-                order.user_id,
-                'Lifetime License Activated | تم تفعيل رخصة مدى الحياة',
-                'Thank you! Your payment of 15,000 DZD has been verified. Your Modiri AI lifetime license is permanently active.\n\nشكراً لك! تم تأكيد دفع 15,000 دج. رخصة Modiri AI مدى الحياة مفعلة لحسابك بشكل دائم.',
-              ],
-            );
-          });
-          order.status = 'paid';
-          order.paid_at = new Date();
+            order.status = 'under_review';
+          } else {
+            await withTransaction(async (client) => {
+              await client.query(
+                `UPDATE payment_orders
+                 SET status = 'paid', paid_at = now(), updated_at = now()
+                 WHERE id = $1 AND status != 'paid'`,
+                [order.id],
+              );
+              await client.query(
+                `UPDATE companies
+                 SET entitlement_type = 'lifetime',
+                     entitlement_granted_at = now(),
+                     entitlement_granted_by = $2,
+                     updated_at = now()
+                 WHERE id = $1`,
+                [companyId, order.user_id],
+              );
+              await client.query(
+                `INSERT INTO license_audit_logs (
+                   company_id, user_id, actor_id, action, previous_entitlement,
+                   new_entitlement, reason, metadata
+                 ) VALUES ($1, $2, $2, 'chargily_reconciled', 'trial', 'lifetime',
+                   'Reconciled directly from Chargily API checkouts verification', $3)`,
+                [companyId, order.user_id, JSON.stringify(checkoutData)],
+              );
+              await client.query(
+                `INSERT INTO notifications (company_id, user_id, type, title, body)
+                 VALUES ($1, $2, 'license_granted', $3, $4)`,
+                [
+                  companyId,
+                  order.user_id,
+                  'Lifetime License Activated | تم تفعيل رخصة مدى الحياة',
+                  'Thank you! Your payment of 15,000 DZD has been verified. Your Modiri AI lifetime license is permanently active.\n\nشكراً لك! تم تأكيد دفع 15,000 دج. رخصة Modiri AI مدى الحياة مفعلة لحسابك بشكل دائم.',
+                ],
+              );
+            });
+            order.status = 'paid';
+            order.paid_at = new Date();
+          }
         } else if (
           providerStatus === 'failed' ||
           providerStatus === 'canceled' ||

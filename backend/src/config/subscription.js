@@ -21,6 +21,10 @@ function normalizeAlgerianWhatsApp(raw) {
 
 const NORMALIZED_WHATSAPP = normalizeAlgerianWhatsApp(RAW_WHATSAPP);
 
+const chargilyMode =
+  process.env.CHARGILY_MODE ||
+  (process.env.NODE_ENV === 'production' ? 'live' : 'test');
+
 module.exports = {
   product: {
     name: 'Modiri AI',
@@ -48,10 +52,10 @@ module.exports = {
   chargily: {
     apiKey: process.env.CHARGILY_API_KEY || null,
     secretKey: process.env.CHARGILY_SECRET_KEY || process.env.CHARGILY_WEBHOOK_SECRET || null,
-    mode: process.env.CHARGILY_MODE || (process.env.NODE_ENV === 'production' ? 'live' : 'test'),
+    mode: chargilyMode,
     baseUrl:
       process.env.CHARGILY_BASE_URL ||
-      (process.env.CHARGILY_MODE === 'live'
+      (chargilyMode === 'live'
         ? 'https://pay.chargily.net/api/v2'
         : 'https://pay.chargily.net/test/api/v2'),
   },
