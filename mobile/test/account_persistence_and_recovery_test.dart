@@ -525,7 +525,7 @@ void main() {
 
     test('4. Offline Sync Queue is Preserved Across Logout and Re-login', () async {
       // User creates a product offline for Company A
-      final clientTxId = 'tx_offline_prod_001';
+      const clientTxId = 'tx_offline_prod_001';
       await db.insert('sync_queue', {
         'id': 'sync_1',
         'company_id': companyA,
@@ -564,7 +564,7 @@ void main() {
       });
 
       // Create an expired session
-      final expiredSession = const Session(
+      const expiredSession = Session(
         accessToken: 'expired_jwt_token',
         userId: 'usr_1',
         companyId: companyA,

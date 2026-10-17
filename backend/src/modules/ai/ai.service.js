@@ -964,7 +964,129 @@ async function chat({ companyId, userId, message, history }) {
 // AI Insights — deterministic metrics (Ch. 6) narrated by Qwen
 // ---------------------------------------------------------------------
 
-async function insights({ companyId, userId }) {
+function generateFallbackInsights(metrics, lang = 'ar') {
+  const normLang = String(lang).toLowerCase().slice(0, 2);
+  const { profitThisMonth, topProducts, lowStock, unpaidInvoices, customersWithDebt } = metrics;
+  const list = [];
+
+  if (normLang === 'fr') {
+    if (Array.isArray(lowStock) && lowStock.length > 0) {
+      list.push({
+        title: 'Alerte Stock',
+        detail: `${lowStock.length} produit(s) ont atteint le seuil minimum de stock.`,
+        severity: 'alert',
+      });
+    }
+    if (Array.isArray(unpaidInvoices) && unpaidInvoices.length > 0) {
+      list.push({
+        title: 'Factures en attente',
+        detail: `Vous avez ${unpaidInvoices.length} facture(s) impayée(s).`,
+        severity: 'watch',
+      });
+    }
+    if (profitThisMonth && (profitThisMonth.net_profit !== undefined || profitThisMonth.netProfit !== undefined)) {
+      const np = profitThisMonth.net_profit ?? profitThisMonth.netProfit ?? 0;
+      list.push({
+        title: 'Bénéfice du mois',
+        detail: `Le bénéfice net ce mois-ci est de ${np} DA.`,
+        severity: np >= 0 ? 'info' : 'watch',
+      });
+    }
+    if (Array.isArray(topProducts) && topProducts.length > 0) {
+      list.push({
+        title: 'Meilleure vente',
+        detail: `Le produit le plus vendu est "${topProducts[0].name || topProducts[0].product_name}".`,
+        severity: 'info',
+      });
+    }
+    if (Array.isArray(customersWithDebt) && customersWithDebt.length > 0) {
+      list.push({
+        title: 'Dettes clients',
+        detail: `${customersWithDebt.length} client(s) ont des créances en cours.`,
+        severity: 'watch',
+      });
+    }
+  } else if (normLang === 'en') {
+    if (Array.isArray(lowStock) && lowStock.length > 0) {
+      list.push({
+        title: 'Low Stock Alert',
+        detail: `${lowStock.length} product(s) reached low stock threshold.`,
+        severity: 'alert',
+      });
+    }
+    if (Array.isArray(unpaidInvoices) && unpaidInvoices.length > 0) {
+      list.push({
+        title: 'Unpaid Invoices',
+        detail: `You have ${unpaidInvoices.length} unpaid invoice(s) pending.`,
+        severity: 'watch',
+      });
+    }
+    if (profitThisMonth && (profitThisMonth.net_profit !== undefined || profitThisMonth.netProfit !== undefined)) {
+      const np = profitThisMonth.net_profit ?? profitThisMonth.netProfit ?? 0;
+      list.push({
+        title: 'Monthly Profit',
+        detail: `Net profit this month is ${np} DZD.`,
+        severity: np >= 0 ? 'info' : 'watch',
+      });
+    }
+    if (Array.isArray(topProducts) && topProducts.length > 0) {
+      list.push({
+        title: 'Top Product',
+        detail: `The top selling product is "${topProducts[0].name || topProducts[0].product_name}".`,
+        severity: 'info',
+      });
+    }
+    if (Array.isArray(customersWithDebt) && customersWithDebt.length > 0) {
+      list.push({
+        title: 'Customer Debts',
+        detail: `${customersWithDebt.length} customer(s) have pending debts.`,
+        severity: 'watch',
+      });
+    }
+  } else {
+    // Default Arabic
+    if (Array.isArray(lowStock) && lowStock.length > 0) {
+      list.push({
+        title: 'تنبيه المخزون',
+        detail: `يوجد ${lowStock.length} منتجات قاربت على النفاد، يرجى مراجعة المخزون.`,
+        severity: 'alert',
+      });
+    }
+    if (Array.isArray(unpaidInvoices) && unpaidInvoices.length > 0) {
+      list.push({
+        title: 'فواتير غير مدفوعة',
+        detail: `لديك ${unpaidInvoices.length} فواتير معلقة بانتظار التحصيل.`,
+        severity: 'watch',
+      });
+    }
+    if (profitThisMonth && (profitThisMonth.net_profit !== undefined || profitThisMonth.netProfit !== undefined)) {
+      const np = profitThisMonth.net_profit ?? profitThisMonth.netProfit ?? 0;
+      list.push({
+        title: 'أرباح الشهر',
+        detail: `صافي أرباح هذا الشهر بلغ ${np} دج.`,
+        severity: np >= 0 ? 'info' : 'watch',
+      });
+    }
+    if (Array.isArray(topProducts) && topProducts.length > 0) {
+      list.push({
+        title: 'المنتج الأكثر مبيعاً',
+        detail: `أفضل منتج مبيعاً هو "${topProducts[0].name || topProducts[0].product_name}".`,
+        severity: 'info',
+      });
+    }
+    if (Array.isArray(customersWithDebt) && customersWithDebt.length > 0) {
+      list.push({
+        title: 'ديون الزبائن',
+        detail: `يوجد ${customersWithDebt.length} زبائن لديهم ديون مسجلة.`,
+        severity: 'watch',
+      });
+    }
+  }
+
+  return list;
+}
+
+async function insights({ companyId, userId, lang = 'ar' }) {
   if (!runtimeAiConfig.enabled) {
     throw ApiError.badRequest('AI services are disabled in settings', 'AI_DISABLED');
   }
@@ -972,8 +1094,6 @@ async function insights({ companyId, userId }) {
 
   // Backend performs every calculation deterministically first — the
   // model only ever narrates numbers it's handed, never computes them
-  // (Ch. 6 "Use deterministic backend calculations... The LLM should
-  // interpret the data, NOT perform critical calculations blindly").
   const [profitThisMonth, topProducts, lowStock, unpaidInvoices, customersWithDebt] =
     await Promise.all([
       executeTool(companyId, 'calculate_profit', { period: 'this_month' }),
@@ -984,6 +1104,16 @@ async function insights({ companyId, userId }) {
     ]);
 
   const metrics = { profitThisMonth, topProducts, lowStock, unpaidInvoices, customersWithDebt };
+
+  const normLang = String(lang).toLowerCase().slice(0, 2);
+  let langDirective = 'CRITICAL LANGUAGE REQUIREMENT: You MUST respond entirely in Arabic (العربية). All titles and details must be in Arabic script suitable for an Algerian small-business owner. Do not mix English or French.';
+  if (normLang === 'fr') {
+    langDirective = 'CRITICAL LANGUAGE REQUIREMENT: You MUST respond entirely in French (Français). All titles and details must be in French. Do not mix English or Arabic words.';
+  } else if (normLang === 'en') {
+    langDirective = 'CRITICAL LANGUAGE REQUIREMENT: You MUST respond entirely in English. All titles and details must be in English.';
+  }
+
+  const narrationPrompt = `${INSIGHT_NARRATION_PROMPT}\n\n${langDirective}`;
 
   const openai = getClient();
   const chatModel = runtimeAiConfig.chatModel || env.ai.chatModel;
@@ -996,23 +1126,26 @@ async function insights({ companyId, userId }) {
       max_tokens: 700,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: INSIGHT_NARRATION_PROMPT },
+        { role: 'system', content: narrationPrompt },
         { role: 'user', content: `Business metrics (JSON): ${JSON.stringify(metrics)}` },
       ],
     });
   } catch (err) {
-    throw ApiError.internal(`AI insights request failed: ${err.message}`, 'AI_REQUEST_FAILED');
+    // Graceful fallback to deterministic localized insights if LLM call fails
+    const fallbackList = generateFallbackInsights(metrics, lang);
+    return { insights: fallbackList };
   }
 
   const raw = completion.choices?.[0]?.message?.content || '{}';
   const parsed = parseJsonLoose(raw);
 
-  if (!parsed) {
-    throw ApiError.internal('AI returned an unreadable response', 'AI_BAD_RESPONSE');
+  if (!parsed || !Array.isArray(parsed.insights)) {
+    const fallbackList = generateFallbackInsights(metrics, lang);
+    return { insights: fallbackList };
   }
 
   const allowedSeverities = new Set(['info', 'watch', 'alert']);
-  const cleanInsights = (Array.isArray(parsed.insights) ? parsed.insights : [])
+  const cleanInsights = parsed.insights
     .filter((i) => i && typeof i.title === 'string' && typeof i.detail === 'string')
     .slice(0, 5)
     .map((i) => ({
@@ -1021,16 +1154,18 @@ async function insights({ companyId, userId }) {
       severity: allowedSeverities.has(i.severity) ? i.severity : 'info',
     }));
 
+  const finalInsights = cleanInsights.length > 0 ? cleanInsights : generateFallbackInsights(metrics, lang);
+
   await logAi({
     companyId,
     userId,
     type: 'insight_generation',
     inputRef: 'dashboard metrics',
-    result: { insights: cleanInsights },
+    result: { insights: finalInsights },
     confirmed: true,
   });
 
-  return { insights: cleanInsights };
+  return { insights: finalInsights };
 }
 
 async function checkHealth() {

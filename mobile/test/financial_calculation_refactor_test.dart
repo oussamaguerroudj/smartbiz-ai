@@ -350,5 +350,46 @@ void main() {
       expect(report.expensesBreakdown.costOfGoodsSold, 0.0);
       expect(report.grossProfit, 0.0);
     });
+
+    test('Direct product inventory addition (without supplier purchases) is added to productPurchases and total expenses', () async {
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+
+      // User adds a direct product in inventory with 10 units @ 1,500 DZD purchase price
+      await db.insert('products', {
+        'id': 'prod_direct_001',
+        'company_id': testCompanyId,
+        'name': 'Direct Inventory Shoes',
+        'category': 'Shoes',
+        'purchase_price': 1500.0,
+        'selling_price': 2500.0,
+        'quantity': 10,
+        'updated_at': '${today}T10:00:00Z',
+      });
+
+      // Operating expense of 2,000 DZD
+      await db.insert('expenses', {
+        'id': 'exp_direct_001',
+        'company_id': testCompanyId,
+        'amount': 2000.0,
+        'category': 'Electricity',
+        'expense_date': today,
+        'created_at': '${today}T10:00:00Z',
+      });
+
+      final report = await LocalFinancialCalculator.calculateReport(
+        period: 'daily',
+        companyId: testCompanyId,
+        date: today,
+        db: db,
+      );
+
+      // Direct inventory acquisition = 10 * 1,500 = 15,000 DZD
+      expect(report.expensesBreakdown.productPurchases, 15000.0);
+      expect(report.operatingExpenses, 2000.0);
+      // Total expenses = 15,000 + 2,000 = 17,000 DZD
+      expect(report.expenses, 17000.0);
+      // Net Profit = 0 - 17,000 = -17,000 DZD
+      expect(report.netProfit, -17000.0);
+    });
   });
 }

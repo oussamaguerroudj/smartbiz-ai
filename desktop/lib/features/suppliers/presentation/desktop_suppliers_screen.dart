@@ -30,6 +30,19 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
       showSymbol: true,
     );
   }
+
+  double _parseDouble(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString()) ?? 0.0;
+  }
+
+  int _parseInt(dynamic val) {
+    if (val == null) return 0;
+    if (val is num) return val.toInt();
+    return int.tryParse(val.toString()) ?? 0;
+  }
+
   bool _isLoading = true;
   List<Map<String, dynamic>> _suppliers = [];
   String? _error;
@@ -120,7 +133,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
         final name = s['name']?.toString() ?? 'Unnamed';
         final phone = s['phone']?.toString();
         final address = s['address']?.toString();
-        final supplied = (s['products_supplied'] as num?)?.toInt() ?? 0;
+        final supplied = _parseInt(s['products_supplied']);
 
         batch.insert(
           'suppliers',
@@ -179,11 +192,11 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
         final m = Map<String, dynamic>.from(r);
         final apiItem = apiMap[m['id']?.toString()];
         if (apiItem != null) {
-          final localPurchases = ((m['total_purchases_amount'] ?? 0) as num).toDouble();
+          final localPurchases = _parseDouble(m['total_purchases_amount']);
           if (localPurchases == 0 && apiItem['total_purchases_amount'] != null) {
-            m['total_purchases_amount'] = apiItem['total_purchases_amount'];
-            m['total_purchases_paid'] = apiItem['total_purchases_paid'];
-            m['outstanding_balance'] = apiItem['outstanding_balance'];
+            m['total_purchases_amount'] = _parseDouble(apiItem['total_purchases_amount']);
+            m['total_purchases_paid'] = _parseDouble(apiItem['total_purchases_paid']);
+            m['outstanding_balance'] = _parseDouble(apiItem['outstanding_balance']);
           }
         }
         return m;
@@ -457,7 +470,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
     final name = supplier['name']?.toString() ?? _loc.get('supplier');
     final phone = supplier['phone']?.toString() ?? _loc.get('no_phone_listed');
     final address = supplier['address']?.toString() ?? _loc.get('no_address_provided');
-    final suppliedCount = (supplier['products_supplied'] as num?)?.toInt() ?? 0;
+    final suppliedCount = _parseInt(supplier['products_supplied']);
     final companyId = supplier['company_id']?.toString() ?? ref.read(sessionProvider).companyId ?? 'default_company';
     final supplierId = supplier['id']?.toString() ?? '';
 
@@ -504,14 +517,14 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
         WHERE sp.company_id = ? AND sp.supplier_id = ?
       ''', [companyId, supplierId]);
 
-      double computedVal = ((purchaseItemsVal.firstOrNull?['val'] ?? 0.0) as num).toDouble();
+      double computedVal = _parseDouble(purchaseItemsVal.firstOrNull?['val']);
       if (computedVal <= 0.0) {
         final pTotal = await db.rawQuery('''
           SELECT COALESCE(SUM(total_amount), 0.0) as val
           FROM supplier_purchases
           WHERE company_id = ? AND supplier_id = ?
         ''', [companyId, supplierId]);
-        computedVal = ((pTotal.firstOrNull?['val'] ?? 0.0) as num).toDouble();
+        computedVal = _parseDouble(pTotal.firstOrNull?['val']);
       }
 
       purchases = List<Map<String, dynamic>>.from(pRows);
@@ -558,14 +571,14 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
           WHERE sp.company_id = ? AND sp.supplier_id = ?
         ''', [companyId, supplierId]);
 
-        double computedVal = ((purchaseItemsVal.firstOrNull?['val'] ?? 0.0) as num).toDouble();
+        double computedVal = _parseDouble(purchaseItemsVal.firstOrNull?['val']);
         if (computedVal <= 0.0) {
           final pTotal = await db.rawQuery('''
             SELECT COALESCE(SUM(total_amount), 0.0) as val
             FROM supplier_purchases
             WHERE company_id = ? AND supplier_id = ?
           ''', [companyId, supplierId]);
-          computedVal = ((pTotal.firstOrNull?['val'] ?? 0.0) as num).toDouble();
+          computedVal = _parseDouble(pTotal.firstOrNull?['val']);
         }
 
         setDialogState(() {
@@ -597,9 +610,9 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
               'supplier_id': supplierId,
               'invoice_number': pMap['invoice_number']?.toString() ?? '',
               'purchase_date': pMap['purchase_date']?.toString() ?? DateTime.now().toIso8601String(),
-              'total_amount': ((pMap['total_amount'] ?? 0.0) as num).toDouble(),
-              'amount_paid': ((pMap['amount_paid'] ?? pMap['paid_amount'] ?? 0.0) as num).toDouble(),
-              'outstanding_balance': ((pMap['outstanding_balance'] ?? pMap['remaining_balance'] ?? 0.0) as num).toDouble(),
+              'total_amount': _parseDouble(pMap['total_amount']),
+              'amount_paid': _parseDouble(pMap['amount_paid'] ?? pMap['paid_amount']),
+              'outstanding_balance': _parseDouble(pMap['outstanding_balance'] ?? pMap['remaining_balance']),
               'payment_status': pMap['payment_status']?.toString() ?? 'unpaid',
               'notes': pMap['notes']?.toString(),
               'created_at': pMap['created_at']?.toString() ?? DateTime.now().toIso8601String(),
@@ -618,7 +631,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
               'company_id': companyId,
               'supplier_id': supplierId,
               'purchase_id': pyMap['purchase_id']?.toString(),
-              'amount': ((pyMap['amount'] ?? 0.0) as num).toDouble(),
+              'amount': _parseDouble(pyMap['amount']),
               'payment_date': pyMap['payment_date']?.toString() ?? DateTime.now().toIso8601String(),
               'payment_method': pyMap['payment_method']?.toString() ?? 'cash',
               'reference': pyMap['reference']?.toString(),
@@ -661,15 +674,15 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
 
           final totalPurchases = purchases.fold<double>(
             0.0,
-            (sum, p) => sum + (((p['total_amount'] ?? 0.0) as num).toDouble()),
+            (sum, p) => sum + _parseDouble(p['total_amount']),
           );
           final totalPaid = purchases.fold<double>(
             0.0,
-            (sum, p) => sum + (((p['amount_paid'] ?? p['paid_amount'] ?? 0.0) as num).toDouble()),
+            (sum, p) => sum + _parseDouble(p['amount_paid'] ?? p['paid_amount']),
           );
           final outstandingDebt = purchases.fold<double>(
             0.0,
-            (sum, p) => sum + (((p['outstanding_balance'] ?? p['remaining_balance'] ?? 0.0) as num).toDouble()),
+            (sum, p) => sum + _parseDouble(p['outstanding_balance'] ?? p['remaining_balance']),
           );
 
           return AlertDialog(
@@ -973,9 +986,9 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                                         separatorBuilder: (_, __) => Divider(color: ModiriColors.border(isDark), height: 1),
                                         itemBuilder: (_, idx) {
                                           final p = purchases[idx];
-                                          final total = ((p['total_amount'] ?? 0.0) as num).toDouble();
-                                          final paid = ((p['amount_paid'] ?? p['paid_amount'] ?? 0.0) as num).toDouble();
-                                          final remaining = ((p['outstanding_balance'] ?? p['remaining_balance'] ?? 0.0) as num).toDouble();
+                                          final total = _parseDouble(p['total_amount']);
+                                          final paid = _parseDouble(p['amount_paid'] ?? p['paid_amount']);
+                                          final remaining = _parseDouble(p['outstanding_balance'] ?? p['remaining_balance']);
                                           final invNo = p['invoice_number']?.toString() ?? 'N/A';
                                           final dateStr = p['purchase_date']?.toString() ?? '';
                                           final status = p['payment_status']?.toString() ?? 'unpaid';
@@ -1048,7 +1061,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                                         separatorBuilder: (_, __) => Divider(color: ModiriColors.border(isDark), height: 1),
                                         itemBuilder: (_, idx) {
                                           final pay = payments[idx];
-                                          final amt = ((pay['amount'] ?? 0.0) as num).toDouble();
+                                          final amt = _parseDouble(pay['amount']);
                                           final dateStr = pay['payment_date']?.toString() ?? '';
                                           final method = pay['payment_method']?.toString() ?? 'cash';
                                           final refStr = pay['reference']?.toString();
@@ -1332,7 +1345,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                         );
                         if (matchingProducts.isNotEmpty) {
                           final prod = matchingProducts.first;
-                          final curStock = (prod['stock_quantity'] as num?)?.toInt() ?? 0;
+                          final curStock = _parseInt(prod['stock_quantity']);
                           await db.update(
                             'products',
                             {
@@ -1353,7 +1366,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                         );
                         if (matchingIngredients.isNotEmpty) {
                           final ing = matchingIngredients.first;
-                          final curStock = (ing['current_stock'] as num?)?.toDouble() ?? 0.0;
+                          final curStock = _parseDouble(ing['current_stock']);
                           await db.update(
                             'restaurant_inventory_items',
                             {
@@ -1583,8 +1596,8 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                     for (final p in unpaidPurchases) {
                       if (remainingToAllocate <= 0) break;
                       final pId = p['id']?.toString() ?? '';
-                      final pPaid = ((p['amount_paid'] ?? p['paid_amount'] ?? 0.0) as num).toDouble();
-                      final pRemaining = ((p['outstanding_balance'] ?? p['remaining_balance'] ?? 0.0) as num).toDouble();
+                      final pPaid = _parseDouble(p['amount_paid'] ?? p['paid_amount']);
+                      final pRemaining = _parseDouble(p['outstanding_balance'] ?? p['remaining_balance']);
 
                       final alloc = remainingToAllocate < pRemaining ? remainingToAllocate : pRemaining;
                       final newPaid = pPaid + alloc;
@@ -1746,21 +1759,26 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    loc.get('suppliers_title'),
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: ModiriColors.textPrimary(isDark)),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    loc.get('suppliers_subtitle'),
-                    style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      loc.get('suppliers_title'),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: ModiriColors.textPrimary(isDark)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      loc.get('suppliers_subtitle'),
+                      style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
+                    ),
+                  ],
+                ),
               ),
-              Row(
+              const SizedBox(width: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
                   OutlinedButton.icon(
                     icon: const Icon(Icons.document_scanner_outlined, size: 16, color: ModiriColors.brandBlue),
@@ -1788,13 +1806,11 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                       ).then((_) => _loadSuppliers());
                     },
                   ),
-                  const SizedBox(width: 10),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.refresh, size: 16),
                     label: Text(loc.get('refresh')),
                     onPressed: _loadSuppliers,
                   ),
-                  const SizedBox(width: 10),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.add_business_outlined, size: 16),
                     label: Text(loc.get('add_supplier')),
@@ -1858,7 +1874,8 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                             final phone = s['phone']?.toString() ?? loc.get('no_phone_listed');
 
                             final address = s['address']?.toString();
-                            final supplied = (s['products_supplied'] as num?)?.toInt() ?? 0;
+                            final supplied = _parseInt(s['products_supplied']);
+                            final debt = _parseDouble(s['outstanding_balance']);
 
                             return InkWell(
                               borderRadius: BorderRadius.circular(10),
@@ -1883,11 +1900,14 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                                         children: [
                                           Row(
                                             children: [
-                                              Text(name,
-                                                  style: TextStyle(
-                                                      color: ModiriColors.textPrimary(isDark),
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.w600)),
+                                              Flexible(
+                                                child: Text(name,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                        color: ModiriColors.textPrimary(isDark),
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w600)),
+                                              ),
                                               if (supplied > 0) ...[
                                                 const SizedBox(width: 8),
                                                 Container(
@@ -1900,7 +1920,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                                                       style: const TextStyle(color: ModiriColors.brandBlue, fontSize: 10, fontWeight: FontWeight.bold)),
                                                 ),
                                               ],
-                                              if (((s['outstanding_balance'] ?? 0) as num).toDouble() > 0) ...[
+                                              if (debt > 0) ...[
                                                 const SizedBox(width: 8),
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1910,7 +1930,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                                                     border: Border.all(color: ModiriColors.brandRose.withOpacity(0.3)),
                                                   ),
                                                   child: Text(
-                                                    '${loc.get("debt")}: ${_formatCurrency(((s['outstanding_balance'] ?? 0) as num).toDouble())}',
+                                                    '${loc.get("debt")}: ${_formatCurrency(debt)}',
                                                     style: const TextStyle(color: ModiriColors.brandRose, fontSize: 10, fontWeight: FontWeight.bold),
                                                   ),
                                                 ),
@@ -1920,6 +1940,7 @@ class _DesktopSuppliersScreenState extends ConsumerState<DesktopSuppliersScreen>
                                           const SizedBox(height: 2),
                                           Text(
                                             ModiriFormatters.toLatinDigits(phone) + (address != null && address.isNotEmpty ? ' • $address' : ''),
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(color: ModiriColors.textSecondary(isDark), fontSize: 11),
                                           ),
                                         ],

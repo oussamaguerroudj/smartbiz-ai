@@ -154,6 +154,7 @@ async function calculateFinancials(companyId, params = {}) {
     globalInventoryRes,
     globalRestInventoryVal,
     globalPurchasesRes,
+    globalDirectPurchasesRes,
   ] = await Promise.all([
     query(
       `SELECT
@@ -198,6 +199,18 @@ async function calculateFinancials(companyId, params = {}) {
        WHERE company_id = $1 AND deleted_at IS NULL`,
       [companyId],
     ).catch(() => ({ rows: [{ total: 0 }] })),
+    query(
+      `SELECT COALESCE(SUM(
+         CASE
+           WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
+           ELSE 0
+         END
+       ), 0) AS direct_purchases
+       FROM products
+       WHERE company_id = $1 AND deleted_at IS NULL
+         AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)`,
+      [companyId],
+    ).catch(() => ({ rows: [{ direct_purchases: 0 }] })),
   ]);
 
   const allRevenue =
@@ -212,7 +225,9 @@ async function calculateFinancials(companyId, params = {}) {
     : Number(globalInventoryRes.rows[0]?.inventory_value || 0);
 
   const globalCogs = isRestaurant ? 0 : Number(globalSalesRes.rows[0]?.cogs || 0);
-  const allProductPurchases = Number(globalPurchasesRes.rows[0]?.total || 0);
+  const allSupplierPurchases = Number(globalPurchasesRes.rows[0]?.total || 0);
+  const allDirectPurchases = Number(globalDirectPurchasesRes?.rows[0]?.direct_purchases || 0);
+  const allProductPurchases = allSupplierPurchases + allDirectPurchases;
   const allRecordedExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
   const allExpenses = allProductPurchases + allRecordedExpenses;
   const globalNetProfit = allRevenue - allExpenses;
@@ -231,6 +246,7 @@ async function calculateFinancials(companyId, params = {}) {
     invoicesCountRes,
     salaryBreakdownList,
     purchasesResult,
+    directPurchasesResult,
   ] = await Promise.all([
     query(
       `SELECT
@@ -304,8 +320,20 @@ async function calculateFinancials(companyId, params = {}) {
          AND purchase_date::date BETWEEN $2::date AND $3::date`,
       [companyId, rangeStart, rangeEnd],
     ).catch(() => ({ rows: [{ total: 0 }] })),
+    query(
+      `SELECT COALESCE(SUM(
+         CASE
+           WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
+           ELSE 0
+         END
+       ), 0) AS direct_purchases
+       FROM products
+       WHERE company_id = $1 AND deleted_at IS NULL
+         AND created_at::date BETWEEN $2::date AND $3::date
+         AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)`,
+      [companyId, rangeStart, rangeEnd],
+    ).catch(() => ({ rows: [{ direct_purchases: 0 }] })),
   ]);
-
 
   const employeesList = employeesRes.rows || [];
 
@@ -351,7 +379,9 @@ async function calculateFinancials(companyId, params = {}) {
   const restaurantRev = Number(restaurantRevenueTotal || 0);
   const revenue = coreSalesRevenue + creditRev + clinicRev + restaurantRev;
 
-  const productPurchases = Number(purchasesResult.rows[0]?.total || 0);
+  const supplierPurchasesPeriod = Number(purchasesResult.rows[0]?.total || 0);
+  const directPurchasesPeriod = Number(directPurchasesResult?.rows[0]?.direct_purchases || 0);
+  const productPurchases = supplierPurchasesPeriod + directPurchasesPeriod;
   const operatingExpenses = Number(operatingExpensesTotal || 0);
   const employeeSalaries = Number(salaryTotal || 0);
   // Mandatory formula: TOTAL EXPENSES = ALL RECORDED PRODUCT PURCHASES + SALARIES + OPERATING EXPENSES
@@ -489,7 +519,7 @@ async function calculateFinancials(companyId, params = {}) {
   let monthlyBreakdown = [];
   if (period === 'yearly') {
     const targetYear = new Date(rangeStart).getUTCFullYear();
-    const [salesByMonthRes, creditByMonthRes, clinicByMonthRes, restByMonthRes, expByMonthRes, purchasesByMonthRes] =
+    const [salesByMonthRes, creditByMonthRes, clinicByMonthRes, restByMonthRes, expByMonthRes, purchasesByMonthRes, directPurchasesByMonthRes] =
       await Promise.all([
         query(
           `SELECT EXTRACT(MONTH FROM s.sold_at)::int AS month,
@@ -544,6 +574,20 @@ async function calculateFinancials(companyId, params = {}) {
            GROUP BY month`,
           [companyId, targetYear],
         ).catch(() => ({ rows: [] })),
+        query(
+          `SELECT EXTRACT(MONTH FROM created_at)::int AS month,
+                  COALESCE(SUM(
+                    CASE
+                      WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
+                      ELSE 0
+                    END
+                  ), 0) AS direct_expenses
+           FROM products
+           WHERE company_id = $1 AND deleted_at IS NULL AND EXTRACT(YEAR FROM created_at) = $2
+             AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+           GROUP BY month`,
+          [companyId, targetYear],
+        ).catch(() => ({ rows: [] })),
       ]);
 
     const monthNames = [
@@ -559,7 +603,9 @@ async function calculateFinancials(companyId, params = {}) {
       const rRev = Number(restByMonthRes.rows.find((r) => r.month === m)?.revenue || 0);
       const mRevenue = sRev + cRev + clRev + rRev;
 
-      const pPurchases = Number(purchasesByMonthRes.rows.find((r) => r.month === m)?.purchase_expenses || 0);
+      const sPurchases = Number(purchasesByMonthRes.rows.find((r) => r.month === m)?.purchase_expenses || 0);
+      const dPurchases = Number(directPurchasesByMonthRes?.rows?.find((r) => r.month === m)?.direct_expenses || 0);
+      const pPurchases = sPurchases + dPurchases;
       const expRow = expByMonthRes.rows.find((r) => r.month === m);
       const mSalary = Number(expRow?.salary_expenses || 0);
       const mOperating = Number(expRow?.operating_expenses || 0);

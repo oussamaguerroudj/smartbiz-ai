@@ -41,9 +41,11 @@ const chat = asyncHandler(async (req, res) => {
 });
 
 const insights = asyncHandler(async (req, res) => {
+  const lang = req.query.lang || req.headers['accept-language'] || 'ar';
   const result = await service.insights({
     companyId: req.user.companyId,
     userId: req.user.id,
+    lang,
   });
 
   res.json({ data: result });

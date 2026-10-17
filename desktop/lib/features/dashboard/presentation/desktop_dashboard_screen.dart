@@ -480,7 +480,7 @@ class _DesktopDashboardScreenState extends ConsumerState<DesktopDashboardScreen>
   Widget _buildStatGrid({
     required List<Widget> children,
     int maxCols = 4,
-    double targetHeight = 155.0,
+    double targetHeight = 120.0,
   }) {
     return LayoutBuilder(
       builder: (ctx, constraints) {
@@ -488,7 +488,7 @@ class _DesktopDashboardScreenState extends ConsumerState<DesktopDashboardScreen>
             ? (constraints.maxWidth > 1050 ? 3 : (constraints.maxWidth > 650 ? 2 : 1))
             : (constraints.maxWidth > 1150 ? 4 : (constraints.maxWidth > 750 ? 2 : 1));
         final itemWidth = (constraints.maxWidth - (cols - 1) * 16) / cols;
-        final ratio = (itemWidth / targetHeight).clamp(1.0, 2.2);
+        final ratio = (itemWidth / targetHeight).clamp(1.2, 2.5);
         return GridView.count(
           crossAxisCount: cols,
           shrinkWrap: true,

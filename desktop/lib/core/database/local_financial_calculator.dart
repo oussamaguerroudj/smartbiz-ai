@@ -166,6 +166,7 @@ class DesktopLocalFinancialCalculator {
       globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
     } catch (_) {}
 
+
     final allSalesRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
     final allRevenue = allSalesRevenue + globalRestRevenue;
     final allRecordedExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
@@ -305,6 +306,7 @@ class DesktopLocalFinancialCalculator {
       );
       periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
     } catch (_) {}
+
 
     // Period Expenses
     final periodExpensesRes = await db.rawQuery(

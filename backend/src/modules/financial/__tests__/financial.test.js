@@ -738,6 +738,49 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(inventoryQueryCaptured).toBe(true);
       expect(result.inventoryValue).toBe(15000);
     });
+
+    it('Scenario 30: Direct inventory product acquisitions (without supplier purchases) are included in Product Purchases and Total Expenses', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 0, purchase_expenses: 0 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('direct_purchases')) {
+          return Promise.resolve({ rows: [{ direct_purchases: 35000 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: 35000 }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 50000, cogs: 20000, sales_count: 5 }] });
+        }
+        if (sql.includes('FROM expenses') && sql.includes('COUNT(*)')) {
+          return Promise.resolve({ rows: [{ count: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      expensesRepo.totalForRange.mockResolvedValue(5000); // 5,000 DA operating expenses
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(10000); // 10,000 DA salary
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+
+      const result = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+
+      // Direct inventory additions (35,000 DA) must be included in productPurchases
+      expect(result.expensesBreakdown.productPurchases).toBe(35000);
+      expect(result.expensesBreakdown.operatingExpenses).toBe(5000);
+      expect(result.expensesBreakdown.employeeSalaries).toBe(10000);
+
+      // Total Expenses = 35,000 + 5,000 + 10,000 = 50,000 DA
+      expect(result.expenses).toBe(50000);
+
+      // Net Profit = Revenue (50,000) - Total Expenses (50,000) = 0 DA
+      expect(result.netProfit).toBe(0);
+    });
   });
 });
 

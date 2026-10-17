@@ -105,6 +105,29 @@ class LocalFinancialCalculator {
       globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
     } catch (_) {}
 
+    try {
+      final directProdRes = await activeDb.rawQuery(
+        '''
+        SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
+        FROM products
+        WHERE company_id = ?
+          AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+        ''',
+        [companyId],
+      );
+      globalProductPurchases += (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      try {
+        final fallbackDirectRes = await activeDb.rawQuery(
+          'SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total FROM products WHERE company_id = ?',
+          [companyId],
+        );
+        if (globalProductPurchases == 0.0) {
+          globalProductPurchases = (fallbackDirectRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        }
+      } catch (_) {}
+    }
+
     final isRestaurant = (businessType == 'restaurant' || businessType == 'cafe');
     final allCoreRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
     final allRevenue = allCoreRevenue + globalCreditPayments + globalRestRevenue;
@@ -211,6 +234,45 @@ class LocalFinancialCalculator {
       );
       periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
     } catch (_) {}
+
+    try {
+      final directProdRes = await activeDb.rawQuery(
+        '''
+        SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
+        FROM products
+        WHERE company_id = ?
+          AND (
+            CASE
+              WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
+              ELSE date(updated_at)
+            END
+          ) BETWEEN date(?) AND date(?)
+          AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+        ''',
+        [companyId, rangeStart, rangeEnd],
+      );
+      periodProductPurchases += (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      try {
+        final fallbackDirectRes = await activeDb.rawQuery(
+          '''
+          SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
+          FROM products
+          WHERE company_id = ?
+            AND (
+              CASE
+                WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
+                ELSE date(updated_at)
+              END
+            ) BETWEEN date(?) AND date(?)
+          ''',
+          [companyId, rangeStart, rangeEnd],
+        );
+        if (periodProductPurchases == 0.0) {
+          periodProductPurchases = (fallbackDirectRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        }
+      } catch (_) {}
+    }
 
     final totalExpenses = periodProductPurchases + operatingExpenses + employeeSalaries;
     final revenue = coreRevenue + periodCreditPayments + periodRestRevenue;
@@ -416,6 +478,25 @@ class LocalFinancialCalculator {
             [companyId, mStart, mEnd],
           );
           mPurch = (mPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        } catch (_) {}
+
+        try {
+          final mDirectRes = await activeDb.rawQuery(
+            '''
+            SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
+            FROM products
+            WHERE company_id = ?
+              AND (
+                CASE
+                  WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
+                  ELSE date(updated_at)
+                END
+              ) BETWEEN date(?) AND date(?)
+              AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+            ''',
+            [companyId, mStart, mEnd],
+          );
+          mPurch += (mDirectRes.first['total'] as num?)?.toDouble() ?? 0.0;
         } catch (_) {}
 
         final mSalesRev = (mSales.first['rev'] as num?)?.toDouble() ?? 0.0;

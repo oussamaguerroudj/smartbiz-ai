@@ -31,6 +31,40 @@ void main() async {
     await ModiriDesktopDatabase.instance.database;
   } catch (_) {}
 
+  // Prevent default release grey box error widget, provide friendly styled error recovery
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF43F5E).withOpacity(0.4)),
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.info_outline, color: Color(0xFFF43F5E), size: 28),
+              const SizedBox(height: 8),
+              const Text(
+                'Section could not be loaded',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                details.exceptionAsString(),
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
+
   runApp(
     const ProviderScope(
       child: ModiriDesktopApp(),

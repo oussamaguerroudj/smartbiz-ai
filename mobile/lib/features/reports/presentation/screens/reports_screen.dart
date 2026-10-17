@@ -1350,6 +1350,15 @@ class _ExpensesBreakdownCard extends StatelessWidget {
             ratio: (exp.employeeSalaries / total).clamp(0.0, 1.0),
             color: AppColors.warning,
           ),
+          if (exp.productPurchases > 0) ...[
+            const SizedBox(height: 8),
+            _ProgressBarRow(
+              label: '${l10n.inventoryTitle} (${l10n.purchasePriceFieldLabel})',
+              amount: exp.productPurchases,
+              ratio: (exp.productPurchases / total).clamp(0.0, 1.0),
+              color: AppColors.info,
+            ),
+          ],
 
           const Divider(height: 20),
 

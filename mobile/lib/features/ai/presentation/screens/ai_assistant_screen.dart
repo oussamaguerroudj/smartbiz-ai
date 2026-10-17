@@ -450,9 +450,9 @@ class _Insight {
 /// Fetches fresh each time the Insights screen is opened (autoDispose,
 /// no caching across visits) — insights are meant to reflect the
 /// business's current state, not a snapshot from an earlier session.
-final _aiInsightsProvider = FutureProvider.autoDispose<List<_Insight>>((ref) async {
+final _aiInsightsProvider = FutureProvider.autoDispose.family<List<_Insight>, String>((ref, lang) async {
   final client = ref.read(apiClientProvider);
-  final response = await client.get('/ai/insights');
+  final response = await client.get('/ai/insights', query: {'lang': lang});
   final data = response['data'] as Map<String, dynamic>;
   final rawInsights = (data['insights'] as List).cast<Map<String, dynamic>>();
 
@@ -487,13 +487,20 @@ class AiInsightsScreen extends ConsumerWidget {
         InsightSeverity.alert => AppColors.danger,
       };
 
+  String _severityLabel(InsightSeverity s, String langCode) => switch (s) {
+        InsightSeverity.info => langCode.startsWith('ar') ? 'معلومة' : (langCode.startsWith('fr') ? 'Info' : 'Info'),
+        InsightSeverity.watch => langCode.startsWith('ar') ? 'متابعة' : (langCode.startsWith('fr') ? 'À surveiller' : 'Watch'),
+        InsightSeverity.alert => langCode.startsWith('ar') ? 'تنبيه' : (langCode.startsWith('fr') ? 'Alerte' : 'Alert'),
+      };
+
   @override
   Widget build(
     BuildContext context,
     WidgetRef ref,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final insightsAsync = ref.watch(_aiInsightsProvider);
+    final langCode = Localizations.localeOf(context).languageCode;
+    final insightsAsync = ref.watch(_aiInsightsProvider(langCode));
 
     return Scaffold(
       appBar: AppBar(
@@ -507,7 +514,7 @@ class AiInsightsScreen extends ConsumerWidget {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () => ref.refresh(_aiInsightsProvider.future),
+                onRefresh: () => ref.refresh(_aiInsightsProvider(langCode).future),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   itemCount: insights.length,
@@ -537,10 +544,13 @@ class AiInsightsScreen extends ConsumerWidget {
                             ),
                           ),
                           Chip(
-                            label: Text(insight.severity.name),
+                            label: Text(_severityLabel(insight.severity, langCode)),
                             backgroundColor:
                                 _colorFor(insight.severity).withValues(alpha: 0.12),
-                            labelStyle: TextStyle(color: _colorFor(insight.severity)),
+                            labelStyle: TextStyle(
+                              color: _colorFor(insight.severity),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -561,7 +571,7 @@ class AiInsightsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 OutlinedButton(
-                  onPressed: () => ref.refresh(_aiInsightsProvider),
+                  onPressed: () => ref.refresh(_aiInsightsProvider(langCode)),
                   child: Text(l10n.retry),
                 ),
               ],
