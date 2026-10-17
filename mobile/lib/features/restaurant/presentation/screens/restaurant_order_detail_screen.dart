@@ -441,7 +441,9 @@ class _RestaurantOrderDetailScreenState extends ConsumerState<RestaurantOrderDet
                               Icon(
                                 isDineIn
                                     ? Icons.table_restaurant
-                                    : Icons.delivery_dining,
+                                    : (order.orderType == 'takeaway'
+                                        ? Icons.shopping_bag_outlined
+                                        : Icons.delivery_dining),
                                 size: 14,
                                 color: Colors.grey.shade700,
                               ),
@@ -449,7 +451,9 @@ class _RestaurantOrderDetailScreenState extends ConsumerState<RestaurantOrderDet
                               Text(
                                 isDineIn
                                     ? (order.tableName != null ? order.tableName! : l10n.dineInOption)
-                                    : l10n.deliveryOption,
+                                    : (order.orderType == 'takeaway'
+                                        ? l10n.takeawayOption
+                                        : l10n.deliveryOption),
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,

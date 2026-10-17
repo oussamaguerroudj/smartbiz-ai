@@ -98,12 +98,40 @@ class LocalFinancialCalculator {
 
     double globalProductPurchases = 0.0;
     try {
-      final suppPurchRes = await activeDb.rawQuery(
-        'SELECT COALESCE(SUM(total_amount), 0) AS total FROM supplier_purchases WHERE company_id = ?',
-        [companyId],
+      final suppPayRes = await activeDb.rawQuery(
+        '''
+        SELECT (
+          COALESCE((
+            SELECT SUM(amount)
+            FROM supplier_payments
+            WHERE company_id = ?
+          ), 0.0)
+          +
+          COALESCE((
+            SELECT SUM(sp.amount_paid)
+            FROM supplier_purchases sp
+            WHERE sp.company_id = ?
+              AND sp.amount_paid > 0
+              AND sp.id NOT IN (
+                SELECT DISTINCT purchase_id
+                FROM supplier_payments
+                WHERE purchase_id IS NOT NULL AND company_id = ?
+              )
+          ), 0.0)
+        ) AS total
+        ''',
+        [companyId, companyId, companyId],
       );
-      globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
-    } catch (_) {}
+      globalProductPurchases = (suppPayRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      try {
+        final suppPurchRes = await activeDb.rawQuery(
+          'SELECT COALESCE(SUM(amount_paid), 0.0) AS total FROM supplier_purchases WHERE company_id = ?',
+          [companyId],
+        );
+        globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      } catch (_) {}
+    }
 
     try {
       final directProdRes = await activeDb.rawQuery(
@@ -115,7 +143,9 @@ class LocalFinancialCalculator {
         ''',
         [companyId],
       );
-      globalProductPurchases += (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      if (globalProductPurchases == 0.0) {
+        globalProductPurchases = (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      }
     } catch (_) {
       try {
         final fallbackDirectRes = await activeDb.rawQuery(
@@ -224,16 +254,49 @@ class LocalFinancialCalculator {
     // 4b. Product Purchases in period — scoped to this company
     double periodProductPurchases = 0.0;
     try {
-      final suppPurchRes = await activeDb.rawQuery(
+      final suppPayRes = await activeDb.rawQuery(
         '''
-        SELECT COALESCE(SUM(total_amount), 0) AS total
-        FROM supplier_purchases
-        WHERE company_id = ? AND $_safePurchaseDate BETWEEN date(?) AND date(?)
+        SELECT (
+          COALESCE((
+            SELECT SUM(amount)
+            FROM supplier_payments
+            WHERE company_id = ?
+              AND (CASE
+                WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime')
+                ELSE date(payment_date)
+              END) BETWEEN date(?) AND date(?)
+          ), 0.0)
+          +
+          COALESCE((
+            SELECT SUM(sp.amount_paid)
+            FROM supplier_purchases sp
+            WHERE sp.company_id = ?
+              AND sp.amount_paid > 0
+              AND $_safePurchaseDate BETWEEN date(?) AND date(?)
+              AND sp.id NOT IN (
+                SELECT DISTINCT purchase_id
+                FROM supplier_payments
+                WHERE purchase_id IS NOT NULL AND company_id = ?
+              )
+          ), 0.0)
+        ) AS total
         ''',
-        [companyId, rangeStart, rangeEnd],
+        [companyId, rangeStart, rangeEnd, companyId, rangeStart, rangeEnd, companyId],
       );
-      periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
-    } catch (_) {}
+      periodProductPurchases = (suppPayRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      try {
+        final suppPurchRes = await activeDb.rawQuery(
+          '''
+          SELECT COALESCE(SUM(amount_paid), 0.0) AS total
+          FROM supplier_purchases
+          WHERE company_id = ? AND $_safePurchaseDate BETWEEN date(?) AND date(?)
+          ''',
+          [companyId, rangeStart, rangeEnd],
+        );
+        periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      } catch (_) {}
+    }
 
     try {
       final directProdRes = await activeDb.rawQuery(
@@ -251,7 +314,9 @@ class LocalFinancialCalculator {
         ''',
         [companyId, rangeStart, rangeEnd],
       );
-      periodProductPurchases += (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      if (periodProductPurchases == 0.0) {
+        periodProductPurchases = (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      }
     } catch (_) {
       try {
         final fallbackDirectRes = await activeDb.rawQuery(
@@ -474,11 +539,44 @@ class LocalFinancialCalculator {
         double mPurch = 0.0;
         try {
           final mPurchRes = await activeDb.rawQuery(
-            '''SELECT COALESCE(SUM(total_amount), 0) AS total FROM supplier_purchases WHERE company_id = ? AND $_safePurchaseDate BETWEEN date(?) AND date(?)''',
-            [companyId, mStart, mEnd],
+            '''
+            SELECT (
+              COALESCE((
+                SELECT SUM(amount)
+                FROM supplier_payments
+                WHERE company_id = ?
+                  AND (CASE
+                    WHEN payment_date LIKE '%Z' OR payment_date LIKE '%+%' THEN date(payment_date, 'localtime')
+                    ELSE date(payment_date)
+                  END) BETWEEN date(?) AND date(?)
+              ), 0.0)
+              +
+              COALESCE((
+                SELECT SUM(sp.amount_paid)
+                FROM supplier_purchases sp
+                WHERE sp.company_id = ?
+                  AND sp.amount_paid > 0
+                  AND $_safePurchaseDate BETWEEN date(?) AND date(?)
+                  AND sp.id NOT IN (
+                    SELECT DISTINCT purchase_id
+                    FROM supplier_payments
+                    WHERE purchase_id IS NOT NULL AND company_id = ?
+                  )
+              ), 0.0)
+            ) AS total
+            ''',
+            [companyId, mStart, mEnd, companyId, mStart, mEnd, companyId],
           );
           mPurch = (mPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
-        } catch (_) {}
+        } catch (_) {
+          try {
+            final mPurchFallback = await activeDb.rawQuery(
+              '''SELECT COALESCE(SUM(amount_paid), 0.0) AS total FROM supplier_purchases WHERE company_id = ? AND $_safePurchaseDate BETWEEN date(?) AND date(?)''',
+              [companyId, mStart, mEnd],
+            );
+            mPurch = (mPurchFallback.first['total'] as num?)?.toDouble() ?? 0.0;
+          } catch (_) {}
+        }
 
         try {
           final mDirectRes = await activeDb.rawQuery(
@@ -496,7 +594,9 @@ class LocalFinancialCalculator {
             ''',
             [companyId, mStart, mEnd],
           );
-          mPurch += (mDirectRes.first['total'] as num?)?.toDouble() ?? 0.0;
+          if (mPurch == 0.0) {
+            mPurch = (mDirectRes.first['total'] as num?)?.toDouble() ?? 0.0;
+          }
         } catch (_) {}
 
         final mSalesRev = (mSales.first['rev'] as num?)?.toDouble() ?? 0.0;

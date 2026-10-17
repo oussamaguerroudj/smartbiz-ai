@@ -194,11 +194,38 @@ async function calculateFinancials(companyId, params = {}) {
       ? restaurantRepo.totalInventoryValue(companyId)
       : Promise.resolve(0)).catch(() => 0),
     query(
-      `SELECT COALESCE(SUM(total_amount), 0) AS total
+      `SELECT (
+         COALESCE((
+           SELECT SUM(amount)
+           FROM supplier_payments
+           WHERE company_id = $1 AND deleted_at IS NULL
+         ), 0)
+         +
+         COALESCE((
+           SELECT SUM(sp.amount_paid)
+           FROM supplier_purchases sp
+           WHERE sp.company_id = $1
+             AND sp.deleted_at IS NULL
+             AND sp.amount_paid > 0
+             AND sp.id NOT IN (
+               SELECT DISTINCT purchase_id
+               FROM supplier_payments
+               WHERE purchase_id IS NOT NULL AND company_id = $1 AND deleted_at IS NULL
+             )
+         ), 0)
+       ) AS total
        FROM supplier_purchases
-       WHERE company_id = $1 AND deleted_at IS NULL`,
+       WHERE company_id = $1 AND deleted_at IS NULL
+       LIMIT 1`,
       [companyId],
-    ).catch(() => ({ rows: [{ total: 0 }] })),
+    ).catch(() =>
+      query(
+        `SELECT COALESCE(SUM(amount_paid), 0) AS total
+         FROM supplier_purchases
+         WHERE company_id = $1 AND deleted_at IS NULL`,
+        [companyId],
+      ).catch(() => ({ rows: [{ total: 0 }] }))
+    ),
     query(
       `SELECT COALESCE(SUM(
          CASE
@@ -227,7 +254,7 @@ async function calculateFinancials(companyId, params = {}) {
   const globalCogs = isRestaurant ? 0 : Number(globalSalesRes.rows[0]?.cogs || 0);
   const allSupplierPurchases = Number(globalPurchasesRes.rows[0]?.total || 0);
   const allDirectPurchases = Number(globalDirectPurchasesRes?.rows[0]?.direct_purchases || 0);
-  const allProductPurchases = allSupplierPurchases + allDirectPurchases;
+  const allProductPurchases = allSupplierPurchases > 0 ? allSupplierPurchases : allDirectPurchases;
   const allRecordedExpenses = Number(globalExpensesRes.rows[0]?.total || 0);
   const allExpenses = allProductPurchases + allRecordedExpenses;
   const globalNetProfit = allRevenue - allExpenses;
@@ -314,12 +341,41 @@ async function calculateFinancials(companyId, params = {}) {
       ? expensesRepo.salariesBreakdownForRange(companyId, rangeStart, rangeEnd).catch(() => [])
       : Promise.resolve([]),
     query(
-      `SELECT COALESCE(SUM(total_amount), 0) AS total
+      `SELECT (
+         COALESCE((
+           SELECT SUM(amount)
+           FROM supplier_payments
+           WHERE company_id = $1 AND deleted_at IS NULL
+             AND payment_date::date BETWEEN $2::date AND $3::date
+         ), 0)
+         +
+         COALESCE((
+           SELECT SUM(sp.amount_paid)
+           FROM supplier_purchases sp
+           WHERE sp.company_id = $1
+             AND sp.deleted_at IS NULL
+             AND sp.amount_paid > 0
+             AND sp.purchase_date::date BETWEEN $2::date AND $3::date
+             AND sp.id NOT IN (
+               SELECT DISTINCT purchase_id
+               FROM supplier_payments
+               WHERE purchase_id IS NOT NULL AND company_id = $1 AND deleted_at IS NULL
+             )
+         ), 0)
+       ) AS total
        FROM supplier_purchases
        WHERE company_id = $1 AND deleted_at IS NULL
-         AND purchase_date::date BETWEEN $2::date AND $3::date`,
+       LIMIT 1`,
       [companyId, rangeStart, rangeEnd],
-    ).catch(() => ({ rows: [{ total: 0 }] })),
+    ).catch(() =>
+      query(
+        `SELECT COALESCE(SUM(amount_paid), 0) AS total
+         FROM supplier_purchases
+         WHERE company_id = $1 AND deleted_at IS NULL
+           AND purchase_date::date BETWEEN $2::date AND $3::date`,
+        [companyId, rangeStart, rangeEnd],
+      ).catch(() => ({ rows: [{ total: 0 }] }))
+    ),
     query(
       `SELECT COALESCE(SUM(
          CASE
@@ -381,7 +437,7 @@ async function calculateFinancials(companyId, params = {}) {
 
   const supplierPurchasesPeriod = Number(purchasesResult.rows[0]?.total || 0);
   const directPurchasesPeriod = Number(directPurchasesResult?.rows[0]?.direct_purchases || 0);
-  const productPurchases = supplierPurchasesPeriod + directPurchasesPeriod;
+  const productPurchases = supplierPurchasesPeriod > 0 ? supplierPurchasesPeriod : directPurchasesPeriod;
   const operatingExpenses = Number(operatingExpensesTotal || 0);
   const employeeSalaries = Number(salaryTotal || 0);
   // Mandatory formula: TOTAL EXPENSES = ALL RECORDED PRODUCT PURCHASES + SALARIES + OPERATING EXPENSES
@@ -567,13 +623,33 @@ async function calculateFinancials(companyId, params = {}) {
           [companyId, targetYear],
         ),
         query(
-          `SELECT EXTRACT(MONTH FROM purchase_date)::int AS month,
-                  COALESCE(SUM(total_amount), 0) AS purchase_expenses
-           FROM supplier_purchases
-           WHERE company_id = $1 AND deleted_at IS NULL AND EXTRACT(YEAR FROM purchase_date) = $2
+          `WITH payments AS (
+             SELECT EXTRACT(MONTH FROM payment_date)::int AS month, amount
+             FROM supplier_payments
+             WHERE company_id = $1 AND deleted_at IS NULL AND EXTRACT(YEAR FROM payment_date) = $2
+             UNION ALL
+             SELECT EXTRACT(MONTH FROM purchase_date)::int AS month, amount_paid AS amount
+             FROM supplier_purchases sp
+             WHERE sp.company_id = $1 AND sp.deleted_at IS NULL AND EXTRACT(YEAR FROM purchase_date) = $2
+               AND sp.amount_paid > 0
+               AND sp.id NOT IN (
+                 SELECT DISTINCT purchase_id FROM supplier_payments WHERE purchase_id IS NOT NULL AND company_id = $1 AND deleted_at IS NULL
+               )
+           )
+           SELECT month, COALESCE(SUM(amount), 0) AS purchase_expenses
+           FROM payments
            GROUP BY month`,
           [companyId, targetYear],
-        ).catch(() => ({ rows: [] })),
+        ).catch(() =>
+          query(
+            `SELECT EXTRACT(MONTH FROM purchase_date)::int AS month,
+                    COALESCE(SUM(amount_paid), 0) AS purchase_expenses
+             FROM supplier_purchases
+             WHERE company_id = $1 AND deleted_at IS NULL AND EXTRACT(YEAR FROM purchase_date) = $2
+             GROUP BY month`,
+            [companyId, targetYear],
+          ).catch(() => ({ rows: [] }))
+        ),
         query(
           `SELECT EXTRACT(MONTH FROM created_at)::int AS month,
                   COALESCE(SUM(

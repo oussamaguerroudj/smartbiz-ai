@@ -389,7 +389,9 @@ class _RestaurantOrdersScreenState extends ConsumerState<RestaurantOrdersScreen>
                 Icon(
                   isDineIn
                       ? Icons.table_restaurant_outlined
-                      : Icons.delivery_dining_outlined,
+                      : (order.orderType == 'takeaway'
+                          ? Icons.shopping_bag_outlined
+                          : Icons.delivery_dining_outlined),
                   size: 16,
                   color: Colors.grey.shade700,
                 ),
@@ -398,7 +400,9 @@ class _RestaurantOrdersScreenState extends ConsumerState<RestaurantOrdersScreen>
                   child: Text(
                     isDineIn
                         ? (order.tableName != null ? '${l10n.dineInOption} · ${order.tableName}' : l10n.dineInOption)
-                        : l10n.deliveryOption,
+                        : (order.orderType == 'takeaway'
+                            ? l10n.takeawayOption
+                            : l10n.deliveryOption),
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -707,7 +711,7 @@ class _NewOrderSheetState extends ConsumerState<_NewOrderSheet> {
             Text(l10n.newOrderTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: AppSpacing.sm),
 
-            // Order Type Selector: Strictly 2 options (Table or Delivery) - "sfri" / takeaway removed
+            // Order Type Selector: Dine-in, Takeaway (À emporter), Delivery
             Row(
               children: [
                 Expanded(
@@ -724,7 +728,26 @@ class _NewOrderSheetState extends ConsumerState<_NewOrderSheet> {
                     onSelected: (s) => setState(() => _orderType = 'dine_in'),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: ChoiceChip(
+                    avatar: const Icon(Icons.shopping_bag_outlined, size: 16),
+                    label: Center(
+                      child: Text(
+                        l10n.takeawayOption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    selected: _orderType == 'takeaway',
+                    onSelected: (s) => setState(() {
+                      _orderType = 'takeaway';
+                      _tableId = null;
+                      _tableName = null;
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 Expanded(
                   child: ChoiceChip(
                     avatar: const Icon(Icons.delivery_dining_outlined, size: 16),
@@ -736,7 +759,11 @@ class _NewOrderSheetState extends ConsumerState<_NewOrderSheet> {
                       ),
                     ),
                     selected: _orderType == 'delivery',
-                    onSelected: (s) => setState(() => _orderType = 'delivery'),
+                    onSelected: (s) => setState(() {
+                      _orderType = 'delivery';
+                      _tableId = null;
+                      _tableName = null;
+                    }),
                   ),
                 ),
               ],

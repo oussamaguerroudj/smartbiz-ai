@@ -501,8 +501,8 @@ void main() {
     expect(retailReport.costOfGoodsSold, 10000.0);
     // Gross Profit = 25,000 - 10,000 = 15,000 DZD
     expect(retailReport.grossProfit, 15000.0);
-    // Net Profit = 15,000 (gross profit) - 4,000 (expenses) = 11,000 DZD
-    expect(retailReport.netProfit, 11000.0);
+    // Net Cash Result under Cash-Based Accounting: turnover (25,000) - expenses (4,000) - supplier payment (5,000) = 16,000 DZD
+    expect(retailReport.netProfit, 16000.0);
   });
 
   test('Financial Invariants: Multi-date installment collections count exactly once in their respective reporting periods', () async {

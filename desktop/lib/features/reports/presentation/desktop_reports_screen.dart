@@ -439,27 +439,44 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: TextStyle(fontSize: 12, color: ModiriColors.textSecondary(isDark))),
-              if (icon != null)
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: ModiriColors.textSecondary(isDark)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (icon != null) ...[
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(color: tone.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, color: tone, size: 16),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: tone,
-              fontFamily: 'monospace',
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: tone,
+                fontFamily: 'monospace',
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          Text(sublabel, style: TextStyle(fontSize: 11, color: ModiriColors.textMuted(isDark))),
+          Text(
+            sublabel,
+            style: TextStyle(fontSize: 11, color: ModiriColors.textMuted(isDark)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -728,99 +745,153 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // Header
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 1120;
+
+              final titleWidget = Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isFinancialTab ? Icons.bar_chart : Icons.hourglass_bottom,
-                        color: isFinancialTab ? ModiriColors.brandBlue : ModiriColors.brandAmber,
-                        size: 26,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        isFinancialTab
-                            ? loc.get('financial_reports_header_title')
-                            : loc.get('slow_moving_stock'),
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: ModiriColors.textPrimary(isDark),
-                            letterSpacing: -0.5),
-                      ),
-                    ],
+                  Icon(
+                    isFinancialTab ? Icons.bar_chart : Icons.hourglass_bottom,
+                    color: isFinancialTab ? ModiriColors.brandBlue : ModiriColors.brandAmber,
+                    size: 26,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isFinancialTab
-                        ? loc.get('financial_reports_header_desc')
-                        : 'Identify low-velocity products, tied-up working capital, and dead stock to optimize inventory reorders.',
-                    style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      isFinancialTab
+                          ? loc.get('financial_reports_header_title')
+                          : loc.get('slow_moving_stock'),
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: ModiriColors.textPrimary(isDark),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
                   ),
                 ],
-              ),
-              Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: ModiriColors.card(isDark),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: ModiriColors.border(isDark)),
+              );
+
+              final subtitleWidget = Text(
+                isFinancialTab
+                    ? loc.get('financial_reports_header_desc')
+                    : loc.get('slow_moving_stock_desc'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
+              );
+
+              final tabBarWidget = Container(
+                decoration: BoxDecoration(
+                  color: ModiriColors.card(isDark),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: ModiriColors.border(isDark)),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  indicatorColor: ModiriColors.brandBlue,
+                  labelColor: ModiriColors.textPrimary(isDark),
+                  unselectedLabelColor: ModiriColors.textSecondary(isDark),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  tabs: [
+                    Tab(icon: const Icon(Icons.bar_chart, size: 16), text: loc.get('financial_reports_header_title')),
+                    Tab(icon: const Icon(Icons.hourglass_bottom, size: 16), text: loc.get('slow_moving_stock')),
+                  ],
+                ),
+              );
+
+              final actionButtons = isFinancialTab
+                  ? <Widget>[
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.print_outlined, size: 16),
+                        label: Text(loc.get('print_statement')),
+                        onPressed: _printStatement,
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.file_download_outlined, size: 16),
+                        label: Text(loc.get('export_csv')),
+                        onPressed: _exportCsvDialog,
+                      ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: Text(loc.get('recalculate')),
+                        onPressed: _loadReports,
+                      ),
+                    ]
+                  : <Widget>[
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.file_download_outlined, size: 16),
+                        label: Text(loc.get('export_csv')),
+                        onPressed: _exportSlowMovingCsvDialog,
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: ModiriColors.brandAmber),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: Text(loc.get('recalculate')),
+                        onPressed: _loadSlowMovingReport,
+                      ),
+                    ];
+
+              if (isCompact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              titleWidget,
+                              const SizedBox(height: 4),
+                              subtitleWidget,
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.end,
+                          children: actionButtons,
+                        ),
+                      ],
                     ),
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      indicatorColor: ModiriColors.brandBlue,
-                      labelColor: ModiriColors.textPrimary(isDark),
-                      unselectedLabelColor: ModiriColors.textSecondary(isDark),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      tabs: [
-                        Tab(icon: const Icon(Icons.bar_chart, size: 16), text: loc.get('financial_reports_header_title')),
-                        Tab(icon: const Icon(Icons.hourglass_bottom, size: 16), text: loc.get('slow_moving_stock')),
+                    const SizedBox(height: 12),
+                    tabBarWidget,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleWidget,
+                        const SizedBox(height: 4),
+                        subtitleWidget,
                       ],
                     ),
                   ),
+                  const SizedBox(width: 16),
+                  tabBarWidget,
                   const SizedBox(width: 12),
-                  if (isFinancialTab) ...[
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.print_outlined, size: 16),
-                      label: Text(loc.get('print_statement')),
-                      onPressed: _printStatement,
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.file_download_outlined, size: 16),
-                      label: Text(loc.get('export_csv')),
-                      onPressed: _exportCsvDialog,
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: Text(loc.get('recalculate')),
-                      onPressed: _loadReports,
-                    ),
-                  ] else ...[
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.file_download_outlined, size: 16),
-                      label: Text(loc.get('export_csv')),
-                      onPressed: _exportSlowMovingCsvDialog,
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: ModiriColors.brandAmber),
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: Text(loc.get('recalculate')),
-                      onPressed: _loadSlowMovingReport,
-                    ),
-                  ],
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: actionButtons,
+                  ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
 
           const SizedBox(height: 16),
@@ -1183,59 +1254,69 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 24,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    // Period Chips
-                    Text(loc.get('days_period'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: ModiriColors.textPrimary(isDark))),
-                    const SizedBox(width: 10),
-                    Wrap(
-                      spacing: 6,
-                      children: [7, 30, 60, 90].map((d) {
-                        final isSel = _slowMovingDays == d;
-                        return ChoiceChip(
-                          label: Text('$d d'),
-                          selected: isSel,
-                          selectedColor: ModiriColors.brandAmber,
-                          labelStyle: TextStyle(
-                            color: isSel ? Colors.black : ModiriColors.textPrimary(isDark),
-                            fontSize: 12,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                          ),
-                          onSelected: (sel) {
-                            if (sel) {
-                              setState(() => _slowMovingDays = d);
-                              _loadSlowMovingReport();
-                            }
-                          },
-                        );
-                      }).toList(),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(loc.get('days_period'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: ModiriColors.textPrimary(isDark))),
+                        const SizedBox(width: 10),
+                        Wrap(
+                          spacing: 6,
+                          children: [7, 30, 60, 90].map((d) {
+                            final isSel = _slowMovingDays == d;
+                            return ChoiceChip(
+                              label: Text('$d d'),
+                              selected: isSel,
+                              selectedColor: ModiriColors.brandAmber,
+                              labelStyle: TextStyle(
+                                color: isSel ? Colors.black : ModiriColors.textPrimary(isDark),
+                                fontSize: 12,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              onSelected: (sel) {
+                                if (sel) {
+                                  setState(() => _slowMovingDays = d);
+                                  _loadSlowMovingReport();
+                                }
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 24),
-                    // Threshold Chips
-                    Text(loc.get('threshold_units'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: ModiriColors.textPrimary(isDark))),
-                    const SizedBox(width: 10),
-                    Wrap(
-                      spacing: 6,
-                      children: [0, 1, 2, 5].map((val) {
-                        final isSel = _slowMovingThreshold == val;
-                        final chipLabel = val == 0 ? loc.get('dead_stock_chip') : '<= $val';
-                        return ChoiceChip(
-                          label: Text(chipLabel),
-                          selected: isSel,
-                          selectedColor: ModiriColors.brandAmber,
-                          labelStyle: TextStyle(
-                            color: isSel ? Colors.black : ModiriColors.textPrimary(isDark),
-                            fontSize: 12,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                          ),
-                          onSelected: (sel) {
-                            if (sel) {
-                              setState(() => _slowMovingThreshold = val);
-                              _loadSlowMovingReport();
-                            }
-                          },
-                        );
-                      }).toList(),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(loc.get('threshold_units'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: ModiriColors.textPrimary(isDark))),
+                        const SizedBox(width: 10),
+                        Wrap(
+                          spacing: 6,
+                          children: [0, 1, 2, 5].map((val) {
+                            final isSel = _slowMovingThreshold == val;
+                            final chipLabel = val == 0 ? loc.get('dead_stock_chip') : '<= $val';
+                            return ChoiceChip(
+                              label: Text(chipLabel),
+                              selected: isSel,
+                              selectedColor: ModiriColors.brandAmber,
+                              labelStyle: TextStyle(
+                                color: isSel ? Colors.black : ModiriColors.textPrimary(isDark),
+                                fontSize: 12,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              onSelected: (sel) {
+                                if (sel) {
+                                  setState(() => _slowMovingThreshold = val);
+                                  _loadSlowMovingReport();
+                                }
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
                     ),
                   ],
                 ),

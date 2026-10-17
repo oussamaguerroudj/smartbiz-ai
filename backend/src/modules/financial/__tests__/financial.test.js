@@ -782,5 +782,268 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.netProfit).toBe(0);
     });
   });
+
+  describe('Cash-Based Accounting Acceptance Scenarios (Scenarios 1 to 10)', () => {
+    const mockCompanyId = '00000000-0000-0000-0000-000000000001';
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 0, purchase_expenses: 0 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: 0 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('direct_purchases')) {
+          return Promise.resolve({ rows: [{ direct_purchases: 0 }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 0, cogs: 0, sales_count: 0 }] });
+        }
+        if (sql.includes('FROM expenses') && sql.includes('COUNT(*)')) {
+          return Promise.resolve({ rows: [{ count: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+      expensesRepo.totalForRange.mockResolvedValue(0);
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(0);
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+      clinicRepo.revenueForRange.mockResolvedValue(0);
+      restaurantRepo.revenueForRange.mockResolvedValue(0);
+    });
+
+    it('Scenario 1: Fully paid cash sale (100 DA sale paid in cash => Revenue 100, Expenses 0, Net Cash +100)', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 100, cogs: 40, sales_count: 1 }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'daily' });
+      expect(res.revenue).toBe(100);
+      expect(res.expenses).toBe(0);
+      expect(res.grossProfit).toBe(60); // 100 - 40 COGS
+      expect(res.netProfit).toBe(100);   // Cash result: 100 - 0
+    });
+
+    it('Scenario 2: Credit sale with 0 down (100 DA on credit, 0 paid => Revenue 0, Expenses 0, Net Cash 0)', async () => {
+      // Unpaid credit sale has payment_status = 'unpaid', filtered out from paid sales
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 0, cogs: 0, sales_count: 0 }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+      creditRepo.totalPaymentsForRange.mockResolvedValue(0);
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'daily' });
+      expect(res.revenue).toBe(0);
+      expect(res.expenses).toBe(0);
+      expect(res.netProfit).toBe(0);
+    });
+
+    it('Scenario 3: Partial payment collected later against credit sale (40 DA collected => Revenue 40, Expenses 0, Net Cash +40)', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 0, cogs: 0, sales_count: 0 }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+      creditRepo.totalPaymentsForRange.mockResolvedValue(40); // 40 DA installment collected
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'daily' });
+      expect(res.revenue).toBe(40);
+      expect(res.expenses).toBe(0);
+      expect(res.netProfit).toBe(40);
+    });
+
+    it('Scenario 4: Fully paid inventory purchase (1,000 DA inventory bought and paid cash => Revenue 0, Paid 1000, Net Cash -1000, Inventory 1000)', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 1000 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: 1000 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'daily' });
+      expect(res.revenue).toBe(0);
+      expect(res.expenses).toBe(1000);
+      expect(res.expensesBreakdown.productPurchases).toBe(1000);
+      expect(res.netProfit).toBe(-1000);
+      expect(res.inventoryValue).toBe(1000);
+    });
+
+    it('Scenario 5: Credit purchase with partial payment (1,000 DA purchase, 600 DA paid today => Paid 600, Net Cash -600. Next month: Paid 400, Net Cash -400)', async () => {
+      // Month 1: 600 DA cash paid towards the 1,000 DA purchase invoice
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 600 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: 1000 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const resMonth1 = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+      expect(resMonth1.revenue).toBe(0);
+      expect(resMonth1.expenses).toBe(600);
+      expect(resMonth1.netProfit).toBe(-600);
+      expect(resMonth1.inventoryValue).toBe(1000);
+
+      // Month 2: remaining 400 DA paid
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 400 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const resMonth2 = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+      expect(resMonth2.revenue).toBe(0);
+      expect(resMonth2.expenses).toBe(400);
+      expect(resMonth2.netProfit).toBe(-400);
+    });
+
+    it('Scenario 6: General operating expense / salary (500 DA salary paid => Expenses 500, Net Cash -500)', async () => {
+      employeesRepo.totalSalaryCostForRange.mockResolvedValue(500);
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+      expect(res.revenue).toBe(0);
+      expect(res.expenses).toBe(500);
+      expect(res.expensesBreakdown.employeeSalaries).toBe(500);
+      expect(res.netProfit).toBe(-500);
+    });
+
+    it('Scenario 7: Sale of inventory item (Item bought for 60 DA, sold for 100 DA cash => Revenue 100, Paid 0, Net Cash +100, Gross Profit +40)', async () => {
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 100, cogs: 60, sales_count: 1 }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'daily' });
+      expect(res.revenue).toBe(100);
+      expect(res.grossProfit).toBe(40); // 100 - 60 COGS
+      expect(res.expenses).toBe(0);      // No cash paid in this period
+      expect(res.netProfit).toBe(100);    // Net cash result: 100 - 0 (no double-deducting COGS)
+    });
+
+    it('Scenario 8: Customer refund (Customer returns item, 50 DA refunded => Net Cash reduces by 50)', async () => {
+      // Sale of 100 minus 50 refund net revenue = 50
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 50, cogs: 20, sales_count: 1 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'daily' });
+      expect(res.revenue).toBe(50);
+      expect(res.netProfit).toBe(50);
+    });
+
+    it('Scenario 9: Supplier refund (Supplier refunds 100 DA cash => Net Cash increases by 100)', async () => {
+      // Operating expenses 200 minus 100 supplier refund credit net expenses = 100
+      expensesRepo.totalForRange.mockResolvedValue(100);
+
+      const res = await calculateFinancials(mockCompanyId, { period: 'daily' });
+      expect(res.expenses).toBe(100);
+      expect(res.netProfit).toBe(-100);
+    });
+
+    it('Scenario 10: Multi-period consistency with independent inventory asset tracking', async () => {
+      // Period 1: Inventory purchase of 1,000 DA cash
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 1000 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: 1000 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const p1 = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+      expect(p1.expenses).toBe(1000);
+      expect(p1.netProfit).toBe(-1000);
+      expect(p1.inventoryValue).toBe(1000);
+
+      // Period 2: Sold all inventory for 1,500 DA cash
+      query.mockImplementation((sql) => {
+        if (sql.includes('FROM companies')) {
+          return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
+        }
+        if (sql.includes('s.payment_status = \'paid\'')) {
+          return Promise.resolve({ rows: [{ revenue: 1500, cogs: 1000, sales_count: 10 }] });
+        }
+        if (sql.includes('FROM supplier_purchases')) {
+          return Promise.resolve({ rows: [{ total: 0 }] });
+        }
+        if (sql.includes('FROM products') && sql.includes('inventory_value')) {
+          return Promise.resolve({ rows: [{ inventory_value: 0 }] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const p2 = await calculateFinancials(mockCompanyId, { period: 'monthly' });
+      expect(p2.revenue).toBe(1500);
+      expect(p2.grossProfit).toBe(500); // 1500 - 1000
+      expect(p2.expenses).toBe(0);
+      expect(p2.netProfit).toBe(1500);
+      expect(p2.inventoryValue).toBe(0);
+
+      // Total Net Cash across P1 + P2 = -1000 + 1500 = +500 DA (True overall business profit)
+      expect(p1.netProfit + p2.netProfit).toBe(500);
+    });
+  });
 });
 

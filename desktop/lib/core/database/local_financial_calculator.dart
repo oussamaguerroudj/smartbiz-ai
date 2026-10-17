@@ -139,6 +139,16 @@ class DesktopLocalFinancialCalculator {
 
 
 
+    // Global credit payments
+    double globalCreditPayments = 0.0;
+    try {
+      final cpRes = await db.rawQuery(
+        'SELECT COALESCE(SUM(amount), 0.0) AS total FROM credit_payments WHERE company_id = ?',
+        [companyId],
+      );
+      globalCreditPayments = (cpRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
     // Global restaurant revenue
     double globalRestRevenue = 0.0;
     try {
@@ -159,19 +169,54 @@ class DesktopLocalFinancialCalculator {
 
     double globalProductPurchases = 0.0;
     try {
-      final suppPurchRes = await db.rawQuery(
-        'SELECT COALESCE(SUM(total_amount), 0.0) AS total FROM supplier_purchases WHERE company_id = ?',
-        [companyId],
+      final suppPayRes = await db.rawQuery(
+        '''
+        SELECT (
+          COALESCE((
+            SELECT SUM(amount)
+            FROM supplier_payments
+            WHERE company_id = ?
+          ), 0.0)
+          +
+          COALESCE((
+            SELECT SUM(sp.amount_paid)
+            FROM supplier_purchases sp
+            WHERE sp.company_id = ?
+              AND sp.amount_paid > 0
+              AND sp.id NOT IN (
+                SELECT DISTINCT purchase_id
+                FROM supplier_payments
+                WHERE purchase_id IS NOT NULL AND company_id = ?
+              )
+          ), 0.0)
+        ) AS total
+        ''',
+        [companyId, companyId, companyId],
       );
-      globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
-    } catch (_) {}
-
+      globalProductPurchases = (suppPayRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      try {
+        final suppPurchRes = await db.rawQuery(
+          'SELECT COALESCE(SUM(amount_paid), 0.0) AS total FROM supplier_purchases WHERE company_id = ?',
+          [companyId],
+        );
+        globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      } catch (_) {
+        try {
+          final suppPurchRes = await db.rawQuery(
+            'SELECT COALESCE(SUM(paid_amount), 0.0) AS total FROM supplier_purchases WHERE company_id = ?',
+            [companyId],
+          );
+          globalProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        } catch (_) {}
+      }
+    }
 
     final allSalesRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
-    final allRevenue = allSalesRevenue + globalRestRevenue;
+    final allRevenue = allSalesRevenue + globalCreditPayments + globalRestRevenue;
     final allRecordedExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
     final allExpenses = globalProductPurchases + allRecordedExpenses;
-    final globalNetProfit = isRestaurant ? (allRevenue - allExpenses) : (allRevenue - globalCogs - allExpenses);
+    final globalNetProfit = allRevenue - allExpenses;
 
     // 2. Period filtering range
     String salesDateClause;
@@ -241,8 +286,18 @@ class DesktopLocalFinancialCalculator {
       } catch (_) {}
     }
 
+    // Period credit payments
+    double periodCreditPayments = 0.0;
+    try {
+      final cpPeriodRes = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount), 0.0) AS total FROM credit_payments WHERE company_id = ? AND $txDateClause",
+        [companyId, periodKey],
+      );
+      periodCreditPayments = (cpPeriodRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
     final periodSalesRevenue = (periodSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
-    final periodRevenue = periodSalesRevenue + periodRestRevenue;
+    final periodRevenue = periodSalesRevenue + periodCreditPayments + periodRestRevenue;
     final salesCount = (periodSalesRes.first['sales_count'] as num?)?.toInt() ?? 0;
 
     // Period COGS from sale_items with fallback to product cost_price (0 for restaurants)
@@ -288,24 +343,71 @@ class DesktopLocalFinancialCalculator {
     // Gross profit = revenue - COGS (COGS is 0 for restaurants where food ingredients are tracked as expenses)
     final periodGrossProfit = isRestaurant ? periodRevenue : (periodRevenue - periodCogs);
 
-    // Period Product Purchases
+    // Period Product Purchases (Cash-based)
     final purchaseDateClause = period == 'daily'
         ? "SUBSTR(purchase_date, 1, 10) = ?"
         : period == 'monthly'
             ? "SUBSTR(purchase_date, 1, 7) = ?"
             : "SUBSTR(purchase_date, 1, 4) = ?";
+    final paymentDateClause = period == 'daily'
+        ? "SUBSTR(payment_date, 1, 10) = ?"
+        : period == 'monthly'
+            ? "SUBSTR(payment_date, 1, 7) = ?"
+            : "SUBSTR(payment_date, 1, 4) = ?";
     double periodProductPurchases = 0.0;
     try {
-      final suppPurchRes = await db.rawQuery(
+      final suppPayRes = await db.rawQuery(
         '''
-        SELECT COALESCE(SUM(total_amount), 0.0) AS total
-        FROM supplier_purchases
-        WHERE company_id = ? AND $purchaseDateClause
+        SELECT (
+          COALESCE((
+            SELECT SUM(amount)
+            FROM supplier_payments
+            WHERE company_id = ?
+              AND $paymentDateClause
+          ), 0.0)
+          +
+          COALESCE((
+            SELECT SUM(sp.amount_paid)
+            FROM supplier_purchases sp
+            WHERE sp.company_id = ?
+              AND sp.amount_paid > 0
+              AND $purchaseDateClause
+              AND sp.id NOT IN (
+                SELECT DISTINCT purchase_id
+                FROM supplier_payments
+                WHERE purchase_id IS NOT NULL AND company_id = ?
+              )
+          ), 0.0)
+        ) AS total
         ''',
-        [companyId, periodKey],
+        [companyId, periodKey, companyId, periodKey, companyId],
       );
-      periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
-    } catch (_) {}
+      periodProductPurchases = (suppPayRes.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      try {
+        final suppPurchRes = await db.rawQuery(
+          '''
+          SELECT COALESCE(SUM(amount_paid), 0.0) AS total
+          FROM supplier_purchases
+          WHERE company_id = ? AND $purchaseDateClause
+          ''',
+          [companyId, periodKey],
+        );
+        periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      } catch (_) {
+        try {
+          final suppPurchRes = await db.rawQuery(
+            '''
+            SELECT COALESCE(SUM(paid_amount), 0.0) AS total
+            FROM supplier_purchases
+            WHERE company_id = ? AND $purchaseDateClause
+            ''',
+            [companyId, periodKey],
+          );
+          periodProductPurchases = (suppPurchRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        } catch (_) {}
+      }
+    }
 
 
     // Period Expenses
