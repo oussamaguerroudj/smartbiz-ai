@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/desktop_theme.dart';
 import '../../../core/widgets/modiri_panel.dart';
 import '../../products/data/products_repository.dart';
+import '../../subscriptions/presentation/desktop_purchase_dialog.dart';
 
 class DesktopSettingsScreen extends ConsumerStatefulWidget {
   const DesktopSettingsScreen({super.key});
@@ -346,7 +347,26 @@ class _DesktopSettingsScreenState extends ConsumerState<DesktopSettingsScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  if (session.entitlementType != 'lifetime') ...[
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ModiriColors.brandAmber,
+                        foregroundColor: Colors.black,
+                        minimumSize: const Size.fromHeight(40),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.upgrade, size: 16, color: Colors.black),
+                      label: Text(
+                        loc.get('upgrade_to_lifetime'),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        showDesktopPurchaseDialog(context);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Text(loc.get('have_license_key'),
                       style: TextStyle(color: ModiriColors.textSecondary(isDark), fontSize: 12)),
                   const SizedBox(height: 8),
@@ -660,30 +680,106 @@ class _DesktopSettingsScreenState extends ConsumerState<DesktopSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final titleWidget = Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.manage_accounts_outlined, color: ModiriColors.brandBlue, size: 20),
                         const SizedBox(width: 8),
-                        Text(loc.get('user_account_subscription'),
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ModiriColors.textPrimary(isDark))),
+                        Flexible(
+                          child: Text(
+                            loc.get('user_account_subscription'),
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: ModiriColors.textPrimary(isDark),
+                            ),
+                          ),
+                        ),
                       ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: ModiriColors.brandTeal.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: ModiriColors.brandTeal.withOpacity(0.35)),
-                      ),
-                      child: Text(
-                        'Plan: ${(session.entitlementType ?? 'TRIAL').toUpperCase()}',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: ModiriColors.brandTeal),
-                      ),
-                    ),
-                  ],
+                    );
+
+                    final badgeWidget = () {
+                      final isLifetime = session.entitlementType == 'lifetime';
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isLifetime
+                                  ? ModiriColors.brandAmber.withOpacity(0.15)
+                                  : ModiriColors.brandBlue.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isLifetime
+                                    ? ModiriColors.brandAmber.withOpacity(0.4)
+                                    : ModiriColors.brandBlue.withOpacity(0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isLifetime ? Icons.workspace_premium : Icons.hourglass_top,
+                                  color: isLifetime ? ModiriColors.brandAmber : ModiriColors.brandBlue,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isLifetime ? loc.get('lifetime_edition') : loc.get('free_trial'),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isLifetime ? ModiriColors.brandAmber : ModiriColors.brandBlue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!isLifetime)
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: ModiriColors.brandAmber,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                elevation: 0,
+                              ),
+                              icon: const Icon(Icons.upgrade, size: 15, color: Colors.black),
+                              label: Text(
+                                loc.get('upgrade_to_lifetime'),
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black),
+                              ),
+                              onPressed: () => showDesktopPurchaseDialog(context),
+                            ),
+                        ],
+                      );
+                    }();
+
+                    if (constraints.maxWidth < 650) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          titleWidget,
+                          const SizedBox(height: 10),
+                          badgeWidget,
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: titleWidget),
+                        badgeWidget,
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -706,110 +802,36 @@ class _DesktopSettingsScreenState extends ConsumerState<DesktopSettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
                     OutlinedButton.icon(
                       icon: const Icon(Icons.lock_reset, size: 16),
                       label: Text(loc.get('change_account_password')),
                       onPressed: _showChangePasswordDialog,
                     ),
-                    const SizedBox(width: 10),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.support_agent_outlined, size: 16),
                       label: Text(loc.get('contact_support')),
                       onPressed: _showSupportTicketDialog,
                     ),
-                    const SizedBox(width: 10),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.verified_outlined, size: 16),
                       label: Text(loc.get('license_subscription')),
                       onPressed: _showActivateLicenseDialog,
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // API & Network Settings
-          ModiriPanel(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(loc.get('backend_api_endpoint'),
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ModiriColors.textPrimary(isDark))),
-                    ElevatedButton.icon(
-                      onPressed: _isTestingConnection ? null : _testConnection,
-                      icon: _isTestingConnection
-                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.wifi_tethering, size: 16),
-                      label: Text(_isTestingConnection ? loc.get('testing_connection') : loc.get('test_connection_button')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ModiriColors.brandBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.logout, size: 16, color: ModiriColors.brandRose),
+                      label: Text(loc.get('logout_title'), style: const TextStyle(color: ModiriColors.brandRose)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ModiriColors.brandRose,
+                        side: const BorderSide(color: ModiriColors.brandRose),
                       ),
+                      onPressed: _confirmLogout,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _apiUrlController,
-                  style: TextStyle(color: ModiriColors.textPrimary(isDark), fontSize: 13),
-                  decoration: InputDecoration(
-                    labelText: loc.get('production_api_url'),
-                    helperText: loc.get('canonical_endpoint_hint'),
-                    helperStyle: TextStyle(color: ModiriColors.textMuted(isDark)),
-                  ),
-                ),
-                if (_connectionTestResult != null) ...[
-                  const SizedBox(height: 12),
-                  () {
-                    final isHealthy = _connectionTestResult!['healthy'] == true || _connectionTestResult!['success'] == true;
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isHealthy
-                            ? ModiriColors.brandTeal.withOpacity(0.12)
-                            : ModiriColors.brandRose.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isHealthy
-                              ? ModiriColors.brandTeal.withOpacity(0.4)
-                              : ModiriColors.brandRose.withOpacity(0.4),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isHealthy ? Icons.check_circle_outline : Icons.error_outline,
-                            color: isHealthy ? ModiriColors.brandTeal : ModiriColors.brandRose,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              isHealthy
-                                  ? loc.get('server_online_latency').replaceAll('{latency}', '${_connectionTestResult!['latencyMs']}')
-                                  : loc.get('server_offline_error').replaceAll('{error}', '${_connectionTestResult!['error'] ?? _connectionTestResult!['statusCode'] ?? "Unknown"}'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: isHealthy ? ModiriColors.brandTeal : ModiriColors.brandRose,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }(),
-                ],
               ],
             ),
           ),
@@ -875,11 +897,23 @@ class _DesktopSettingsScreenState extends ConsumerState<DesktopSettingsScreen> {
                   style: TextStyle(color: ModiriColors.textSecondary(isDark), fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: ModiriColors.brandRose),
-                  icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-                  label: Text(loc.get('clear_company_data')),
-                  onPressed: _showClearDataDialog,
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  children: [
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: ModiriColors.brandRose),
+                      icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                      label: Text(loc.get('clear_company_data')),
+                      onPressed: _showClearDataDialog,
+                    ),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade800),
+                      icon: const Icon(Icons.person_remove_outlined, size: 18),
+                      label: Text(loc.get('delete_account_permanently')),
+                      onPressed: _confirmDeleteAccount,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1072,5 +1106,186 @@ class _DesktopSettingsScreenState extends ConsumerState<DesktopSettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmLogout() async {
+    final loc = ModiriLocalizations(ref.read(desktopLocaleProvider));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ModiriColors.surface(isDark),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: ModiriColors.border(isDark)),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.logout, color: ModiriColors.brandRose, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              loc.get('logout_title'),
+              style: TextStyle(
+                color: ModiriColors.textPrimary(isDark),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          loc.get('logout_confirm'),
+          style: TextStyle(
+            color: ModiriColors.textSecondary(isDark),
+            fontSize: 13,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(loc.get('cancel'), style: TextStyle(color: ModiriColors.textSecondary(isDark))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: ModiriColors.brandRose),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(loc.get('logout_title')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(sessionProvider.notifier).logout();
+    }
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final loc = ModiriLocalizations(ref.read(desktopLocaleProvider));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pwdCtrl = TextEditingController();
+    bool obscure = true;
+    bool isLoading = false;
+    String? errorText;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: ModiriColors.surface(isDark),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: Colors.red.shade800.withOpacity(0.5)),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                loc.get('delete_account_permanently'),
+                style: TextStyle(
+                  color: ModiriColors.textPrimary(isDark),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 480,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    loc.get('delete_account_warning'),
+                    style: TextStyle(
+                      color: isDark ? Colors.red.shade200 : Colors.red.shade900,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: pwdCtrl,
+                  obscureText: obscure,
+                  style: TextStyle(color: ModiriColors.textPrimary(isDark), fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: loc.get('enter_password_to_confirm'),
+                    errorText: errorText,
+                    prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscure ? Icons.visibility : Icons.visibility_off,
+                        color: ModiriColors.textMuted(isDark),
+                      ),
+                      onPressed: () => setDialogState(() => obscure = !obscure),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.of(ctx).pop(false),
+              child: Text(loc.get('cancel'), style: TextStyle(color: ModiriColors.textSecondary(isDark))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade800),
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final pwd = pwdCtrl.text.trim();
+                      if (pwd.isEmpty) {
+                        setDialogState(() => errorText = loc.get('enter_password_to_confirm'));
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isLoading = true;
+                        errorText = null;
+                      });
+
+                      try {
+                        final client = ref.read(apiClientProvider);
+                        await client.delete('/auth/account', body: {'password': pwd});
+                        if (ctx.mounted) {
+                          Navigator.of(ctx).pop(true);
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isLoading = false;
+                          final msg = e.toString().replaceFirst('Exception: ', '');
+                          errorText = loc.get('account_deletion_failed').replaceAll('{error}', msg);
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(loc.get('delete_permanently_action')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(sessionProvider.notifier).logout();
+    }
   }
 }

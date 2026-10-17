@@ -27,9 +27,9 @@ class SessionState {
     this.userName,
     this.userPhone,
     this.role,
-    this.businessType = 'company',
+    this.businessType,
     this.entitlementType = 'trial',
-    this.onboardingCompleted = true,
+    this.onboardingCompleted = false,
   });
 
   bool get isOfflineSession =>
@@ -88,6 +88,8 @@ class SessionNotifier extends StateNotifier<SessionState> {
       final role = await _storage.read(key: 'modiri_desktop_user_role');
       final businessType = await _storage.read(key: 'modiri_desktop_business_type');
       final entitlementType = await _storage.read(key: 'modiri_desktop_entitlement_type');
+      final onboardingStr = await _storage.read(key: 'modiri_desktop_onboarding_completed');
+      final onboardingCompleted = onboardingStr == 'true';
 
       if (token != null && token.isNotEmpty) {
         state = SessionState(
@@ -101,8 +103,9 @@ class SessionNotifier extends StateNotifier<SessionState> {
           userName: name,
           userPhone: phone,
           role: role,
-          businessType: businessType ?? 'company',
+          businessType: businessType,
           entitlementType: entitlementType ?? 'trial',
+          onboardingCompleted: onboardingCompleted,
         );
       }
     } catch (_) {}
@@ -123,7 +126,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
     bool onboardingCompleted = true,
     bool? isOfflineSession,
   }) async {
-    final bType = businessType ?? state.businessType ?? 'company';
+    final bType = businessType;
     final entType = entitlementType ?? state.entitlementType ?? 'trial';
     state = SessionState(
       isLoggedIn: true,
@@ -163,8 +166,31 @@ class SessionNotifier extends StateNotifier<SessionState> {
       if (role != null) {
         await _storage.write(key: 'modiri_desktop_user_role', value: role);
       }
-      await _storage.write(key: 'modiri_desktop_business_type', value: bType);
+      if (bType != null) {
+        await _storage.write(key: 'modiri_desktop_business_type', value: bType);
+      } else {
+        await _storage.delete(key: 'modiri_desktop_business_type');
+      }
       await _storage.write(key: 'modiri_desktop_entitlement_type', value: entType);
+      await _storage.write(
+        key: 'modiri_desktop_onboarding_completed',
+        value: onboardingCompleted ? 'true' : 'false',
+      );
+    } catch (_) {}
+  }
+
+  Future<void> updateBusinessType(String type, {String? companyName}) async {
+    state = state.copyWith(
+      businessType: type,
+      companyName: companyName ?? state.companyName,
+      onboardingCompleted: true,
+    );
+    try {
+      await _storage.write(key: 'modiri_desktop_business_type', value: type);
+      await _storage.write(key: 'modiri_desktop_onboarding_completed', value: 'true');
+      if (companyName != null && companyName.isNotEmpty) {
+        await _storage.write(key: 'modiri_desktop_company_name', value: companyName);
+      }
     } catch (_) {}
   }
 
@@ -198,14 +224,22 @@ class SessionNotifier extends StateNotifier<SessionState> {
   }
 
   Future<void> logout() async {
-    state = state.copyWith(
+    state = const SessionState(
       isLoggedIn: false,
-      accessToken: null,
-      refreshToken: null,
     );
     try {
       await _storage.delete(key: 'modiri_desktop_access_token');
       await _storage.delete(key: 'modiri_desktop_refresh_token');
+      await _storage.delete(key: 'modiri_desktop_user_id');
+      await _storage.delete(key: 'modiri_desktop_company_id');
+      await _storage.delete(key: 'modiri_desktop_company_name');
+      await _storage.delete(key: 'modiri_desktop_user_email');
+      await _storage.delete(key: 'modiri_desktop_user_name');
+      await _storage.delete(key: 'modiri_desktop_user_phone');
+      await _storage.delete(key: 'modiri_desktop_user_role');
+      await _storage.delete(key: 'modiri_desktop_business_type');
+      await _storage.delete(key: 'modiri_desktop_entitlement_type');
+      await _storage.delete(key: 'modiri_desktop_onboarding_completed');
     } catch (_) {}
   }
 }

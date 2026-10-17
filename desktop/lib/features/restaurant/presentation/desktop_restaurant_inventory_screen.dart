@@ -563,24 +563,27 @@ class _DesktopRestaurantInventoryScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      loc.get('raw_materials'),
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: ModiriColors.textPrimary(isDark),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.get('raw_materials'),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: ModiriColors.textPrimary(isDark),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Manage restaurant ingredients, kitchen commodities, and stock adjustments',
-                      style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        loc.get('raw_materials_subtitle'),
+                        style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
                 Row(
                   children: [
                     OutlinedButton.icon(
@@ -732,7 +735,7 @@ class _DesktopRestaurantInventoryScreenState
                   : items.isEmpty
                       ? Center(
                           child: Text(
-                            'No raw materials found. Click "Add Raw Material" to register ingredients.',
+                            loc.get('no_raw_materials_found'),
                             style: TextStyle(color: ModiriColors.textSecondary(isDark)),
                           ),
                         )
@@ -755,13 +758,13 @@ class _DesktopRestaurantInventoryScreenState
                               ],
                               rows: items.map((it) {
                                 Color statusColor = ModiriColors.brandTeal;
-                                String statusLabel = 'In Stock';
+                                String statusLabel = loc.get('in_stock');
                                 if (it.isOutOfStock) {
                                   statusColor = ModiriColors.brandRose;
-                                  statusLabel = 'Out of Stock';
+                                  statusLabel = loc.get('out_of_stock');
                                 } else if (it.isLowStock) {
                                   statusColor = ModiriColors.brandAmber;
-                                  statusLabel = 'Low Stock';
+                                  statusLabel = loc.get('low_stock');
                                 }
 
                                 return DataRow(

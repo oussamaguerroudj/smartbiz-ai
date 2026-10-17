@@ -382,6 +382,7 @@ class _LoggedInMockSession extends SessionNotifier {
       companyId: 'comp_1',
       companyName: 'Modiri Test Corp',
       businessType: 'superette',
+      onboardingCompleted: true,
     );
   }
 }

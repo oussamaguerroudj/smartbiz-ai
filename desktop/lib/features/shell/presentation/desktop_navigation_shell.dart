@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/desktop_localizations.dart';
 import '../../../core/network/session.dart';
+import '../../../core/sync/desktop_sync_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/desktop_theme.dart';
 import '../../../core/widgets/modiri_background.dart';
@@ -26,6 +27,7 @@ import '../../reports/presentation/desktop_reports_screen.dart';
 import '../../restaurant/presentation/desktop_restaurant_orders_screen.dart';
 import '../../restaurant/presentation/desktop_restaurant_inventory_screen.dart';
 import '../../settings/presentation/desktop_settings_screen.dart';
+import '../../subscriptions/presentation/desktop_purchase_dialog.dart';
 import '../../suppliers/presentation/desktop_suppliers_screen.dart';
 
 enum DesktopSection {
@@ -68,7 +70,11 @@ class _DesktopNavigationShellState extends ConsumerState<DesktopNavigationShell>
   void initState() {
     super.initState();
     if (!Platform.environment.containsKey('FLUTTER_TEST')) {
-      _checkInternet();
+      _checkInternet().then((_) {
+        if (_hasInternet) {
+          ref.read(desktopSyncServiceProvider.notifier).pullInitialData();
+        }
+      });
       _netCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkInternet());
     }
   }
@@ -81,24 +87,25 @@ class _DesktopNavigationShellState extends ConsumerState<DesktopNavigationShell>
 
   Future<void> _checkInternet() async {
     if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+    final wasOffline = !_hasInternet;
+    bool online = false;
     try {
       final res = await InternetAddress.lookup('dns.google').timeout(const Duration(seconds: 3));
-      final online = res.isNotEmpty && res[0].rawAddress.isNotEmpty;
-      if (mounted && _hasInternet != online) {
-        setState(() => _hasInternet = online);
-      }
+      online = res.isNotEmpty && res[0].rawAddress.isNotEmpty;
     } catch (_) {
       try {
         final res2 = await InternetAddress.lookup('one.one.one.one').timeout(const Duration(seconds: 3));
-        final online2 = res2.isNotEmpty && res2[0].rawAddress.isNotEmpty;
-        if (mounted && _hasInternet != online2) {
-          setState(() => _hasInternet = online2);
-        }
+        online = res2.isNotEmpty && res2[0].rawAddress.isNotEmpty;
       } catch (_) {
-        if (mounted && _hasInternet != false) {
-          setState(() => _hasInternet = false);
-        }
+        online = false;
       }
+    }
+    if (mounted && _hasInternet != online) {
+      setState(() => _hasInternet = online);
+    }
+    if (online && wasOffline) {
+      ref.read(desktopSyncServiceProvider.notifier).syncPending();
+      ref.read(desktopSyncServiceProvider.notifier).pullInitialData();
     }
   }
 
@@ -419,50 +426,95 @@ class _DesktopNavigationShellState extends ConsumerState<DesktopNavigationShell>
                     ),
                   ),
 
-                  // Bottom "Business Plan" Card matching website Sidebar.jsx
+                  // Bottom "Business Plan / Account Version" Card matching mobile app & website Sidebar.jsx
                   if (!_isCollapsed) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                      child: InkWell(
-                        onTap: () => setState(() => _activeSection = DesktopSection.settings),
-                        borderRadius: BorderRadius.circular(14),
+                    () {
+                      final isLifetime = session.entitlementType == 'lifetime';
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: ModiriColors.brandAmber.withOpacity(isDark ? 0.08 : 0.06),
+                            color: isLifetime
+                                ? ModiriColors.brandAmber.withOpacity(isDark ? 0.12 : 0.08)
+                                : ModiriColors.brandBlue.withOpacity(isDark ? 0.10 : 0.06),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: ModiriColors.brandAmber.withOpacity(0.35)),
+                            border: Border.all(
+                              color: isLifetime
+                                  ? ModiriColors.brandAmber.withOpacity(0.4)
+                                  : ModiriColors.brandBlue.withOpacity(0.3),
+                            ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Icon(Icons.workspace_premium, color: ModiriColors.brandAmber, size: 20),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              InkWell(
+                                onTap: isLifetime
+                                    ? () => setState(() => _activeSection = DesktopSection.settings)
+                                    : () => showDesktopPurchaseDialog(context),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Row(
                                   children: [
-                                    Text(
-                                      session.entitlementType == 'lifetime'
-                                          ? 'Lifetime License Active'
-                                          : loc.get('business_plan_active'),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                        color: ModiriColors.textPrimary(isDark),
+                                    Icon(
+                                      isLifetime ? Icons.workspace_premium : Icons.hourglass_top_rounded,
+                                      color: isLifetime ? ModiriColors.brandAmber : ModiriColors.brandBlue,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isLifetime
+                                                ? loc.get('lifetime_edition')
+                                                : loc.get('free_trial'),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: ModiriColors.textPrimary(isDark),
+                                            ),
+                                          ),
+                                          Text(
+                                            'DZD · ${bType.toUpperCase()}',
+                                            style: TextStyle(fontSize: 10, color: ModiriColors.textMuted(isDark)),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    Text(
-                                      'DZD · ${bType.toUpperCase()}',
-                                      style: TextStyle(fontSize: 10, color: ModiriColors.textMuted(isDark)),
-                                    ),
+                                    if (isLifetime)
+                                      const Icon(Icons.check_circle, color: ModiriColors.brandTeal, size: 16),
                                   ],
                                 ),
                               ),
+                              if (!isLifetime) ...[
+                                const SizedBox(height: 10),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: ModiriColors.brandAmber,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    elevation: 0,
+                                  ),
+                                  icon: const Icon(Icons.upgrade, size: 16, color: Colors.black),
+                                  label: Text(
+                                    loc.get('upgrade_to_lifetime'),
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  onPressed: () => showDesktopPurchaseDialog(context),
+                                ),
+                              ],
                             ],
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }(),
                   ],
 
                   // Collapse Toggle Button
@@ -618,26 +670,73 @@ class _DesktopNavigationShellState extends ConsumerState<DesktopNavigationShell>
                             ),
                             const SizedBox(width: 10),
 
-                            // Network Connection Status Indicator
-                            Tooltip(
-                              message: _hasInternet ? loc.get('online_connected') : loc.get('server_offline'),
-                              child: InkWell(
-                                onTap: _checkInternet,
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  padding: const EdgeInsets.all(7),
-                                  decoration: BoxDecoration(
-                                    color: (_hasInternet ? ModiriColors.brandTeal : ModiriColors.brandAmber).withOpacity(isDark ? 0.12 : 0.08),
+                            // Network Connection Status & Cloud Sync Indicator
+                            Builder(
+                              builder: (ctx) {
+                                final syncState = ref.watch(desktopSyncServiceProvider);
+                                final isSyncing = syncState.isSyncing;
+                                final tooltipMsg = isSyncing
+                                    ? loc.get('syncing_data')
+                                    : (_hasInternet
+                                        ? '${loc.get('online_connected')} · ${loc.get('sync_all_data')}'
+                                        : loc.get('server_offline'));
+
+                                return Tooltip(
+                                  message: tooltipMsg,
+                                  child: InkWell(
+                                    onTap: isSyncing
+                                        ? null
+                                        : () async {
+                                            await _checkInternet();
+                                            if (_hasInternet) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(loc.get('syncing_data')),
+                                                  backgroundColor: ModiriColors.brandBlue,
+                                                  duration: const Duration(seconds: 1),
+                                                  behavior: SnackBarBehavior.floating,
+                                                ),
+                                              );
+                                              await ref.read(desktopSyncServiceProvider.notifier).syncPending();
+                                              await ref.read(desktopSyncServiceProvider.notifier).pullInitialData();
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(loc.get('sync_completed')),
+                                                    backgroundColor: ModiriColors.brandTeal,
+                                                    duration: const Duration(seconds: 2),
+                                                    behavior: SnackBarBehavior.floating,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: (_hasInternet ? ModiriColors.brandTeal : ModiriColors.brandAmber).withOpacity(0.4)),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(7),
+                                      decoration: BoxDecoration(
+                                        color: (_hasInternet ? ModiriColors.brandTeal : ModiriColors.brandAmber).withOpacity(isDark ? 0.12 : 0.08),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: (_hasInternet ? ModiriColors.brandTeal : ModiriColors.brandAmber).withOpacity(0.4)),
+                                      ),
+                                      child: isSyncing
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: ModiriColors.brandBlue,
+                                              ),
+                                            )
+                                          : Icon(
+                                              _hasInternet ? Icons.cloud_done : Icons.cloud_off,
+                                              size: 16,
+                                              color: _hasInternet ? ModiriColors.brandTeal : ModiriColors.brandAmber,
+                                            ),
+                                    ),
                                   ),
-                                  child: Icon(
-                                    _hasInternet ? Icons.cloud_done : Icons.cloud_off,
-                                    size: 16,
-                                    color: _hasInternet ? ModiriColors.brandTeal : ModiriColors.brandAmber,
-                                  ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                             const SizedBox(width: 10),
 

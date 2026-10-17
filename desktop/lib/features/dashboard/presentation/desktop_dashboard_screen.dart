@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -51,6 +52,11 @@ class _DesktopDashboardScreenState extends ConsumerState<DesktopDashboardScreen>
 
     bool remoteSuccess = false;
     if (!session.isOfflineSession) {
+      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+        try {
+          await ref.read(desktopSyncServiceProvider.notifier).pullInitialData();
+        } catch (_) {}
+      }
       try {
         if (bType == 'restaurant' || bType == 'cafe') {
         final res = await Future.wait([

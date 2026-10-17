@@ -73,6 +73,29 @@ module.exports = {
 
   corsOrigin,
 
+  google: {
+    clientId:
+      process.env.GOOGLE_CLIENT_ID ||
+      '128675361201-9sql94sb7b2av7upaksoqunkvs1c4amp.apps.googleusercontent.com',
+    androidClientId:
+      process.env.GOOGLE_ANDROID_CLIENT_ID ||
+      '128675361201-s1qac05sj36egh69a054ljmqukptt4tl.apps.googleusercontent.com',
+    windowsClientId:
+      process.env.GOOGLE_WINDOWS_CLIENT_ID ||
+      '128675361201-qhb7u121simtqfq3nubaek2nhk0qae2f.apps.googleusercontent.com',
+    windowsClientSecret:
+      process.env.GOOGLE_WINDOWS_CLIENT_SECRET ||
+      process.env.GOOGLE_CLIENT_SECRET ||
+      '',
+    allowedAudiences: process.env.GOOGLE_ALLOWED_AUDIENCES
+      ? process.env.GOOGLE_ALLOWED_AUDIENCES.split(',').map((s) => s.trim()).filter(Boolean)
+      : [
+          process.env.GOOGLE_CLIENT_ID || '128675361201-9sql94sb7b2av7upaksoqunkvs1c4amp.apps.googleusercontent.com',
+          process.env.GOOGLE_ANDROID_CLIENT_ID || '128675361201-s1qac05sj36egh69a054ljmqukptt4tl.apps.googleusercontent.com',
+          process.env.GOOGLE_WINDOWS_CLIENT_ID || '128675361201-qhb7u121simtqfq3nubaek2nhk0qae2f.apps.googleusercontent.com',
+        ].filter(Boolean),
+  },
+
   // ---------------------------------------------------------------
   // AI (Ch. 25  -  ZERO OpenAI dependency, self-hosted/open-source only)
   //

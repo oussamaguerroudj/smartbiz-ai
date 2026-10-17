@@ -32,6 +32,14 @@ services:
         sync: false
       - key: SCHEDULER_SECRET
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_ANDROID_CLIENT_ID
+        sync: false
+      - key: GOOGLE_WINDOWS_CLIENT_ID
+        sync: false
+      - key: GOOGLE_WINDOWS_CLIENT_SECRET
+        sync: false
       - key: SUPPORT_WHATSAPP
         value: "0774195871"
       - key: SUPPORT_EMAIL

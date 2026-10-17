@@ -7,6 +7,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/auth_repository.dart';
+import '../widgets/google_sign_in_button.dart';
 
 /// Register Screen — STEP 1 of Onboarding Flow
 /// Initial account creation containing ONLY:
@@ -23,12 +24,14 @@ class RegisterScreen extends ConsumerStatefulWidget {
     super.key,
     required this.onRegisterSuccess,
     required this.onGoToLogin,
+    this.onGoogleSuccess,
   });
 
   /// Called with the registered email so Step 2 (account
   /// verification) knows which address the code was sent to.
   final void Function(String email) onRegisterSuccess;
   final VoidCallback onGoToLogin;
+  final VoidCallback? onGoogleSuccess;
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -41,6 +44,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -151,6 +155,62 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final success = await ref.read(authRepositoryProvider).signInWithGoogle();
+      if (success && mounted) {
+        if (widget.onGoogleSuccess != null) {
+          widget.onGoogleSuccess!();
+        } else {
+          widget.onGoToLogin();
+        }
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        if (e.isAccountSuspended) {
+          widget.onGoogleSuccess?.call();
+        } else if (e.code == 'ACCOUNT_EXISTS_WITH_PASSWORD') {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Account Exists'),
+              content: const Text(
+                'An account with this email address already exists using a password.\n\nPlease log in using your email and password, or reset your password if forgotten.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        } else if (e.code == 'GOOGLE_EMAIL_NOT_VERIFIED') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message)),
+          );
+        } else if (e.code != 'GOOGLE_SIGN_IN_FAILED' && e.statusCode != 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message)),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -196,7 +256,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
+                  onPressed: (_isLoading || _isGoogleLoading) ? null : _submit,
                   child: _isLoading
                       ? const SizedBox(
                           width: 20,
@@ -205,6 +265,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         )
                       : Text(l10n.createAccount),
                 ),
+                if (ref.read(authRepositoryProvider).isGoogleSignInSupported) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          Localizations.localeOf(context).languageCode == 'ar'
+                              ? 'أو'
+                              : (Localizations.localeOf(context).languageCode == 'fr' ? 'ou' : 'or'),
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  GoogleSignInButton(
+                    isLoading: _isGoogleLoading,
+                    onPressed: (_isLoading || _isGoogleLoading) ? null : _signInWithGoogle,
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.sm),
                 Center(
                   child: TextButton(

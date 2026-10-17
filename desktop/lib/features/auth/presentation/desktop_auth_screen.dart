@@ -1,14 +1,20 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/localization/desktop_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/session.dart';
+import '../../../core/sync/desktop_sync_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/desktop_theme.dart';
 import '../../../core/widgets/modiri_background.dart';
 import '../../../core/widgets/modiri_panel.dart';
+import '../data/desktop_google_oauth.dart';
+import 'widgets/google_sign_in_button.dart';
 
 class DesktopAuthScreen extends ConsumerStatefulWidget {
   const DesktopAuthScreen({super.key});
@@ -18,38 +24,93 @@ class DesktopAuthScreen extends ConsumerStatefulWidget {
 }
 
 class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
+  final _formKey = GlobalKey<FormState>();
+
   bool _isRegister = false;
   bool _isVerifyingEmail = false;
+  bool _rememberMe = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String _pendingEmail = '';
 
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _companyController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _otpController = TextEditingController();
-  String _selectedBusinessType = 'company';
 
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   String? _errorMessage;
   String? _infoMessage;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final remember = prefs.getBool('remember_me') ?? false;
+        final rememberedEmail = prefs.getString('remembered_email');
+        if (remember && rememberedEmail != null && rememberedEmail.isNotEmpty && mounted) {
+          setState(() {
+            _rememberMe = true;
+            _emailController.text = rememberedEmail;
+          });
+        }
+      } catch (_) {}
+    });
+  }
+
+  @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _nameController.dispose();
-    _companyController.dispose();
+    _confirmPasswordController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  String? _validateName(String? value, ModiriLocalizations loc) {
+    if (value == null || value.trim().length < 2) {
+      return loc.get('name_required');
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value, ModiriLocalizations loc) {
+    if (value == null || value.trim().isEmpty) {
+      return loc.get('email_required');
+    }
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(value.trim())) {
+      return loc.get('email_invalid');
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value, ModiriLocalizations loc) {
+    if (value == null || value.isEmpty) {
+      return loc.get('password_required');
+    }
+    if (value.length < 6) {
+      return loc.get('password_too_short');
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value, ModiriLocalizations loc) {
+    if (value != _passwordController.text) {
+      return loc.get('passwords_do_not_match');
+    }
+    return null;
   }
 
   Future<void> _applyAuthPayload(
     Map<dynamic, dynamic> data, {
     required String fallbackEmail,
     String? preferredCompanyName,
-    String? preferredBusinessType,
-    bool syncCompanyProfile = false,
   }) async {
     final token = (data['accessToken'] ?? data['token'] ?? '').toString();
     final refreshToken = data['refreshToken']?.toString();
@@ -66,23 +127,21 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
             preferredCompanyName ??
             'Modiri Business')
         .toString();
-    var businessType = (company['businessType'] ??
+    final businessType = (company['businessType'] ??
             company['business_type'] ??
             user['businessType'] ??
-            user['business_type'] ??
-            preferredBusinessType ??
-            'company')
-        .toString();
+            user['business_type'])
+        ?.toString();
     final entitlementType =
         (company['entitlementType'] ?? company['entitlement_type'] ?? 'trial')
             .toString();
-    final onboardingCompleted = company['onboardingCompleted'] != false;
+    final bool onboardingCompleted = company['onboardingCompleted'] == true ||
+        company['onboarding_completed'] == true;
 
-    if (preferredCompanyName != null && preferredCompanyName.isNotEmpty) {
+    if (preferredCompanyName != null &&
+        preferredCompanyName.isNotEmpty &&
+        (company['name'] == null || company['name'].toString().isEmpty)) {
       companyName = preferredCompanyName;
-    }
-    if (preferredBusinessType != null && preferredBusinessType.isNotEmpty) {
-      businessType = preferredBusinessType;
     }
 
     await ref.read(sessionProvider.notifier).applyLogin(
@@ -97,39 +156,27 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
           role: (user['role'] ?? 'owner').toString(),
           businessType: businessType,
           entitlementType: entitlementType,
-          onboardingCompleted: true,
+          onboardingCompleted: onboardingCompleted,
         );
 
-    if (syncCompanyProfile && token.isNotEmpty) {
-      try {
-        final client = ref.read(apiClientProvider);
-        await client.put('/companies/me', body: {
-          'name': companyName,
-          'businessType': businessType,
-          'onboardingCompleted': true,
-        });
-      } catch (_) {}
-    } else if (!onboardingCompleted && token.isNotEmpty) {
-      try {
-        final client = ref.read(apiClientProvider);
-        await client.put('/companies/me', body: {
-          'name': companyName,
-          'businessType': businessType,
-          'onboardingCompleted': true,
-        });
-      } catch (_) {}
+    // Pull authoritative cloud data immediately upon login so all data matches mobile
+    if (onboardingCompleted == true && !Platform.environment.containsKey('FLUTTER_TEST')) {
+      unawaited(() async {
+        await ref.read(desktopSyncServiceProvider.notifier).syncPending();
+        await ref.read(desktopSyncServiceProvider.notifier).pullInitialData();
+      }());
     }
   }
 
   Future<void> _submit() async {
     final loc = ModiriLocalizations(ref.read(desktopLocaleProvider));
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
 
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = loc.get('auth_validation_required'));
+    if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
     setState(() {
       _isLoading = true;
@@ -166,11 +213,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
           await _applyAuthPayload(
             data,
             fallbackEmail: email,
-            preferredCompanyName: _companyController.text.trim().isNotEmpty
-                ? _companyController.text.trim()
-                : '$fullName Business',
-            preferredBusinessType: _selectedBusinessType,
-            syncCompanyProfile: true,
+            preferredCompanyName: '$fullName Business',
           );
         }
       } else {
@@ -181,6 +224,18 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
 
         final data = res is Map ? (res['data'] ?? res) : {};
         if (data is Map) {
+          // Persist remember me preferences
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            if (_rememberMe) {
+              await prefs.setBool('remember_me', true);
+              await prefs.setString('remembered_email', email);
+            } else {
+              await prefs.remove('remember_me');
+              await prefs.remove('remembered_email');
+            }
+          } catch (_) {}
+
           await _applyAuthPayload(data, fallbackEmail: email);
         }
       }
@@ -198,8 +253,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
         setState(() => _errorMessage = e.message);
       }
     } catch (e) {
-      setState(() => _errorMessage =
-          loc.get('connection_failed_offline_hint'));
+      setState(() => _errorMessage = loc.get('connection_failed_offline_hint'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -233,11 +287,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
         await _applyAuthPayload(
           data,
           fallbackEmail: _pendingEmail,
-          preferredCompanyName: _companyController.text.trim().isNotEmpty
-              ? _companyController.text.trim()
-              : '$fullName Business',
-          preferredBusinessType: _selectedBusinessType,
-          syncCompanyProfile: true,
+          preferredCompanyName: '$fullName Business',
         );
       }
     } on ApiException catch (e) {
@@ -256,6 +306,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
       _errorMessage = null;
       _infoMessage = null;
     });
+
     try {
       final client = ref.read(apiClientProvider);
       await client.post('/auth/resend-verification', body: {
@@ -271,7 +322,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
     }
   }
 
-  Future<void> _showForgotPasswordDialog() async {
+  void _showForgotPasswordDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final loc = ModiriLocalizations(ref.read(desktopLocaleProvider));
     final emailCtrl = TextEditingController(text: _emailController.text.trim());
@@ -282,76 +333,79 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
     String? dialogError;
     String? dialogInfo;
 
-    await showDialog(
+    showDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
+      builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: ModiriColors.surface(isDark),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: ModiriColors.border(isDark)),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
-            loc.get('reset_password'),
-            style: TextStyle(
-              color: ModiriColors.textPrimary(isDark),
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+            loc.get('forgot_password_title'),
+            style: TextStyle(color: ModiriColors.textPrimary(isDark), fontSize: 16),
           ),
           content: SizedBox(
-            width: 400,
+            width: 360,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text(
+                  loc.get('forgot_password_desc'),
+                  style: TextStyle(color: ModiriColors.textSecondary(isDark), fontSize: 13),
+                ),
+                const SizedBox(height: 14),
                 if (dialogError != null) ...[
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: ModiriColors.brandRose.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      dialogError!,
-                      style: const TextStyle(color: ModiriColors.brandRose, fontSize: 12),
-                    ),
+                    child: Text(dialogError!,
+                        style: const TextStyle(color: ModiriColors.brandRose, fontSize: 12)),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                 ],
                 if (dialogInfo != null) ...[
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: ModiriColors.brandTeal.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      dialogInfo!,
-                      style: const TextStyle(color: ModiriColors.brandTeal, fontSize: 12),
-                    ),
+                    child: Text(dialogInfo!,
+                        style: const TextStyle(color: ModiriColors.brandTeal, fontSize: 12)),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                 ],
                 TextField(
                   controller: emailCtrl,
                   enabled: !codeSent,
                   style: TextStyle(color: ModiriColors.textPrimary(isDark), fontSize: 13),
-                  decoration: InputDecoration(labelText: loc.get('email')),
+                  decoration: InputDecoration(
+                    labelText: loc.get('email'),
+                    hintText: 'admin@company.com',
+                  ),
                 ),
                 if (codeSent) ...[
                   const SizedBox(height: 12),
                   TextField(
                     controller: codeCtrl,
                     style: TextStyle(color: ModiriColors.textPrimary(isDark), fontSize: 13),
-                    decoration: InputDecoration(labelText: loc.get('verification_code')),
+                    decoration: InputDecoration(
+                      labelText: loc.get('verification_code'),
+                      hintText: '123456',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: newPwdCtrl,
                     obscureText: true,
                     style: TextStyle(color: ModiriColors.textPrimary(isDark), fontSize: 13),
-                    decoration: InputDecoration(labelText: loc.get('new_password')),
+                    decoration: InputDecoration(
+                      labelText: loc.get('new_password'),
+                      hintText: '••••••••',
+                    ),
                   ),
                 ],
               ],
@@ -359,19 +413,15 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: busy ? null : () => Navigator.of(ctx).pop(),
-              child: Text(loc.get('cancel'),
-                  style: TextStyle(color: ModiriColors.textSecondary(isDark))),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(loc.get('cancel')),
             ),
             ElevatedButton(
               onPressed: busy
                   ? null
                   : () async {
                       final email = emailCtrl.text.trim();
-                      if (email.isEmpty) {
-                        setDialogState(() => dialogError = 'Email is required.');
-                        return;
-                      }
+                      if (email.isEmpty) return;
                       setDialogState(() {
                         busy = true;
                         dialogError = null;
@@ -443,7 +493,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
     var savedCompanyName = existing.companyName;
 
     if (savedCompanyId == null || savedCompanyId.isEmpty) {
-      final storage = FlutterSecureStorage();
+      const storage = FlutterSecureStorage();
       savedCompanyId = await storage.read(key: 'modiri_desktop_company_id');
       savedUserId ??= await storage.read(key: 'modiri_desktop_user_id');
       savedBusinessType ??= await storage.read(key: 'modiri_desktop_business_type');
@@ -456,9 +506,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
     final name = _nameController.text.trim().isNotEmpty
         ? _nameController.text.trim()
         : (existing.userName ?? 'Administrator');
-    final companyName = _companyController.text.trim().isNotEmpty
-        ? _companyController.text.trim()
-        : (savedCompanyName ?? 'Modiri Local Business');
+    final companyName = savedCompanyName ?? 'Modiri Local Business';
 
     await ref.read(sessionProvider.notifier).applyLogin(
           accessToken: 'local_offline_${DateTime.now().millisecondsSinceEpoch}',
@@ -468,8 +516,80 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
           email: email,
           name: name,
           role: existing.role ?? 'owner',
-          businessType: savedBusinessType ?? _selectedBusinessType,
+          businessType: savedBusinessType ?? 'company',
+          onboardingCompleted: true,
+          isOfflineSession: true,
         );
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _errorMessage = null;
+      _infoMessage = null;
+    });
+
+    try {
+      final authResult = await DesktopGoogleOAuth.authenticate(
+        clientId: '128675361201-qhb7u121simtqfq3nubaek2nhk0qae2f.apps.googleusercontent.com',
+      );
+      if (authResult == null) {
+        return;
+      }
+
+      final client = ref.read(apiClientProvider);
+      final body = <String, dynamic>{};
+      if (authResult.hasIdToken) {
+        body['idToken'] = authResult.idToken;
+      } else if (authResult.hasCode) {
+        body['code'] = authResult.code;
+        body['codeVerifier'] = authResult.codeVerifier;
+        body['redirectUri'] = authResult.redirectUri;
+        body['clientId'] = authResult.clientId;
+      } else {
+        throw ApiException(
+          statusCode: 400,
+          message: 'Failed to retrieve Google credentials from browser.',
+          code: 'GOOGLE_CREDENTIALS_MISSING',
+        );
+      }
+
+      final res = await client.post('/auth/google', body: body);
+
+      final data = res is Map ? (res['data'] ?? res) : {};
+      if (data is Map) {
+        final user = data['user'] is Map ? data['user'] as Map : {};
+        final email = user['email']?.toString() ?? 'google_user@modiri.ai';
+        final name = user['name']?.toString();
+        await _applyAuthPayload(
+          data,
+          fallbackEmail: email,
+          preferredCompanyName: name != null && name.isNotEmpty
+              ? '$name Business'
+              : 'Modiri Business',
+        );
+      }
+    } on ApiException catch (e) {
+      if (e.code == 'ACCOUNT_EXISTS_WITH_PASSWORD') {
+        setState(() => _errorMessage =
+            'An account with this email already exists with a password. Please sign in with your email and password.');
+      } else if (e.code == 'GOOGLE_CLIENT_SECRET_NOT_CONFIGURED') {
+        setState(() => _errorMessage =
+            'Google Sign-In is not configured on the backend server: GOOGLE_WINDOWS_CLIENT_SECRET is missing. Please set this environment variable in your backend environment.');
+      } else if (e.code == 'NOT_FOUND' || e.statusCode == 404) {
+        setState(() => _errorMessage =
+            'The backend server has not been updated with Google Sign-In support yet. Please deploy the latest backend update.');
+      } else {
+        setState(() => _errorMessage = e.message);
+      }
+    } catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (!msg.contains('cancelled') && !msg.contains('canceled')) {
+        setState(() => _errorMessage = msg);
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
   }
 
   @override
@@ -483,7 +603,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
       body: ModiriBackground(
         child: Stack(
           children: [
-            // Top Right Controls matching website AuthLayout.jsx
+            // Top Right Controls (Theme & Language Switcher)
             PositionedDirectional(
               top: 24,
               end: 24,
@@ -573,6 +693,7 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Logo & App Name
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -621,377 +742,15 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
                       ModiriPanel(
                         padding: const EdgeInsets.all(32),
                         child: _isVerifyingEmail
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    loc.get('verify_email_title'),
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: ModiriColors.textPrimary(isDark),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '${loc.get('verify_email_subtitle')}\n($_pendingEmail)',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: ModiriColors.textSecondary(isDark),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  if (_errorMessage != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: ModiriColors.brandRose
-                                            .withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                            color: ModiriColors.brandRose
-                                                .withOpacity(0.3)),
-                                      ),
-                                      child: Text(
-                                        _errorMessage!,
-                                        style: const TextStyle(
-                                            color: ModiriColors.brandRose,
-                                            fontSize: 13),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                  ],
-                                  if (_infoMessage != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: ModiriColors.brandTeal
-                                            .withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                            color: ModiriColors.brandTeal
-                                                .withOpacity(0.3)),
-                                      ),
-                                      child: Text(
-                                        _infoMessage!,
-                                        style: const TextStyle(
-                                            color: ModiriColors.brandTeal,
-                                            fontSize: 13),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                  ],
-                                  TextField(
-                                    controller: _otpController,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 6,
-                                    style: TextStyle(
-                                      color: ModiriColors.textPrimary(isDark),
-                                      fontSize: 16,
-                                      letterSpacing: 4,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: loc.get('verification_code'),
-                                      hintText: '123456',
-                                      counterText: '',
-                                    ),
-                                    onSubmitted: (_) => _verifyOtp(),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  ElevatedButton.icon(
-                                    onPressed: _isLoading ? null : _verifyOtp,
-                                    icon: const Icon(Icons.verified_outlined,
-                                        size: 18),
-                                    label: Text(loc.get('verify_and_continue')),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      TextButton(
-                                        onPressed:
-                                            _isLoading ? null : _resendOtp,
-                                        child: Text(loc.get('resend_code')),
-                                      ),
-                                      TextButton(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : () => setState(() {
-                                                  _isVerifyingEmail = false;
-                                                  _errorMessage = null;
-                                                  _infoMessage = null;
-                                                }),
-                                        child: Text(loc.get('sign_in_link')),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _isRegister
-                                        ? loc.get('create_business_title')
-                                        : loc.get('welcome_back'),
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: ModiriColors.textPrimary(isDark),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    _isRegister
-                                        ? loc.get('create_business_subtitle')
-                                        : loc.get('sign_in_subtitle'),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: ModiriColors.textSecondary(isDark),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  if (_errorMessage != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: ModiriColors.brandRose
-                                            .withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                            color: ModiriColors.brandRose
-                                                .withOpacity(0.3)),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.error_outline,
-                                              color: ModiriColors.brandRose,
-                                              size: 18),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Text(
-                                              _errorMessage!,
-                                              style: const TextStyle(
-                                                  color: ModiriColors.brandRose,
-                                                  fontSize: 13),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-                                  if (_infoMessage != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: ModiriColors.brandTeal
-                                            .withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                            color: ModiriColors.brandTeal
-                                                .withOpacity(0.3)),
-                                      ),
-                                      child: Text(
-                                        _infoMessage!,
-                                        style: const TextStyle(
-                                            color: ModiriColors.brandTeal,
-                                            fontSize: 13),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-                                  if (_isRegister) ...[
-                                    TextField(
-                                      controller: _nameController,
-                                      style: TextStyle(
-                                          color:
-                                              ModiriColors.textPrimary(isDark),
-                                          fontSize: 13),
-                                      decoration: InputDecoration(
-                                        labelText: loc.get('full_name'),
-                                        hintText: 'Sarah Connor',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    TextField(
-                                      controller: _companyController,
-                                      style: TextStyle(
-                                          color:
-                                              ModiriColors.textPrimary(isDark),
-                                          fontSize: 13),
-                                      decoration: InputDecoration(
-                                        labelText:
-                                            loc.get('company_name_label'),
-                                        hintText: 'Apex Supermarket',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    DropdownButtonFormField<String>(
-                                      value: _selectedBusinessType,
-                                      dropdownColor: ModiriColors.card(isDark),
-                                      style: TextStyle(
-                                          color:
-                                              ModiriColors.textPrimary(isDark),
-                                          fontSize: 13),
-                                      decoration: InputDecoration(
-                                        labelText: loc.get('business_type'),
-                                      ),
-                                      items: [
-                                        DropdownMenuItem(
-                                            value: 'superette',
-                                            child: Text(
-                                                loc.get('type_superette'))),
-                                        DropdownMenuItem(
-                                            value: 'restaurant',
-                                            child: Text(
-                                                loc.get('type_restaurant'))),
-                                        DropdownMenuItem(
-                                            value: 'cafe',
-                                            child: Text(loc.get('type_cafe'))),
-                                        DropdownMenuItem(
-                                            value: 'clinic',
-                                            child:
-                                                Text(loc.get('type_clinic'))),
-                                        DropdownMenuItem(
-                                            value: 'dental_clinic',
-                                            child: Text(
-                                                loc.get('type_dental_clinic'))),
-                                        DropdownMenuItem(
-                                            value: 'pharmacy',
-                                            child:
-                                                Text(loc.get('type_pharmacy'))),
-                                        DropdownMenuItem(
-                                            value: 'clothing',
-                                            child:
-                                                Text(loc.get('type_clothing'))),
-                                        DropdownMenuItem(
-                                            value: 'company',
-                                            child:
-                                                Text(loc.get('type_company'))),
-                                      ],
-                                      onChanged: (val) {
-                                        if (val != null) {
-                                          setState(() =>
-                                              _selectedBusinessType = val);
-                                        }
-                                      },
-                                    ),
-                                    const SizedBox(height: 14),
-                                  ],
-                                  TextField(
-                                    controller: _emailController,
-                                    keyboardType: TextInputType.emailAddress,
-                                    style: TextStyle(
-                                        color: ModiriColors.textPrimary(isDark),
-                                        fontSize: 13),
-                                    decoration: InputDecoration(
-                                      labelText: loc.get('email'),
-                                      hintText: 'admin@company.com',
-                                    ),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  TextField(
-                                    controller: _passwordController,
-                                    obscureText: _obscurePassword,
-                                    style: TextStyle(
-                                        color: ModiriColors.textPrimary(isDark),
-                                        fontSize: 13),
-                                    decoration: InputDecoration(
-                                      labelText: loc.get('password'),
-                                      hintText: '••••••••',
-                                      suffixIcon: IconButton(
-                                        icon: Icon(
-                                          _obscurePassword
-                                              ? Icons.visibility
-                                              : Icons.visibility_off,
-                                          color: ModiriColors.textMuted(isDark),
-                                          size: 18,
-                                        ),
-                                        onPressed: () => setState(() =>
-                                            _obscurePassword =
-                                                !_obscurePassword),
-                                      ),
-                                    ),
-                                    onSubmitted: (_) => _submit(),
-                                  ),
-                                  if (!_isRegister) ...[
-                                    const SizedBox(height: 6),
-                                    Align(
-                                      alignment: AlignmentDirectional.centerEnd,
-                                      child: TextButton(
-                                        onPressed: _showForgotPasswordDialog,
-                                        child: Text(
-                                          loc.get('forgot_password'),
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: _isLoading ? null : _submit,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: ModiriColors.brandBlue,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12)),
-                                    ),
-                                    child: _isLoading
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                                strokeWidth: 2),
-                                          )
-                                        : Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                  _isRegister
-                                                      ? Icons.person_add
-                                                      : Icons.login,
-                                                  size: 18),
-                                              const SizedBox(width: 8),
-                                              Text(_isRegister
-                                                  ? loc.get('register')
-                                                  : loc.get('login')),
-                                            ],
-                                          ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: ModiriColors.brandTeal,
-                                      side: const BorderSide(
-                                          color: ModiriColors.brandTeal),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12)),
-                                    ),
-                                    icon: const Icon(Icons.cloud_off, size: 16),
-                                    label: Text(loc.get('work_offline')),
-                                    onPressed: _continueOffline,
-                                  ),
-                                ],
-                              ),
+                            ? _buildOtpCard(isDark, loc)
+                            : (_isRegister
+                                ? _buildRegisterCard(isDark, loc, activeLocale)
+                                : _buildLoginCard(isDark, loc, activeLocale)),
                       ),
 
                       const SizedBox(height: 20),
+
+                      // Bottom Mode Switcher (Matching Mobile App)
                       Wrap(
                         alignment: WrapAlignment.center,
                         crossAxisAlignment: WrapCrossAlignment.center,
@@ -1001,8 +760,9 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
                                 ? loc.get('already_have_account')
                                 : loc.get('dont_have_account'),
                             style: TextStyle(
-                                color: ModiriColors.textSecondary(isDark),
-                                fontSize: 13),
+                              color: ModiriColors.textSecondary(isDark),
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           GestureDetector(
@@ -1012,6 +772,8 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
                                 _isVerifyingEmail = false;
                                 _errorMessage = null;
                                 _infoMessage = null;
+                                _passwordController.clear();
+                                _confirmPasswordController.clear();
                               });
                             },
                             child: Text(
@@ -1035,6 +797,471 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Login View Card (Matching Mobile App LoginScreen)
+  Widget _buildLoginCard(bool isDark, ModiriLocalizations loc, Locale activeLocale) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            loc.get('welcome_back'),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: ModiriColors.textPrimary(isDark),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            loc.get('sign_in_subtitle'),
+            style: TextStyle(
+              fontSize: 13,
+              color: ModiriColors.textSecondary(isDark),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          if (_errorMessage != null) ...[
+            _buildErrorBanner(),
+            const SizedBox(height: 16),
+          ],
+          if (_infoMessage != null) ...[
+            _buildInfoBanner(),
+            const SizedBox(height: 16),
+          ],
+
+          // Email Field
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            validator: (v) => _validateEmail(v, loc),
+            style: TextStyle(
+              color: ModiriColors.textPrimary(isDark),
+              fontSize: 13,
+            ),
+            decoration: InputDecoration(
+              labelText: loc.get('email'),
+              hintText: 'you@business.com',
+              prefixIcon: const Icon(Icons.email_outlined, size: 18),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Password Field
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            validator: (v) => _validatePassword(v, loc),
+            style: TextStyle(
+              color: ModiriColors.textPrimary(isDark),
+              fontSize: 13,
+            ),
+            decoration: InputDecoration(
+              labelText: loc.get('password'),
+              hintText: '••••••••',
+              prefixIcon: const Icon(Icons.lock_outline, size: 18),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                  color: ModiriColors.textMuted(isDark),
+                  size: 18,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+            onFieldSubmitted: (_) => _submit(),
+          ),
+          const SizedBox(height: 8),
+
+          // Remember Me + Forgot Password Row (Matching Mobile App)
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 4,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: Checkbox(
+                      value: _rememberMe,
+                      activeColor: ModiriColors.brandBlue,
+                      onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => _rememberMe = !_rememberMe),
+                    child: Text(
+                      loc.get('remember_me'),
+                      style: TextStyle(
+                        color: ModiriColors.textSecondary(isDark),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: _showForgotPasswordDialog,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  loc.get('forgot_password'),
+                  style: const TextStyle(
+                    color: ModiriColors.brandBlue,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Login Button
+          ElevatedButton(
+            onPressed: (_isLoading || _isGoogleLoading) ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ModiriColors.brandBlue,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.login, size: 18),
+                      const SizedBox(width: 8),
+                      Text(loc.get('login')),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 14),
+
+          // Divider
+          _buildDivider(isDark, activeLocale),
+          const SizedBox(height: 14),
+
+          // Google Sign-In Button
+          GoogleSignInButton(
+            isLoading: _isGoogleLoading,
+            onPressed: (_isLoading || _isGoogleLoading) ? null : _signInWithGoogle,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Register View Card (Matching Mobile App RegisterScreen: Full Name, Email, Password, Confirm Password)
+  Widget _buildRegisterCard(bool isDark, ModiriLocalizations loc, Locale activeLocale) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            loc.get('create_business_title'),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: ModiriColors.textPrimary(isDark),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            loc.get('create_business_subtitle'),
+            style: TextStyle(
+              fontSize: 13,
+              color: ModiriColors.textSecondary(isDark),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          if (_errorMessage != null) ...[
+            _buildErrorBanner(),
+            const SizedBox(height: 16),
+          ],
+          if (_infoMessage != null) ...[
+            _buildInfoBanner(),
+            const SizedBox(height: 16),
+          ],
+
+          // 1. Full Name (Matching Mobile App)
+          TextFormField(
+            controller: _nameController,
+            validator: (v) => _validateName(v, loc),
+            style: TextStyle(
+              color: ModiriColors.textPrimary(isDark),
+              fontSize: 13,
+            ),
+            decoration: InputDecoration(
+              labelText: loc.get('full_name'),
+              hintText: loc.get('your_name_hint'),
+              prefixIcon: const Icon(Icons.person_outline, size: 18),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 2. Email (Matching Mobile App)
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            validator: (v) => _validateEmail(v, loc),
+            style: TextStyle(
+              color: ModiriColors.textPrimary(isDark),
+              fontSize: 13,
+            ),
+            decoration: InputDecoration(
+              labelText: loc.get('email'),
+              hintText: 'you@business.com',
+              prefixIcon: const Icon(Icons.email_outlined, size: 18),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 3. Password (Matching Mobile App)
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            validator: (v) => _validatePassword(v, loc),
+            style: TextStyle(
+              color: ModiriColors.textPrimary(isDark),
+              fontSize: 13,
+            ),
+            decoration: InputDecoration(
+              labelText: loc.get('password'),
+              hintText: '••••••••',
+              prefixIcon: const Icon(Icons.lock_outline, size: 18),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                  color: ModiriColors.textMuted(isDark),
+                  size: 18,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 4. Confirm Password (Matching Mobile App)
+          TextFormField(
+            controller: _confirmPasswordController,
+            obscureText: _obscureConfirmPassword,
+            validator: (v) => _validateConfirmPassword(v, loc),
+            style: TextStyle(
+              color: ModiriColors.textPrimary(isDark),
+              fontSize: 13,
+            ),
+            decoration: InputDecoration(
+              labelText: loc.get('confirm_password'),
+              hintText: '••••••••',
+              prefixIcon: const Icon(Icons.lock_outline, size: 18),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                  color: ModiriColors.textMuted(isDark),
+                  size: 18,
+                ),
+                onPressed: () =>
+                    setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              ),
+            ),
+            onFieldSubmitted: (_) => _submit(),
+          ),
+          const SizedBox(height: 20),
+
+          // Create Account Button
+          ElevatedButton(
+            onPressed: (_isLoading || _isGoogleLoading) ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ModiriColors.brandBlue,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.person_add, size: 18),
+                      const SizedBox(width: 8),
+                      Text(loc.get('register')),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 14),
+
+          // Divider
+          _buildDivider(isDark, activeLocale),
+          const SizedBox(height: 14),
+
+          // Google Sign-In Button
+          GoogleSignInButton(
+            isLoading: _isGoogleLoading,
+            onPressed: (_isLoading || _isGoogleLoading) ? null : _signInWithGoogle,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// OTP Email Verification Card
+  Widget _buildOtpCard(bool isDark, ModiriLocalizations loc) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          loc.get('verify_email_title'),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: ModiriColors.textPrimary(isDark),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${loc.get('verify_email_subtitle')}\n($_pendingEmail)',
+          style: TextStyle(
+            fontSize: 13,
+            color: ModiriColors.textSecondary(isDark),
+          ),
+        ),
+        const SizedBox(height: 20),
+        if (_errorMessage != null) ...[
+          _buildErrorBanner(),
+          const SizedBox(height: 14),
+        ],
+        if (_infoMessage != null) ...[
+          _buildInfoBanner(),
+          const SizedBox(height: 14),
+        ],
+        TextField(
+          controller: _otpController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          style: TextStyle(
+            color: ModiriColors.textPrimary(isDark),
+            fontSize: 16,
+            letterSpacing: 4,
+            fontWeight: FontWeight.bold,
+          ),
+          decoration: InputDecoration(
+            labelText: loc.get('verification_code'),
+            hintText: '123456',
+            counterText: '',
+          ),
+          onSubmitted: (_) => _verifyOtp(),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton.icon(
+          onPressed: _isLoading ? null : _verifyOtp,
+          icon: const Icon(Icons.verified_outlined, size: 18),
+          label: Text(loc.get('verify_and_continue')),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: _isLoading ? null : _resendOtp,
+              child: Text(loc.get('resend_code')),
+            ),
+            TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () => setState(() {
+                        _isVerifyingEmail = false;
+                        _errorMessage = null;
+                        _infoMessage = null;
+                      }),
+              child: Text(loc.get('sign_in_link')),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: ModiriColors.brandRose.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ModiriColors.brandRose.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: ModiriColors.brandRose, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _errorMessage!,
+              style: const TextStyle(color: ModiriColors.brandRose, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: ModiriColors.brandTeal.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ModiriColors.brandTeal.withOpacity(0.3)),
+      ),
+      child: Text(
+        _infoMessage!,
+        style: const TextStyle(color: ModiriColors.brandTeal, fontSize: 13),
+      ),
+    );
+  }
+
+  Widget _buildDivider(bool isDark, Locale activeLocale) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: ModiriColors.border(isDark))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            activeLocale.languageCode == 'ar'
+                ? 'أو'
+                : (activeLocale.languageCode == 'fr' ? 'OU' : 'OR'),
+            style: TextStyle(
+              color: ModiriColors.textMuted(isDark),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: ModiriColors.border(isDark))),
+      ],
     );
   }
 }

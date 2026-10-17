@@ -178,6 +178,13 @@ class _AppFlowState extends ConsumerState<_AppFlow> with WidgetsBindingObserver 
       return;
     }
 
+    // Onboarding check: If user has not selected a business type or completed onboarding,
+    // route directly to BusinessTypeScreen.
+    if (session.onboardingCompleted == false || session.businessType == null) {
+      setState(() => _phase = _AppPhase.businessType);
+      return;
+    }
+
     try {
       final entitlement = await ref.read(subscriptionsRepositoryProvider).getEntitlementStatus();
       if (!mounted) return;
@@ -344,6 +351,7 @@ class _AppFlowState extends ConsumerState<_AppFlow> with WidgetsBindingObserver 
             _phase = _AppPhase.verifyAccount;
           }),
           onGoToLogin: () => setState(() => _phase = _AppPhase.login),
+          onGoogleSuccess: _navigateAuthenticated,
         );
 
       case _AppPhase.verifyAccount:
@@ -409,7 +417,7 @@ class _AppFlowState extends ConsumerState<_AppFlow> with WidgetsBindingObserver 
       case _AppPhase.businessSetup:
         return BusinessSetupScreen(
           businessType: _selectedBusinessType ?? BusinessType.company,
-          onFinish: () => setState(() => _phase = _AppPhase.main),
+          onFinish: _navigateAuthenticated,
         );
 
       case _AppPhase.main:

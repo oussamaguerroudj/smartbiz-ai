@@ -96,6 +96,21 @@ const verifyPassword = asyncHandler(async (req, res) => {
   res.status(200).json({ data: result });
 });
 
+const googleSignIn = asyncHandler(async (req, res) => {
+  const result = await authService.googleSignIn(req.body);
+  res.status(200).json(result);
+});
+
+const linkGoogleAccount = asyncHandler(async (req, res) => {
+  const result = await authService.linkGoogleAccount(req.user.id, req.body || {});
+  res.status(200).json({ data: result });
+});
+
+const unlinkGoogleAccount = asyncHandler(async (req, res) => {
+  const result = await authService.unlinkGoogleAccount(req.user.id, req.body || {});
+  res.status(200).json({ data: result });
+});
+
 module.exports = {
   register,
   login,
@@ -109,4 +124,7 @@ module.exports = {
   changePassword,
   deleteAccount,
   verifyPassword,
+  googleSignIn,
+  linkGoogleAccount,
+  unlinkGoogleAccount,
 };

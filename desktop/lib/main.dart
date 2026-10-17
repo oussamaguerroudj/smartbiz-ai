@@ -9,6 +9,7 @@ import 'core/network/api_client.dart';
 import 'core/network/session.dart';
 import 'core/theme/desktop_theme.dart';
 import 'features/auth/presentation/desktop_auth_screen.dart';
+import 'features/auth/presentation/desktop_onboarding_screen.dart';
 import 'features/shell/presentation/desktop_navigation_shell.dart';
 
 void main() async {
@@ -95,7 +96,9 @@ class ModiriDesktopApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       home: session.isLoggedIn
-          ? const DesktopNavigationShell()
+          ? (session.onboardingCompleted && session.businessType != null
+              ? const DesktopNavigationShell()
+              : const DesktopOnboardingScreen())
           : const DesktopAuthScreen(),
     );
   }

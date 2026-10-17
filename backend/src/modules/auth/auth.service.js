@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const { withTransaction, query } = require('../../config/db');
 const env = require('../../config/env');
 const ApiError = require('../../utils/ApiError');
@@ -81,6 +82,8 @@ function toPublicUser(row) {
     isSuspended: row.is_suspended === true,
     suspensionReason: row.suspension_reason || null,
     suspendedAt: row.suspended_at || null,
+    authProvider: row.auth_provider || (row.google_id ? 'google' : 'local'),
+    isGoogleLinked: Boolean(row.google_id),
   };
 }
 
@@ -218,6 +221,13 @@ async function login({ email, password }) {
     throw ApiError.unauthorized(
       'Invalid email or password',
       'INVALID_CREDENTIALS',
+    );
+  }
+
+  if (!user.password_hash) {
+    throw ApiError.badRequest(
+      'This account is registered with Google. Please use Continue with Google to sign in.',
+      'GOOGLE_ACCOUNT',
     );
   }
 
@@ -788,9 +798,14 @@ async function changePassword(userId, { currentPassword, newPassword } = {}) {
   const user = userRes.rows[0];
   if (!user) throw ApiError.notFound('User not found');
 
-  const matches = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!matches) {
-    throw ApiError.badRequest('Current password is incorrect', 'INVALID_PASSWORD');
+  if (user.password_hash) {
+    if (!currentPassword || typeof currentPassword !== 'string') {
+      throw ApiError.badRequest('Current password is required', 'VALIDATION_ERROR');
+    }
+    const matches = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!matches) {
+      throw ApiError.badRequest('Current password is incorrect', 'INVALID_PASSWORD');
+    }
   }
 
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
@@ -856,6 +871,384 @@ async function verifyPassword(userId, { password } = {}) {
   return { verified: true };
 }
 
+let googleOAuthClient;
+function getGoogleOAuthClient() {
+  if (!googleOAuthClient) {
+    googleOAuthClient = new OAuth2Client(env.google.clientId);
+  }
+  return googleOAuthClient;
+}
+
+async function verifyGoogleIdToken(idToken) {
+  if (!idToken || typeof idToken !== 'string' || idToken.trim() === '') {
+    throw ApiError.badRequest('A valid Google ID token is required', 'MISSING_GOOGLE_TOKEN');
+  }
+
+  const clientId = env.google.clientId;
+  if (!clientId || String(clientId).trim() === '') {
+    throw ApiError.internal('Google OAuth is not configured on the server', 'GOOGLE_OAUTH_NOT_CONFIGURED');
+  }
+
+  const audiences = (env.google.allowedAudiences && env.google.allowedAudiences.length > 0)
+    ? env.google.allowedAudiences
+    : [
+        clientId.trim(),
+        '128675361201-s1qac05sj36egh69a054ljmqukptt4tl.apps.googleusercontent.com',
+        '128675361201-qhb7u121simtqfq3nubaek2nhk0qae2f.apps.googleusercontent.com',
+      ];
+
+  const client = getGoogleOAuthClient();
+  let ticket;
+  try {
+    ticket = await client.verifyIdToken({
+      idToken: idToken.trim(),
+      audience: audiences,
+    });
+  } catch (err) {
+    throw ApiError.unauthorized('Invalid or expired Google token', 'INVALID_GOOGLE_TOKEN');
+  }
+
+  const payload = ticket.getPayload();
+  if (!payload) {
+    throw ApiError.unauthorized('Invalid Google token payload', 'INVALID_GOOGLE_TOKEN');
+  }
+
+  const issuer = payload.iss;
+  if (issuer !== 'accounts.google.com' && issuer !== 'https://accounts.google.com') {
+    throw ApiError.unauthorized('Invalid Google token issuer', 'INVALID_GOOGLE_TOKEN');
+  }
+
+  const googleId = payload.sub;
+  if (!googleId || typeof googleId !== 'string' || googleId.trim() === '') {
+    throw ApiError.unauthorized('Missing Google user identifier (sub)', 'INVALID_GOOGLE_TOKEN');
+  }
+
+  if (!payload.email || typeof payload.email !== 'string') {
+    throw ApiError.badRequest('Google account must provide an email address', 'GOOGLE_EMAIL_MISSING');
+  }
+
+  if (payload.email_verified !== true && payload.email_verified !== 'true') {
+    throw ApiError.forbidden('Google email address is not verified', 'GOOGLE_EMAIL_NOT_VERIFIED');
+  }
+
+  return {
+    googleId: googleId.trim(),
+    email: normalizeEmail(payload.email),
+    name: String(payload.name || payload.given_name || 'Google User').trim(),
+    avatarUrl: payload.picture || null,
+  };
+}
+
+async function exchangeGoogleAuthCode({ code, codeVerifier, redirectUri, clientId }) {
+  const targetClientId = clientId || env.google.windowsClientId;
+  const clientSecret = env.google.windowsClientSecret;
+
+  if (!clientSecret || String(clientSecret).trim() === '') {
+    throw ApiError.internal(
+      'Google Desktop OAuth client secret is not configured on the backend server. Please configure GOOGLE_WINDOWS_CLIENT_SECRET in the server environment.',
+      'GOOGLE_CLIENT_SECRET_NOT_CONFIGURED',
+    );
+  }
+
+  const tokenEndpoint = 'https://oauth2.googleapis.com/token';
+  const params = new URLSearchParams({
+    client_id: targetClientId,
+    client_secret: clientSecret.trim(),
+    code: code.trim(),
+    code_verifier: codeVerifier.trim(),
+    redirect_uri: redirectUri.trim(),
+    grant_type: 'authorization_code',
+  });
+
+  let response;
+  try {
+    const fetchFn = typeof global.fetch === 'function' ? global.fetch : require('node-fetch');
+    response = await fetchFn(tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+  } catch (err) {
+    throw ApiError.internal('Failed to connect to Google OAuth token endpoint', 'GOOGLE_NETWORK_ERROR');
+  }
+
+  const data = await response.json();
+  if (!response.ok || !data.id_token) {
+    const errorType = data.error || 'token_exchange_failed';
+    const errorDesc = data.error_description || errorType;
+    let userFriendlyMessage = `Failed to exchange Google authorization code: ${errorDesc}`;
+    if (errorType === 'invalid_client' || (typeof errorDesc === 'string' && errorDesc.toLowerCase().includes('client secret'))) {
+      userFriendlyMessage = 'Google Desktop OAuth token exchange failed: invalid client secret. Ensure GOOGLE_WINDOWS_CLIENT_SECRET matches the Windows Desktop OAuth client in Google Cloud Console, not the Web client.';
+    }
+    throw ApiError.badRequest(userFriendlyMessage, 'TOKEN_EXCHANGE_FAILED', {
+      googleError: errorType,
+    });
+  }
+
+  return data.id_token;
+}
+
+async function googleSignIn({ idToken, code, codeVerifier, redirectUri, clientId }) {
+  let effectiveIdToken = idToken;
+  if (!effectiveIdToken && code) {
+    effectiveIdToken = await exchangeGoogleAuthCode({ code, codeVerifier, redirectUri, clientId });
+  }
+
+  const { googleId, email, name, avatarUrl } = await verifyGoogleIdToken(effectiveIdToken);
+
+  // 1. Check if user already exists with this google_id
+  const googleUserResult = await query(
+    `SELECT u.*, c.business_type, c.name AS company_name, c.onboarding_completed,
+            c.entitlement_type, c.trial_starts_at, c.trial_ends_at, c.license_expires_at,
+            c.account_approval_status, c.is_suspended, c.suspension_reason, c.suspended_at
+     FROM users u
+     LEFT JOIN companies c ON c.id = u.company_id
+     WHERE u.google_id = $1 AND u.deleted_at IS NULL`,
+    [googleId],
+  );
+
+  const existingGoogleUser = googleUserResult.rows[0];
+  if (existingGoogleUser) {
+    if (existingGoogleUser.is_suspended === true && existingGoogleUser.role !== 'super_admin') {
+      const suspendedDetails = buildSuspendedDetails(existingGoogleUser);
+      throw ApiError.forbidden(
+        suspendedDetails.suspensionReason,
+        'ACCOUNT_SUSPENDED',
+        suspendedDetails,
+      );
+    }
+
+    const tokens = signTokens(existingGoogleUser);
+    return {
+      user: toPublicUser(existingGoogleUser),
+      company: {
+        id: existingGoogleUser.company_id,
+        name: existingGoogleUser.company_name,
+        businessType: existingGoogleUser.business_type || null,
+        onboardingCompleted: existingGoogleUser.onboarding_completed === true,
+        entitlementType: existingGoogleUser.entitlement_type || 'none',
+        trialStartsAt: existingGoogleUser.trial_starts_at || null,
+        trialEndsAt: existingGoogleUser.trial_ends_at || null,
+        licenseExpiresAt: existingGoogleUser.license_expires_at || null,
+        accountApprovalStatus: existingGoogleUser.account_approval_status || 'approved',
+        isSuspended: existingGoogleUser.is_suspended === true,
+        suspensionReason: existingGoogleUser.suspension_reason || null,
+        suspendedAt: existingGoogleUser.suspended_at || null,
+      },
+      ...tokens,
+    };
+  }
+
+  // 2. Check if an account already exists with this email without matching google_id
+  const emailUserResult = await query(
+    `SELECT id, google_id, password_hash FROM users WHERE lower(trim(email)) = $1 AND deleted_at IS NULL`,
+    [email],
+  );
+
+  if (emailUserResult.rows.length > 0) {
+    // Non-negotiable: Never automatically merge/link accounts solely because their email addresses match!
+    throw ApiError.conflict(
+      'An account with this email already exists. Please sign in with your email and password to link your Google account in Settings.',
+      'ACCOUNT_EXISTS_WITH_PASSWORD',
+    );
+  }
+
+  // 3. New Google User: Create company and user atomically inside a transaction
+  return await withTransaction(async (client) => {
+    const lockCheck = await client.query(
+      `SELECT id FROM users WHERE (lower(trim(email)) = $1 OR google_id = $2) AND deleted_at IS NULL FOR UPDATE`,
+      [email, googleId],
+    );
+    if (lockCheck.rows.length > 0) {
+      throw ApiError.conflict(
+        'An account with this email or Google identity already exists.',
+        'ACCOUNT_EXISTS',
+      );
+    }
+
+    const companyName = name ? `${name}'s Business` : 'New Business';
+    const trialDays = 15;
+    const now = new Date();
+    const trialEnds = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+    const companyResult = await client.query(
+      `INSERT INTO companies (
+         name,
+         business_type,
+         onboarding_completed,
+         currency,
+         entitlement_type,
+         trial_starts_at,
+         trial_ends_at,
+         account_approval_status
+       )
+       VALUES ($1, NULL, false, 'DZD', 'trial', $2, $3, 'approved')
+       RETURNING id, business_type, onboarding_completed, name, entitlement_type, trial_starts_at, trial_ends_at`,
+      [companyName, now, trialEnds],
+    );
+
+    const companyRow = companyResult.rows[0];
+    const companyId = companyRow.id;
+
+    const userResult = await client.query(
+      `INSERT INTO users (
+         company_id,
+         name,
+         email,
+         password_hash,
+         role,
+         email_verified,
+         google_id,
+         auth_provider,
+         avatar_url
+       )
+       VALUES ($1, $2, $3, NULL, 'owner', true, $4, 'google', $5)
+       RETURNING *`,
+      [companyId, name, email, googleId, avatarUrl],
+    );
+
+    const newUser = userResult.rows[0];
+    newUser.business_type = null;
+    newUser.onboarding_completed = false;
+    newUser.company_name = companyRow.name;
+    newUser.entitlement_type = companyRow.entitlement_type;
+    newUser.trial_starts_at = companyRow.trial_starts_at;
+    newUser.trial_ends_at = companyRow.trial_ends_at;
+
+    await client.query(
+      'DELETE FROM pending_registrations WHERE lower(trim(email)) = $1',
+      [email],
+    );
+
+    const tokens = signTokens(newUser);
+
+    return {
+      user: toPublicUser(newUser),
+      company: {
+        id: companyId,
+        name: companyRow.name,
+        businessType: null,
+        onboardingCompleted: false,
+        entitlementType: 'trial',
+        trialStartsAt: companyRow.trial_starts_at,
+        trialEndsAt: companyRow.trial_ends_at,
+        licenseExpiresAt: null,
+        accountApprovalStatus: 'approved',
+        isSuspended: false,
+        suspensionReason: null,
+        suspendedAt: null,
+      },
+      ...tokens,
+    };
+  });
+}
+
+async function linkGoogleAccount(userId, { idToken, code, codeVerifier, redirectUri, clientId, password } = {}) {
+  let effectiveIdToken = idToken;
+  if (!effectiveIdToken && code) {
+    effectiveIdToken = await exchangeGoogleAuthCode({ code, codeVerifier, redirectUri, clientId });
+  }
+
+  const { googleId, email, avatarUrl } = await verifyGoogleIdToken(effectiveIdToken);
+
+  const userResult = await query(
+    `SELECT u.*, c.name AS company_name FROM users u
+     LEFT JOIN companies c ON c.id = u.company_id
+     WHERE u.id = $1 AND u.deleted_at IS NULL`,
+    [userId],
+  );
+
+  const user = userResult.rows[0];
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  if (user.password_hash) {
+    if (!password || typeof password !== 'string') {
+      throw ApiError.badRequest('Password confirmation is required to link a Google account', 'PASSWORD_REQUIRED');
+    }
+    const matches = await bcrypt.compare(password, user.password_hash);
+    if (!matches) {
+      throw ApiError.unauthorized('Incorrect password', 'INVALID_CREDENTIALS');
+    }
+  }
+
+  const existingGoogleResult = await query(
+    `SELECT id FROM users WHERE google_id = $1 AND id != $2 AND deleted_at IS NULL`,
+    [googleId, userId],
+  );
+
+  if (existingGoogleResult.rows.length > 0) {
+    throw ApiError.conflict(
+      'This Google identity is already linked to another Modiri AI account.',
+      'GOOGLE_ACCOUNT_ALREADY_LINKED',
+    );
+  }
+
+  await query(
+    `UPDATE users
+     SET google_id = $1,
+         auth_provider = CASE WHEN auth_provider = 'local' THEN 'hybrid' ELSE auth_provider END,
+         avatar_url = COALESCE(avatar_url, $2),
+         updated_at = now()
+     WHERE id = $3`,
+    [googleId, avatarUrl, userId],
+  );
+
+  return {
+    success: true,
+    message: 'Google account linked successfully.',
+    googleEmail: email,
+  };
+}
+
+async function unlinkGoogleAccount(userId, { password } = {}) {
+  const userResult = await query(
+    `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [userId],
+  );
+  const user = userResult.rows[0];
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  if (!user.google_id) {
+    throw ApiError.badRequest('No Google account is linked to this user', 'NOT_LINKED');
+  }
+
+  if (!user.password_hash) {
+    throw ApiError.badRequest(
+      'You must set a password in your account settings before unlinking your Google account.',
+      'PASSWORD_NOT_SET',
+    );
+  }
+
+  if (!password || typeof password !== 'string') {
+    throw ApiError.badRequest('Password confirmation is required to unlink Google account', 'PASSWORD_REQUIRED');
+  }
+
+  const matches = await bcrypt.compare(password, user.password_hash);
+  if (!matches) {
+    throw ApiError.unauthorized('Incorrect password', 'INVALID_CREDENTIALS');
+  }
+
+  await query(
+    `UPDATE users
+     SET google_id = NULL,
+         auth_provider = 'local',
+         updated_at = now()
+     WHERE id = $1`,
+    [userId],
+  );
+
+  return {
+    success: true,
+    message: 'Google account unlinked successfully.',
+  };
+}
+
 module.exports = {
   register,
   login,
@@ -869,4 +1262,8 @@ module.exports = {
   changePassword,
   deleteAccount,
   verifyPassword,
+  verifyGoogleIdToken,
+  googleSignIn,
+  linkGoogleAccount,
+  unlinkGoogleAccount,
 };

@@ -144,11 +144,15 @@ class ApiClient {
     );
   }
 
-  Future<dynamic> delete(String endpoint) async {
+  Future<dynamic> delete(String endpoint, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$baseUrl$endpoint');
     return _executeWithAuthRefresh(
       endpoint,
-      () => http.delete(uri, headers: _buildHeaders()),
+      () => http.delete(
+        uri,
+        headers: _buildHeaders(),
+        body: body != null ? jsonEncode(body) : null,
+      ),
     );
   }
 

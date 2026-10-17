@@ -235,6 +235,40 @@ function validateVerifyPassword(req, _res, next) {
   return next();
 }
 
+function validateGoogleSignIn(req, res, next) {
+  const { idToken, code, codeVerifier, redirectUri } = req.body || {};
+  if (typeof idToken === 'string' && idToken.trim().length > 0) {
+    return next();
+  }
+  if (
+    typeof code === 'string' && code.trim().length > 0 &&
+    typeof codeVerifier === 'string' && codeVerifier.trim().length > 0 &&
+    typeof redirectUri === 'string' && redirectUri.trim().length > 0
+  ) {
+    return next();
+  }
+  return next(
+    ApiError.badRequest('A valid Google idToken or authorization code with codeVerifier and redirectUri is required', 'VALIDATION_ERROR'),
+  );
+}
+
+function validateLinkGoogle(req, res, next) {
+  const { idToken, code, codeVerifier, redirectUri } = req.body || {};
+  if (typeof idToken === 'string' && idToken.trim().length > 0) {
+    return next();
+  }
+  if (
+    typeof code === 'string' && code.trim().length > 0 &&
+    typeof codeVerifier === 'string' && codeVerifier.trim().length > 0 &&
+    typeof redirectUri === 'string' && redirectUri.trim().length > 0
+  ) {
+    return next();
+  }
+  return next(
+    ApiError.badRequest('A valid Google idToken or authorization code with codeVerifier and redirectUri is required', 'VALIDATION_ERROR'),
+  );
+}
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -244,6 +278,8 @@ module.exports = {
   validateForgotPassword,
   validateResetPassword,
   validateVerifyPassword,
+  validateGoogleSignIn,
+  validateLinkGoogle,
   VALID_INDUSTRIES,
   VALID_TYPES,
 };

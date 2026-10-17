@@ -2188,59 +2188,49 @@ class _DesktopRestaurantOrdersScreenState extends ConsumerState<DesktopRestauran
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: Title & Subtitle on start, Quick actions on end
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.restaurant, color: ModiriColors.brandAmber, size: 26),
-                      const SizedBox(width: 10),
-                      Text(
-                        loc.get('restaurant_management_title'),
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: ModiriColors.textPrimary(isDark), letterSpacing: -0.5),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    loc.get('restaurant_management_subtitle'),
-                    style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: ModiriColors.card(isDark),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: ModiriColors.border(isDark)),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      indicatorColor: ModiriColors.brandAmber,
-                      labelColor: ModiriColors.textPrimary(isDark),
-                      unselectedLabelColor: ModiriColors.textSecondary(isDark),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      tabs: [
-                        Tab(icon: const Icon(Icons.kitchen, size: 16), text: loc.get('kitchen_tickets')),
-                        Tab(icon: const Icon(Icons.table_restaurant, size: 16), text: loc.get('floor_tables')),
-                        Tab(icon: const Icon(Icons.menu_book, size: 16), text: loc.get('menu_recipes')),
-                        Tab(icon: const Icon(Icons.event_seat, size: 16), text: loc.get('reservations')),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.restaurant, color: ModiriColors.brandAmber, size: 26),
+                        const SizedBox(width: 10),
+                        Text(
+                          loc.get('restaurant_management_title'),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: ModiriColors.textPrimary(isDark),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(height: 4),
+                    Text(
+                      loc.get('restaurant_management_subtitle'),
+                      style: TextStyle(fontSize: 13, color: ModiriColors.textSecondary(isDark)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
                   OutlinedButton.icon(
                     icon: const Icon(Icons.document_scanner_outlined, size: 16, color: ModiriColors.brandAmber),
                     label: Text(loc.get('scan_order_receipt')),
                     onPressed: _showScanBillModal,
                   ),
-                  const SizedBox(width: 10),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.add, size: 16),
                     label: Text(loc.get('new_order')),
@@ -2249,6 +2239,31 @@ class _DesktopRestaurantOrdersScreenState extends ConsumerState<DesktopRestauran
                 ],
               ),
             ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Dedicated TabBar Row
+          Container(
+            decoration: BoxDecoration(
+              color: ModiriColors.card(isDark),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: ModiriColors.border(isDark)),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              indicatorColor: ModiriColors.brandAmber,
+              labelColor: ModiriColors.textPrimary(isDark),
+              unselectedLabelColor: ModiriColors.textSecondary(isDark),
+              indicatorSize: TabBarIndicatorSize.tab,
+              tabs: [
+                Tab(icon: const Icon(Icons.kitchen, size: 16), text: loc.get('kitchen_tickets')),
+                Tab(icon: const Icon(Icons.table_restaurant, size: 16), text: loc.get('floor_tables')),
+                Tab(icon: const Icon(Icons.menu_book, size: 16), text: loc.get('menu_recipes')),
+                Tab(icon: const Icon(Icons.event_seat, size: 16), text: loc.get('reservations')),
+              ],
+            ),
           ),
 
           const SizedBox(height: 16),

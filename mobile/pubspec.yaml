@@ -51,6 +51,8 @@ dependencies:
   flutter_native_splash: ^2.4.6
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
+  google_sign_in: ^6.2.2
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:

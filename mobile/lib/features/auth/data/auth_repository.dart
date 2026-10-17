@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/app_database.dart';
@@ -27,11 +29,29 @@ import '../../restaurant/data/restaurant_repository.dart' show restaurantDashboa
 import '../../clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
 import '../../enterprise/presentation/screens/enterprise_main_dashboard_screen.dart' show enterpriseDashboardProvider;
 import 'companies_repository.dart';
-
+import 'desktop_google_oauth.dart';
 
 class AuthRepository {
   AuthRepository(this._ref);
   final Ref _ref;
+
+  static const String googleServerClientId =
+      '128675361201-9sql94sb7b2av7upaksoqunkvs1c4amp.apps.googleusercontent.com';
+  static const String googleWindowsClientId =
+      '128675361201-qhb7u121simtqfq3nubaek2nhk0qae2f.apps.googleusercontent.com';
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: googleServerClientId,
+    clientId: kIsWeb ? googleServerClientId : null,
+    scopes: const ['email', 'profile', 'openid'],
+  );
+
+  bool get isGoogleSignInSupported {
+    return kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
 
   /// Registering does NOT create the account yet and does NOT return a
   /// session  -  the backend only stores a pending signup + emails a code.
@@ -270,11 +290,162 @@ class AuthRepository {
   ///   - A's rows reappear because company_id = A matches again
   ///   - A's offline work and sync queue are fully preserved
   Future<void> logout() async {
+    try {
+      if (isGoogleSignInSupported) {
+        await _googleSignIn.signOut();
+      }
+    } catch (_) {}
     await _ref.read(notificationServiceProvider).unregisterOnLogout();
     await _ref.read(sessionProvider.notifier).clear();
     _invalidateBusinessProviders();
     // DO NOT call AppDatabase.instance.clearAllData() here.
     // Isolation is enforced by company_id scoping in all repository reads.
+  }
+
+  /// Initiates Google Sign-In flow.
+  /// Returns `true` if login was successful and session was established.
+  /// Returns `false` if the user cancelled the dialog.
+  Future<bool> signInWithGoogle() async {
+    if (!isGoogleSignInSupported) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Google Sign-In is only available on Android, Web, and Windows platforms.',
+        code: 'PLATFORM_NOT_SUPPORTED',
+      );
+    }
+
+    try {
+      String? idToken;
+
+      Map<String, dynamic> requestBody = {};
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+        final authResult = await DesktopGoogleOAuth.authenticate(
+          clientId: googleWindowsClientId,
+        );
+        if (authResult == null) {
+          // User closed/cancelled consent in browser
+          return false;
+        }
+
+        if (authResult.hasIdToken) {
+          requestBody['idToken'] = authResult.idToken;
+        } else if (authResult.hasCode) {
+          requestBody['code'] = authResult.code;
+          requestBody['codeVerifier'] = authResult.codeVerifier;
+          requestBody['redirectUri'] = authResult.redirectUri;
+          requestBody['clientId'] = authResult.clientId;
+        } else {
+          throw ApiException(
+            statusCode: 400,
+            message: 'Failed to retrieve Google credentials from browser.',
+            code: 'GOOGLE_CREDENTIALS_MISSING',
+          );
+        }
+      } else {
+        try {
+          await _googleSignIn.signOut();
+        } catch (_) {}
+
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          return false;
+        }
+
+        final googleAuth = await googleUser.authentication;
+        idToken = googleAuth.idToken;
+
+        if (idToken == null || idToken.isEmpty) {
+          throw ApiException(
+            statusCode: 400,
+            message: 'Failed to retrieve Google ID token.',
+            code: 'GOOGLE_TOKEN_MISSING',
+          );
+        }
+        requestBody['idToken'] = idToken;
+      }
+
+      final client = _ref.read(apiClientProvider);
+      final data = await client.post('/auth/google', body: requestBody);
+
+      if (data is Map<String, dynamic>) {
+        await _applySession(data);
+      } else if (data is Map) {
+        await _applySession(Map<String, dynamic>.from(data));
+      } else {
+        throw ApiException(
+          statusCode: 200,
+          message: 'Invalid response format from server.',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+      return true;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(
+        statusCode: 500,
+        message: 'Google Sign-In failed: $e',
+        code: 'GOOGLE_SIGN_IN_FAILED',
+      );
+    }
+  }
+
+  Future<void> linkGoogleAccount({String? password}) async {
+    if (!isGoogleSignInSupported) {
+      throw ApiException(
+        statusCode: 400,
+        message: 'Google Sign-In is only available on Android, Web, and Windows platforms.',
+        code: 'PLATFORM_NOT_SUPPORTED',
+      );
+    }
+
+    final Map<String, dynamic> body = {
+      if (password != null && password.isNotEmpty) 'password': password,
+    };
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      final oauthResult = await DesktopGoogleOAuth.authenticate(
+        clientId: googleWindowsClientId,
+      );
+      if (oauthResult == null) return;
+      if (oauthResult.hasIdToken) {
+        body['idToken'] = oauthResult.idToken;
+      } else if (oauthResult.hasCode) {
+        body['code'] = oauthResult.code;
+        body['codeVerifier'] = oauthResult.codeVerifier;
+        body['redirectUri'] = oauthResult.redirectUri;
+        body['clientId'] = oauthResult.clientId;
+      } else {
+        throw ApiException(
+          statusCode: 400,
+          message: 'Failed to retrieve Google credentials.',
+          code: 'GOOGLE_TOKEN_MISSING',
+        );
+      }
+    } else {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw ApiException(
+          statusCode: 400,
+          message: 'Failed to retrieve Google ID token.',
+          code: 'GOOGLE_TOKEN_MISSING',
+        );
+      }
+      body['idToken'] = idToken;
+    }
+
+    final client = _ref.read(apiClientProvider);
+    await client.post('/auth/link-google', body: body);
+  }
+
+  Future<void> unlinkGoogleAccount({required String password}) async {
+    final client = _ref.read(apiClientProvider);
+    await client.post('/auth/unlink-google', body: {
+      'password': password,
+    });
   }
 
   Future<void> _applySession(Map<String, dynamic> data) async {
