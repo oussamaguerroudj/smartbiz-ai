@@ -315,12 +315,24 @@ class SalesRepository extends StateNotifier<AsyncValue<List<Sale>>> {
         'created_at': nowIso,
       });
 
-      // 5. If sale is unpaid or partial, record debt on customer ledger
+      // 5. If sale is unpaid or partial, record debt on customer ledger & any cash down-payment
       if (customerId != null && paymentStatus != PaymentStatus.paid) {
         final paidAmount = (paymentStatus == PaymentStatus.unpaid)
             ? 0.0
             : (amountPaidNow ?? total).clamp(0.0, total);
         final debtAmount = (total - paidAmount).clamp(0.0, double.infinity);
+
+        if (paidAmount > 0) {
+          await txn.insert('credit_payments', {
+            'id': const Uuid().v4(),
+            'company_id': companyId,
+            'customer_id': customerId,
+            'amount': paidAmount,
+            'paid_at': nowIso,
+            'notes': 'Down payment for sale $invoiceNumber',
+            'created_at': nowIso,
+          });
+        }
 
         if (debtAmount > 0) {
           final custRows = await txn.query(

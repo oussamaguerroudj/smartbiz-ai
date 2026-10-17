@@ -136,10 +136,17 @@ class LocalFinancialCalculator {
     try {
       final directProdRes = await activeDb.rawQuery(
         '''
-        SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
-        FROM products
-        WHERE company_id = ?
-          AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+        SELECT COALESCE(SUM(
+          (p.quantity + COALESCE((
+            SELECT SUM(si.quantity)
+            FROM sale_items si
+            JOIN sales s ON s.id = si.sale_id
+            WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+          ), 0)) * COALESCE(p.purchase_price, 0)
+        ), 0.0) AS total
+        FROM products p
+        WHERE p.company_id = ?
+          AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
         ''',
         [companyId],
       );
@@ -149,7 +156,18 @@ class LocalFinancialCalculator {
     } catch (_) {
       try {
         final fallbackDirectRes = await activeDb.rawQuery(
-          'SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total FROM products WHERE company_id = ?',
+          '''
+          SELECT COALESCE(SUM(
+            (p.quantity + COALESCE((
+              SELECT SUM(si.quantity)
+              FROM sale_items si
+              JOIN sales s ON s.id = si.sale_id
+              WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+            ), 0)) * COALESCE(p.purchase_price, 0)
+          ), 0.0) AS total
+          FROM products p
+          WHERE p.company_id = ?
+          ''',
           [companyId],
         );
         if (globalProductPurchases == 0.0) {
@@ -301,16 +319,23 @@ class LocalFinancialCalculator {
     try {
       final directProdRes = await activeDb.rawQuery(
         '''
-        SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
-        FROM products
-        WHERE company_id = ?
+        SELECT COALESCE(SUM(
+          (p.quantity + COALESCE((
+            SELECT SUM(si.quantity)
+            FROM sale_items si
+            JOIN sales s ON s.id = si.sale_id
+            WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+          ), 0)) * COALESCE(p.purchase_price, 0)
+        ), 0.0) AS total
+        FROM products p
+        WHERE p.company_id = ?
           AND (
             CASE
               WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
               ELSE date(updated_at)
             END
           ) BETWEEN date(?) AND date(?)
-          AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+          AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
         ''',
         [companyId, rangeStart, rangeEnd],
       );
@@ -321,9 +346,16 @@ class LocalFinancialCalculator {
       try {
         final fallbackDirectRes = await activeDb.rawQuery(
           '''
-          SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
-          FROM products
-          WHERE company_id = ?
+          SELECT COALESCE(SUM(
+            (p.quantity + COALESCE((
+              SELECT SUM(si.quantity)
+              FROM sale_items si
+              JOIN sales s ON s.id = si.sale_id
+              WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+            ), 0)) * COALESCE(p.purchase_price, 0)
+          ), 0.0) AS total
+          FROM products p
+          WHERE p.company_id = ?
             AND (
               CASE
                 WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
@@ -581,16 +613,23 @@ class LocalFinancialCalculator {
         try {
           final mDirectRes = await activeDb.rawQuery(
             '''
-            SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * purchase_price ELSE 0 END), 0) AS total
-            FROM products
-            WHERE company_id = ?
+            SELECT COALESCE(SUM(
+              (p.quantity + COALESCE((
+                SELECT SUM(si.quantity)
+                FROM sale_items si
+                JOIN sales s ON s.id = si.sale_id
+                WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+              ), 0)) * COALESCE(p.purchase_price, 0)
+            ), 0.0) AS total
+            FROM products p
+            WHERE p.company_id = ?
               AND (
                 CASE
                   WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
                   ELSE date(updated_at)
                 END
               ) BETWEEN date(?) AND date(?)
-              AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+              AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
             ''',
             [companyId, mStart, mEnd],
           );

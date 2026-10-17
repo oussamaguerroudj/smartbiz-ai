@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/local_financial_calculator.dart';
@@ -25,18 +26,48 @@ class ClothingRepository {
       );
     }
 
+    ClothingDashboardStats? localStats;
+    try {
+      localStats = await LocalFinancialCalculator.calculateClothingDashboard(companyId: companyId);
+    } catch (_) {}
+
     final isOnline = _ref.read(connectionStatusProvider) == ConnectionStatus.online;
     final syncState = _ref.read(syncServiceProvider);
     if (isOnline && syncState.pendingCount == 0) {
       try {
         final client = _ref.read(apiClientProvider);
         final response = await client.get('/clothing/dashboard');
-        return ClothingDashboardStats.fromJson(response['data'] as Map<String, dynamic>);
+        final serverStats = ClothingDashboardStats.fromJson(response['data'] as Map<String, dynamic>);
+        if (localStats != null && localStats.todayRevenue > serverStats.todayRevenue) {
+          return ClothingDashboardStats(
+            todayRevenue: localStats.todayRevenue,
+            todayGrossProfit: localStats.todayGrossProfit,
+            todayNetProfit: localStats.todayNetProfit,
+            todayExpenses: math.max(localStats.todayExpenses, serverStats.todayExpenses),
+            transactionsToday: math.max(localStats.transactionsToday, serverStats.transactionsToday),
+            itemsSoldToday: math.max(localStats.itemsSoldToday, serverStats.itemsSoldToday),
+            weekRevenue: math.max(localStats.weekRevenue, serverStats.weekRevenue),
+            monthRevenue: math.max(localStats.monthRevenue, serverStats.monthRevenue),
+            lowStockCount: serverStats.lowStockCount,
+            lowStockProducts: serverStats.lowStockProducts.isNotEmpty ? serverStats.lowStockProducts : localStats.lowStockProducts,
+            stockCostValue: localStats.stockCostValue,
+            stockRetailValue: localStats.stockRetailValue,
+            unitsInStock: localStats.unitsInStock,
+            bestSellingProducts: serverStats.bestSellingProducts.isNotEmpty ? serverStats.bestSellingProducts : localStats.bestSellingProducts,
+            stockByCategory: serverStats.stockByCategory.isNotEmpty ? serverStats.stockByCategory : localStats.stockByCategory,
+            suppliersCount: math.max(localStats.suppliersCount, serverStats.suppliersCount),
+            customersCount: math.max(localStats.customersCount, serverStats.customersCount),
+            outstandingDebt: serverStats.outstandingDebt,
+            debtorsCount: serverStats.debtorsCount,
+            topDebtors: serverStats.topDebtors,
+          );
+        }
+        return serverStats;
       } catch (_) {}
     }
 
     // Offline fallback — scoped to the active company
-    return LocalFinancialCalculator.calculateClothingDashboard(companyId: companyId);
+    return localStats ?? await LocalFinancialCalculator.calculateClothingDashboard(companyId: companyId);
   }
 }
 

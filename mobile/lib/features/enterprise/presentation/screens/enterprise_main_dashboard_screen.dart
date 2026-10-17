@@ -1,5 +1,6 @@
 import '../../../../core/widgets/directional_chevron.dart';
 import '../../../../core/connectivity/connectivity_service.dart';
+import '../../../../core/network/session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -36,6 +37,7 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 /// would often read as zero), unpaid invoices, and projects, with no
 /// stock, product-sale or retail concepts anywhere on the screen.
 final enterpriseDashboardProvider = FutureProvider.autoDispose((ref) {
+  ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
   ref.watch(connectionStatusProvider);
   return ref.read(enterpriseRepositoryProvider).dashboard();
 });

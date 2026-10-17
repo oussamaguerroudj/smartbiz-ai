@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/app_database.dart';
@@ -26,18 +27,46 @@ class PharmacyRepository {
       );
     }
 
+    PharmacyDashboardStats? localStats;
+    try {
+      localStats = await LocalFinancialCalculator.calculatePharmacyDashboard(companyId: companyId);
+    } catch (_) {}
+
     final isOnline = _ref.read(connectionStatusProvider) == ConnectionStatus.online;
     final syncState = _ref.read(syncServiceProvider);
     if (isOnline && syncState.pendingCount == 0) {
       try {
         final client = _ref.read(apiClientProvider);
         final response = await client.get('/pharmacy/dashboard');
-        return PharmacyDashboardStats.fromJson(response['data'] as Map<String, dynamic>);
+        final serverStats = PharmacyDashboardStats.fromJson(response['data'] as Map<String, dynamic>);
+        if (localStats != null && localStats.todayRevenue > serverStats.todayRevenue) {
+          return PharmacyDashboardStats(
+            todayRevenue: localStats.todayRevenue,
+            todayGrossProfit: localStats.todayGrossProfit,
+            todayNetProfit: localStats.todayNetProfit,
+            todayExpenses: math.max(localStats.todayExpenses, serverStats.todayExpenses),
+            transactionsToday: math.max(localStats.transactionsToday, serverStats.transactionsToday),
+            productsSoldToday: math.max(localStats.productsSoldToday, serverStats.productsSoldToday),
+            weekRevenue: math.max(localStats.weekRevenue, serverStats.weekRevenue),
+            monthRevenue: math.max(localStats.monthRevenue, serverStats.monthRevenue),
+            lowStockCount: serverStats.lowStockCount,
+            lowStockProducts: serverStats.lowStockProducts.isNotEmpty ? serverStats.lowStockProducts : localStats.lowStockProducts,
+            expiringCount: serverStats.expiringCount,
+            expiringProducts: serverStats.expiringProducts.isNotEmpty ? serverStats.expiringProducts : localStats.expiringProducts,
+            expiredCount: serverStats.expiredCount,
+            inventoryCostValue: localStats.inventoryCostValue,
+            inventoryRetailValue: localStats.inventoryRetailValue,
+            unitsInStock: localStats.unitsInStock,
+            bestSellingProducts: serverStats.bestSellingProducts.isNotEmpty ? serverStats.bestSellingProducts : localStats.bestSellingProducts,
+            suppliersCount: math.max(localStats.suppliersCount, serverStats.suppliersCount),
+          );
+        }
+        return serverStats;
       } catch (_) {}
     }
 
     // Offline fallback — scoped to the active company
-    return LocalFinancialCalculator.calculatePharmacyDashboard(companyId: companyId);
+    return localStats ?? await LocalFinancialCalculator.calculatePharmacyDashboard(companyId: companyId);
   }
 
   Future<List<PharmacyExpiringProduct>> expiringProducts({int days = 30}) async {

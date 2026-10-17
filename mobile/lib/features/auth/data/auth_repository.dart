@@ -20,6 +20,12 @@ import '../../employees/data/employees_repository.dart' show employeesRepository
 import '../../appointments/data/appointments_repository.dart' show appointmentsRepositoryProvider;
 import '../../invoices/data/invoices_repository.dart' show invoicesRepositoryProvider;
 import '../../credit/data/credit_repository.dart' show creditRepositoryProvider;
+import '../../superette/presentation/screens/superette_main_dashboard_screen.dart' show superetteDashboardProvider;
+import '../../clothing/presentation/screens/clothing_main_dashboard_screen.dart' show clothingDashboardProvider;
+import '../../pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart' show pharmacyDashboardProvider;
+import '../../restaurant/data/restaurant_repository.dart' show restaurantDashboardProvider;
+import '../../clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
+import '../../enterprise/presentation/screens/enterprise_main_dashboard_screen.dart' show enterpriseDashboardProvider;
 import 'companies_repository.dart';
 
 
@@ -232,6 +238,12 @@ class AuthRepository {
     _ref.invalidate(appointmentsRepositoryProvider);
     _ref.invalidate(invoicesRepositoryProvider);
     _ref.invalidate(creditRepositoryProvider);
+    _ref.invalidate(clothingDashboardProvider);
+    _ref.invalidate(superetteDashboardProvider);
+    _ref.invalidate(pharmacyDashboardProvider);
+    _ref.invalidate(restaurantDashboardProvider);
+    _ref.invalidate(clinicDashboardProvider);
+    _ref.invalidate(enterpriseDashboardProvider);
   }
 
   /// Backward-compatible alias for existing code
@@ -268,8 +280,11 @@ class AuthRepository {
   Future<void> _applySession(Map<String, dynamic> data) async {
     await _ref.read(sessionProvider.notifier).apply(data);
     _invalidateBusinessProviders();
-    // Background pull all company data into local SQLite so app is instantly ready offline!
-    unawaited(_ref.read(syncServiceProvider.notifier).pullInitialData());
+    // Push any pending offline mutations first, then pull authoritative server data
+    unawaited(() async {
+      await _ref.read(syncServiceProvider.notifier).syncPending();
+      await _ref.read(syncServiceProvider.notifier).pullInitialData();
+    }());
     // Register FCM device token with newly authenticated session
     unawaited(_ref.read(notificationServiceProvider).initialize());
   }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/app_database.dart';
@@ -134,14 +135,23 @@ class DashboardRepository extends StateNotifier<AsyncValue<DashboardData>> {
       final unsyncedGrossProfit = unsyncedRevenue - unsyncedCogs;
       final unsyncedNetProfit = unsyncedGrossProfit - unsyncedExpenses;
 
+      final combinedRevenue = serverData.todayRevenue + unsyncedRevenue;
+      final finalRevenue = math.max(local.todayRevenue, combinedRevenue);
+      final finalSalesCount = math.max(local.salesCount, serverData.salesCount + unsyncedSalesCount);
+      final finalExpenses = math.max(local.todayExpenses, serverData.todayExpenses + unsyncedExpenses);
+      final finalProfit = combinedRevenue >= local.todayRevenue
+          ? (serverData.todayProfit + unsyncedNetProfit)
+          : local.todayProfit;
+      final finalGrossProfit = (combinedRevenue >= local.todayRevenue && serverData.todayGrossProfit != null)
+          ? (serverData.todayGrossProfit! + unsyncedGrossProfit)
+          : local.todayGrossProfit;
+
       final reconciled = DashboardData(
-        todayRevenue: serverData.todayRevenue + unsyncedRevenue,
-        todayExpenses: serverData.todayExpenses + unsyncedExpenses,
-        todayProfit: serverData.todayProfit + unsyncedNetProfit,
-        todayGrossProfit: serverData.todayGrossProfit != null
-            ? (serverData.todayGrossProfit! + unsyncedGrossProfit)
-            : null,
-        salesCount: serverData.salesCount + unsyncedSalesCount,
+        todayRevenue: finalRevenue,
+        todayExpenses: finalExpenses,
+        todayProfit: finalProfit,
+        todayGrossProfit: finalGrossProfit,
+        salesCount: finalSalesCount,
         lowStockCount: local.lowStockCount,
         unpaidInvoicesCount: local.unpaidInvoicesCount,
         upcomingAppointmentsCount: serverData.upcomingAppointmentsCount,

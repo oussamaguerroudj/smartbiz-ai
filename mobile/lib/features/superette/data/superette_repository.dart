@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/database/app_database.dart';
@@ -64,7 +65,31 @@ class SuperetteRepository {
       }
       final raw = response['data'] ?? response;
       final data = raw is Map<String, dynamic> ? raw : Map<String, dynamic>.from(raw as Map);
-      return SuperetteDashboardStats.fromJson(data);
+      final serverStats = SuperetteDashboardStats.fromJson(data);
+      if (localStats != null && localStats.todayRevenue > serverStats.todayRevenue) {
+        return SuperetteDashboardStats(
+          todayRevenue: localStats.todayRevenue,
+          todayGrossProfit: localStats.todayGrossProfit,
+          todayNetProfit: localStats.todayNetProfit,
+          todayExpenses: math.max(localStats.todayExpenses, serverStats.todayExpenses),
+          transactionsToday: math.max(localStats.transactionsToday, serverStats.transactionsToday),
+          productsSoldToday: math.max(localStats.productsSoldToday, serverStats.productsSoldToday),
+          weekRevenue: math.max(localStats.weekRevenue, serverStats.weekRevenue),
+          monthRevenue: math.max(localStats.monthRevenue, serverStats.monthRevenue),
+          lowStockCount: serverStats.lowStockCount,
+          lowStockProducts: serverStats.lowStockProducts.isNotEmpty ? serverStats.lowStockProducts : localStats.lowStockProducts,
+          stockCostValue: localStats.stockCostValue,
+          stockRetailValue: localStats.stockRetailValue,
+          unitsInStock: localStats.unitsInStock,
+          bestSellingProducts: serverStats.bestSellingProducts.isNotEmpty ? serverStats.bestSellingProducts : localStats.bestSellingProducts,
+          suppliersCount: math.max(localStats.suppliersCount, serverStats.suppliersCount),
+          customersCount: math.max(localStats.customersCount, serverStats.customersCount),
+          outstandingDebt: serverStats.outstandingDebt,
+          debtorsCount: serverStats.debtorsCount,
+          topDebtors: serverStats.topDebtors,
+        );
+      }
+      return serverStats;
     } catch (_) {
       return localStats ?? defaultStats;
     }

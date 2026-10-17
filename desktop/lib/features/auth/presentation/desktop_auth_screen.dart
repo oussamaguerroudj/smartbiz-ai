@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/localization/desktop_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
@@ -436,6 +437,19 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
 
   Future<void> _continueOffline() async {
     final existing = ref.read(sessionProvider);
+    var savedCompanyId = existing.companyId;
+    var savedUserId = existing.userId;
+    var savedBusinessType = existing.businessType;
+    var savedCompanyName = existing.companyName;
+
+    if (savedCompanyId == null || savedCompanyId.isEmpty) {
+      final storage = FlutterSecureStorage();
+      savedCompanyId = await storage.read(key: 'modiri_desktop_company_id');
+      savedUserId ??= await storage.read(key: 'modiri_desktop_user_id');
+      savedBusinessType ??= await storage.read(key: 'modiri_desktop_business_type');
+      savedCompanyName ??= await storage.read(key: 'modiri_desktop_company_name');
+    }
+
     final email = _emailController.text.trim().isNotEmpty
         ? _emailController.text.trim()
         : (existing.userEmail ?? 'admin@modiri.local');
@@ -444,17 +458,17 @@ class _DesktopAuthScreenState extends ConsumerState<DesktopAuthScreen> {
         : (existing.userName ?? 'Administrator');
     final companyName = _companyController.text.trim().isNotEmpty
         ? _companyController.text.trim()
-        : (existing.companyName ?? 'Modiri Local Business');
+        : (savedCompanyName ?? 'Modiri Local Business');
 
     await ref.read(sessionProvider.notifier).applyLogin(
           accessToken: 'local_offline_${DateTime.now().millisecondsSinceEpoch}',
-          userId: existing.userId ?? 'local_user_1',
-          companyId: existing.companyId ?? 'comp_local_1',
+          userId: savedUserId ?? 'local_user_1',
+          companyId: (savedCompanyId != null && savedCompanyId.isNotEmpty) ? savedCompanyId : 'comp_1',
           companyName: companyName,
           email: email,
           name: name,
           role: existing.role ?? 'owner',
-          businessType: _selectedBusinessType,
+          businessType: savedBusinessType ?? _selectedBusinessType,
         );
   }
 

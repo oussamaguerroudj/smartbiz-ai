@@ -351,18 +351,30 @@ void main() {
       expect(report.grossProfit, 0.0);
     });
 
-    test('Direct product inventory addition (without supplier purchases) is added to productPurchases and total expenses', () async {
+    test('Recorded purchase expense remains constant and does not reduce when products are sold', () async {
       final today = DateTime.now().toIso8601String().substring(0, 10);
 
-      // User adds a direct product in inventory with 10 units @ 1,500 DZD purchase price
-      await db.insert('products', {
-        'id': 'prod_direct_001',
+      // Record a supplier purchase of 10 shoes @ 1,500 DZD = 15,000 DZD
+      await db.insert('supplier_purchases', {
+        'id': 'supp_purch_001',
         'company_id': testCompanyId,
-        'name': 'Direct Inventory Shoes',
+        'supplier_id': 'supp_001',
+        'total_amount': 15000.0,
+        'amount_paid': 15000.0,
+        'payment_status': 'paid',
+        'purchase_date': today,
+        'created_at': '${today}T09:00:00Z',
+      });
+
+      // Product in inventory: originally 10 units, now 6 units remaining (4 sold)
+      await db.insert('products', {
+        'id': 'prod_shoes_001',
+        'company_id': testCompanyId,
+        'name': 'Shoes',
         'category': 'Shoes',
         'purchase_price': 1500.0,
         'selling_price': 2500.0,
-        'quantity': 10,
+        'quantity': 6,
         'updated_at': '${today}T10:00:00Z',
       });
 
@@ -390,6 +402,8 @@ void main() {
       expect(report.expenses, 17000.0);
       // Net Profit = 0 - 17,000 = -17,000 DZD
       expect(report.netProfit, -17000.0);
+      // Remaining inventory value tracked independently = 6 * 1,500 = 9,000 DZD
+      expect(report.inventoryValue, 9000.0);
     });
 
     group('Cash-Based Accounting Acceptance Scenarios (Scenarios 1 to 10)', () {

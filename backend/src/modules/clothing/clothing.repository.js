@@ -50,7 +50,7 @@ async function lowStockCount(companyId) {
 async function stockValue(companyId) {
   const result = await query(
     `SELECT
-       COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * (COALESCE(selling_price, 0) - COALESCE(purchase_price, 0)) ELSE 0 END), 0) AS cost_value,
+       COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0) ELSE 0 END), 0) AS cost_value,
        COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity * COALESCE(selling_price, 0) ELSE 0 END), 0) AS retail_value,
        COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0)::int AS units_in_stock
      FROM products

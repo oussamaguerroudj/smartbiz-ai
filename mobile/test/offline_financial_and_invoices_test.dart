@@ -287,27 +287,27 @@ void main() {
       expect(superetteStats.todayRevenue, equals(2100.0));
       // Gross Profit = 600 + 90 = 690
       expect(superetteStats.todayGrossProfit, equals(690.0));
-      // Net Profit = GP (690) - Expenses (200) = 490
-      expect(superetteStats.todayNetProfit, equals(490.0));
+      // Cash Net Profit = Revenue (2100) - Expenses (200) = 1900
+      expect(superetteStats.todayNetProfit, equals(1900.0));
       expect(superetteStats.transactionsToday, equals(2));
 
       // Verify Generic Dashboard math
       final dashStats = await LocalFinancialCalculator.calculateDashboard(db: db, companyId: testCompanyId);
       expect(dashStats.todayRevenue, equals(2100.0));
       expect(dashStats.todayGrossProfit, equals(690.0));
-      expect(dashStats.todayProfit, equals(490.0));
+      expect(dashStats.todayProfit, equals(1900.0));
 
       // Verify Clothing Dashboard math
       final clothingStats = await LocalFinancialCalculator.calculateClothingDashboard(db: db, companyId: testCompanyId);
       expect(clothingStats.todayRevenue, equals(2100.0));
       expect(clothingStats.todayGrossProfit, equals(690.0));
-      expect(clothingStats.todayNetProfit, equals(490.0));
+      expect(clothingStats.todayNetProfit, equals(1900.0));
 
       // Verify Pharmacy Dashboard math
       final pharmacyStats = await LocalFinancialCalculator.calculatePharmacyDashboard(db: db, companyId: testCompanyId);
       expect(pharmacyStats.todayRevenue, equals(2100.0));
       expect(pharmacyStats.todayGrossProfit, equals(690.0));
-      expect(pharmacyStats.todayNetProfit, equals(490.0));
+      expect(pharmacyStats.todayNetProfit, equals(1900.0));
     });
 
     test('Invoice lookup resolves Arabic product name from products table when sale_items product_name is empty', () async {
@@ -663,15 +663,15 @@ void main() {
       // Revenue = actual receipts (10,000 DZD)
       // Gross Profit = Revenue (10,000 DZD)
       // COGS = 0.0 DZD
-      // Current inventory value = 3,000 DZD
+      // Current inventory value = 3,000 DZD (asset, not deducted from cash profit)
       // Expenses = 1,000 DZD
-      // Net Profit = Revenue (10,000) - Inventory Value (3,000) - Expenses (1,000) = 6,000 DZD
+      // Net Profit = Revenue (10,000) - Expenses (1,000) = 9,000 DZD
       expect(report.revenue, equals(10000.0));
       expect(report.grossProfit, equals(10000.0));
       expect(report.expensesBreakdown.costOfGoodsSold, equals(0.0));
       expect(report.inventoryValue, equals(3000.0));
       expect(report.expenses, equals(1000.0));
-      expect(report.netProfit, equals(6000.0));
+      expect(report.netProfit, equals(9000.0));
     });
   });
 }

@@ -198,9 +198,14 @@ class SessionNotifier extends StateNotifier<SessionState> {
   }
 
   Future<void> logout() async {
-    state = const SessionState(isLoggedIn: false);
+    state = state.copyWith(
+      isLoggedIn: false,
+      accessToken: null,
+      refreshToken: null,
+    );
     try {
-      await _storage.deleteAll();
+      await _storage.delete(key: 'modiri_desktop_access_token');
+      await _storage.delete(key: 'modiri_desktop_refresh_token');
     } catch (_) {}
   }
 }

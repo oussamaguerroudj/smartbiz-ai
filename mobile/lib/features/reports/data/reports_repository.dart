@@ -222,6 +222,10 @@ class ReportsRepository {
           );
         }
 
+        if (localReport != null && localReport.revenue > serverReport.revenue) {
+          return localReport;
+        }
+
         return serverReport;
       } catch (e) {
         // Fallback to local calculation or cached report if server call fails

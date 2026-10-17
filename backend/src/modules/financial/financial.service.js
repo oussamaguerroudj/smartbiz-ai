@@ -228,14 +228,16 @@ async function calculateFinancials(companyId, params = {}) {
     ),
     query(
       `SELECT COALESCE(SUM(
-         CASE
-           WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
-           ELSE 0
-         END
+         (p.quantity + COALESCE((
+           SELECT SUM(si.quantity)
+           FROM sale_items si
+           JOIN sales s ON s.id = si.sale_id
+           WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+         ), 0)) * COALESCE(p.purchase_price, 0)
        ), 0) AS direct_purchases
-       FROM products
-       WHERE company_id = $1 AND deleted_at IS NULL
-         AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)`,
+       FROM products p
+       WHERE p.company_id = $1 AND p.deleted_at IS NULL
+         AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)`,
       [companyId],
     ).catch(() => ({ rows: [{ direct_purchases: 0 }] })),
   ]);
@@ -378,15 +380,17 @@ async function calculateFinancials(companyId, params = {}) {
     ),
     query(
       `SELECT COALESCE(SUM(
-         CASE
-           WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
-           ELSE 0
-         END
+         (p.quantity + COALESCE((
+           SELECT SUM(si.quantity)
+           FROM sale_items si
+           JOIN sales s ON s.id = si.sale_id
+           WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+         ), 0)) * COALESCE(p.purchase_price, 0)
        ), 0) AS direct_purchases
-       FROM products
-       WHERE company_id = $1 AND deleted_at IS NULL
-         AND created_at::date BETWEEN $2::date AND $3::date
-         AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)`,
+       FROM products p
+       WHERE p.company_id = $1 AND p.deleted_at IS NULL
+         AND p.created_at::date BETWEEN $2::date AND $3::date
+         AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)`,
       [companyId, rangeStart, rangeEnd],
     ).catch(() => ({ rows: [{ direct_purchases: 0 }] })),
   ]);
@@ -651,16 +655,18 @@ async function calculateFinancials(companyId, params = {}) {
           ).catch(() => ({ rows: [] }))
         ),
         query(
-          `SELECT EXTRACT(MONTH FROM created_at)::int AS month,
+          `SELECT EXTRACT(MONTH FROM p.created_at)::int AS month,
                   COALESCE(SUM(
-                    CASE
-                      WHEN quantity > 0 THEN quantity * COALESCE(purchase_price, 0)
-                      ELSE 0
-                    END
+                    (p.quantity + COALESCE((
+                      SELECT SUM(si.quantity)
+                      FROM sale_items si
+                      JOIN sales s ON s.id = si.sale_id
+                      WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+                    ), 0)) * COALESCE(p.purchase_price, 0)
                   ), 0) AS direct_expenses
-           FROM products
-           WHERE company_id = $1 AND deleted_at IS NULL AND EXTRACT(YEAR FROM created_at) = $2
-             AND id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+           FROM products p
+           WHERE p.company_id = $1 AND p.deleted_at IS NULL AND EXTRACT(YEAR FROM p.created_at) = $2
+             AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
            GROUP BY month`,
           [companyId, targetYear],
         ).catch(() => ({ rows: [] })),
@@ -681,7 +687,7 @@ async function calculateFinancials(companyId, params = {}) {
 
       const sPurchases = Number(purchasesByMonthRes.rows.find((r) => r.month === m)?.purchase_expenses || 0);
       const dPurchases = Number(directPurchasesByMonthRes?.rows?.find((r) => r.month === m)?.direct_expenses || 0);
-      const pPurchases = sPurchases + dPurchases;
+      const pPurchases = sPurchases > 0 ? sPurchases : dPurchases;
       const expRow = expByMonthRes.rows.find((r) => r.month === m);
       const mSalary = Number(expRow?.salary_expenses || 0);
       const mOperating = Number(expRow?.operating_expenses || 0);

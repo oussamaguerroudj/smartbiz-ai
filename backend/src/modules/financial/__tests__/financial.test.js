@@ -739,19 +739,17 @@ describe('Financial Calculation Service - Unit Tests', () => {
       expect(result.inventoryValue).toBe(15000);
     });
 
-    it('Scenario 30: Direct inventory product acquisitions (without supplier purchases) are included in Product Purchases and Total Expenses', async () => {
+    it('Scenario 30: Recorded purchase expenses derive strictly from purchase transactions and remain constant when inventory is sold', async () => {
       query.mockImplementation((sql) => {
         if (sql.includes('FROM companies')) {
           return Promise.resolve({ rows: [{ business_type: 'retail_store' }] });
         }
-        if (sql.includes('FROM supplier_purchases')) {
-          return Promise.resolve({ rows: [{ total: 0, purchase_expenses: 0 }] });
-        }
-        if (sql.includes('FROM products') && sql.includes('direct_purchases')) {
-          return Promise.resolve({ rows: [{ direct_purchases: 35000 }] });
+        if (sql.includes('FROM supplier_purchases') || sql.includes('FROM supplier_payments')) {
+          return Promise.resolve({ rows: [{ total: 35000, purchase_expenses: 35000 }] });
         }
         if (sql.includes('FROM products') && sql.includes('inventory_value')) {
-          return Promise.resolve({ rows: [{ inventory_value: 35000 }] });
+          // Inventory value has decreased to 15,000 after 20,000 COGS sold
+          return Promise.resolve({ rows: [{ inventory_value: 15000 }] });
         }
         if (sql.includes('s.payment_status = \'paid\'')) {
           return Promise.resolve({ rows: [{ revenue: 50000, cogs: 20000, sales_count: 5 }] });
@@ -770,7 +768,7 @@ describe('Financial Calculation Service - Unit Tests', () => {
 
       const result = await calculateFinancials(mockCompanyId, { period: 'monthly' });
 
-      // Direct inventory additions (35,000 DA) must be included in productPurchases
+      // Recorded purchases (35,000 DA) must remain unchanged despite inventory decreasing to 15,000
       expect(result.expensesBreakdown.productPurchases).toBe(35000);
       expect(result.expensesBreakdown.operatingExpenses).toBe(5000);
       expect(result.expensesBreakdown.employeeSalaries).toBe(10000);
@@ -780,6 +778,9 @@ describe('Financial Calculation Service - Unit Tests', () => {
 
       // Net Profit = Revenue (50,000) - Total Expenses (50,000) = 0 DA
       expect(result.netProfit).toBe(0);
+
+      // Independent asset tracking: inventoryValue is 15,000 DA without altering expenses
+      expect(result.inventoryValue).toBe(15000);
     });
   });
 

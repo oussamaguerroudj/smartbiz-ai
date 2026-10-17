@@ -892,6 +892,7 @@ class RestaurantRepository {
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) => RestaurantRepository(ref));
 
 final restaurantDashboardProvider = FutureProvider.autoDispose((ref) {
+  ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
   ref.watch(connectionStatusProvider);
   return ref.read(restaurantRepositoryProvider).dashboard();
 });

@@ -19,6 +19,12 @@ import '../../features/appointments/data/appointments_repository.dart' show appo
 import '../../features/invoices/data/invoices_repository.dart' show invoicesRepositoryProvider;
 import '../../features/credit/data/credit_repository.dart' show creditRepositoryProvider;
 import '../../features/auth/data/companies_repository.dart' show companyInfoProvider;
+import '../../features/superette/presentation/screens/superette_main_dashboard_screen.dart' show superetteDashboardProvider;
+import '../../features/clothing/presentation/screens/clothing_main_dashboard_screen.dart' show clothingDashboardProvider;
+import '../../features/pharmacy/presentation/screens/pharmacy_main_dashboard_screen.dart' show pharmacyDashboardProvider;
+import '../../features/restaurant/data/restaurant_repository.dart' show restaurantDashboardProvider;
+import '../../features/clinic/presentation/screens/clinic_dashboard_screen.dart' show clinicDashboardProvider;
+import '../../features/enterprise/presentation/screens/enterprise_main_dashboard_screen.dart' show enterpriseDashboardProvider;
 
 class SyncState {
   final int pendingCount;
@@ -1315,6 +1321,12 @@ class SyncService extends StateNotifier<SyncState> {
       _ref.invalidate(invoicesRepositoryProvider);
       _ref.invalidate(creditRepositoryProvider);
       _ref.invalidate(companyInfoProvider);
+      _ref.invalidate(clothingDashboardProvider);
+      _ref.invalidate(superetteDashboardProvider);
+      _ref.invalidate(pharmacyDashboardProvider);
+      _ref.invalidate(restaurantDashboardProvider);
+      _ref.invalidate(clinicDashboardProvider);
+      _ref.invalidate(enterpriseDashboardProvider);
     } catch (_) {}
 
   }

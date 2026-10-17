@@ -212,11 +212,56 @@ class DesktopLocalFinancialCalculator {
       }
     }
 
+    try {
+      final directProdRes = await db.rawQuery(
+        '''
+        SELECT COALESCE(SUM(
+          (COALESCE(p.stock_quantity, p.quantity, 0) + COALESCE((
+            SELECT SUM(si.quantity)
+            FROM sale_items si
+            JOIN sales s ON s.id = si.sale_id
+            WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+          ), 0)) * COALESCE(NULLIF(p.purchase_price, 0), p.cost_price, 0)
+        ), 0.0) AS total
+        FROM products p
+        WHERE p.company_id = ?
+          AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+        ''',
+        [companyId],
+      );
+      if (globalProductPurchases == 0.0) {
+        globalProductPurchases = (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      }
+    } catch (_) {
+      try {
+        final fallbackDirectRes = await db.rawQuery(
+          '''
+          SELECT COALESCE(SUM(
+            (COALESCE(p.stock_quantity, p.quantity, 0) + COALESCE((
+              SELECT SUM(si.quantity)
+              FROM sale_items si
+              JOIN sales s ON s.id = si.sale_id
+              WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+            ), 0)) * COALESCE(NULLIF(p.purchase_price, 0), p.cost_price, 0)
+          ), 0.0) AS total
+          FROM products p
+          WHERE p.company_id = ?
+          ''',
+          [companyId],
+        );
+        if (globalProductPurchases == 0.0) {
+          globalProductPurchases = (fallbackDirectRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        }
+      } catch (_) {}
+    }
+
     final allSalesRevenue = (globalSalesRes.first['revenue'] as num?)?.toDouble() ?? 0.0;
     final allRevenue = allSalesRevenue + globalCreditPayments + globalRestRevenue;
     final allRecordedExpenses = (globalExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
     final allExpenses = globalProductPurchases + allRecordedExpenses;
-    final globalNetProfit = allRevenue - allExpenses;
+    final globalNetProfit = (globalProductPurchases > 0 || isRestaurant)
+        ? (allRevenue - allExpenses)
+        : (allRevenue - globalCogs - allExpenses);
 
     // 2. Period filtering range
     String salesDateClause;
@@ -409,6 +454,50 @@ class DesktopLocalFinancialCalculator {
       }
     }
 
+    try {
+      final directProdRes = await db.rawQuery(
+        '''
+        SELECT COALESCE(SUM(
+          (COALESCE(p.stock_quantity, p.quantity, 0) + COALESCE((
+            SELECT SUM(si.quantity)
+            FROM sale_items si
+            JOIN sales s ON s.id = si.sale_id
+            WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+          ), 0)) * COALESCE(NULLIF(p.purchase_price, 0), p.cost_price, 0)
+        ), 0.0) AS total
+        FROM products p
+        WHERE p.company_id = ?
+          AND $txDateClause
+          AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
+        ''',
+        [companyId, periodKey],
+      );
+      if (periodProductPurchases == 0.0) {
+        periodProductPurchases = (directProdRes.first['total'] as num?)?.toDouble() ?? 0.0;
+      }
+    } catch (_) {
+      try {
+        final fallbackDirectRes = await db.rawQuery(
+          '''
+          SELECT COALESCE(SUM(
+            (COALESCE(p.stock_quantity, p.quantity, 0) + COALESCE((
+              SELECT SUM(si.quantity)
+              FROM sale_items si
+              JOIN sales s ON s.id = si.sale_id
+              WHERE si.product_id = p.id AND s.payment_status != 'cancelled'
+            ), 0)) * COALESCE(NULLIF(p.purchase_price, 0), p.cost_price, 0)
+          ), 0.0) AS total
+          FROM products p
+          WHERE p.company_id = ?
+            AND $txDateClause
+          ''',
+          [companyId, periodKey],
+        );
+        if (periodProductPurchases == 0.0) {
+          periodProductPurchases = (fallbackDirectRes.first['total'] as num?)?.toDouble() ?? 0.0;
+        }
+      } catch (_) {}
+    }
 
     // Period Expenses
     final periodExpensesRes = await db.rawQuery(
@@ -423,7 +512,9 @@ class DesktopLocalFinancialCalculator {
 
     final periodRecordedExpenses = (periodExpensesRes.first['total'] as num?)?.toDouble() ?? 0.0;
     final periodExpenses = periodProductPurchases + periodRecordedExpenses;
-    final periodNetProfit = periodRevenue - periodExpenses;
+    final periodNetProfit = (periodProductPurchases > 0 || isRestaurant)
+        ? (periodRevenue - periodExpenses)
+        : (periodGrossProfit - periodExpenses);
     final profitMargin = periodRevenue > 0 ? (periodNetProfit / periodRevenue) * 100 : 0.0;
 
     // Top Selling Products in period

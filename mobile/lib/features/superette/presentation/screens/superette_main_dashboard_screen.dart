@@ -1,5 +1,6 @@
 import '../../../../core/widgets/directional_chevron.dart';
 import '../../../../core/connectivity/connectivity_service.dart';
+import '../../../../core/network/session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -39,6 +40,7 @@ import '../../../dashboard/presentation/widgets/dashboard_pages_section.dart';
 /// (Ch. 16's own point of difference from Pharmacy) instead of a
 /// patient queue, an orders board, or expiry alerts.
 final superetteDashboardProvider = FutureProvider.autoDispose((ref) {
+  ref.watch(sessionProvider.select((s) => s.companyId ?? s.userId));
   ref.watch(connectionStatusProvider);
   return ref.read(superetteRepositoryProvider).dashboard();
 });
