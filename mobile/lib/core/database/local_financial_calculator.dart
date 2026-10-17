@@ -331,8 +331,8 @@ class LocalFinancialCalculator {
         WHERE p.company_id = ?
           AND (
             CASE
-              WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
-              ELSE date(updated_at)
+              WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime')
+              ELSE date(created_at)
             END
           ) BETWEEN date(?) AND date(?)
           AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)
@@ -358,8 +358,8 @@ class LocalFinancialCalculator {
           WHERE p.company_id = ?
             AND (
               CASE
-                WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
-                ELSE date(updated_at)
+                WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime')
+                ELSE date(created_at)
               END
             ) BETWEEN date(?) AND date(?)
           ''',
@@ -625,8 +625,8 @@ class LocalFinancialCalculator {
             WHERE p.company_id = ?
               AND (
                 CASE
-                  WHEN updated_at LIKE '%Z' OR updated_at LIKE '%+%' THEN date(updated_at, 'localtime')
-                  ELSE date(updated_at)
+                  WHEN created_at LIKE '%Z' OR created_at LIKE '%+%' THEN date(created_at, 'localtime')
+                  ELSE date(created_at)
                 END
               ) BETWEEN date(?) AND date(?)
               AND p.id NOT IN (SELECT product_id FROM supplier_purchase_items WHERE product_id IS NOT NULL)

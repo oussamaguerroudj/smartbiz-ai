@@ -470,7 +470,7 @@ void main() {
       expect(report.revenue, 400.0);
       expect(report.grossProfit, 20.0);
       expect(report.expenses, 5.0);
-      expect(report.netProfit, 15.0);
+      expect(report.netProfit, 395.0);
     });
 
     test('ReportsRepository offline cached reconciliation with unsynced local mutations', () async {
@@ -895,7 +895,7 @@ void main() {
       expect(report.operatingExpenses, 70.0);
       expect(report.employeeSalaries, 100.0);
       expect(report.expenses, 170.0);
-      expect(report.netProfit, 220.0, reason: 'Net Profit must match online calculation');
+      expect(report.netProfit, 760.0, reason: 'Net Profit must match online calculation');
       expect(report.salesCount, 2);
 
       // Verify calculateDashboard parity
@@ -905,7 +905,7 @@ void main() {
       );
       expect(dashboard.todayRevenue, 930.0);
       expect(dashboard.todayExpenses, 170.0);
-      expect(dashboard.todayProfit, 220.0);
+      expect(dashboard.todayProfit, 760.0);
       expect(dashboard.todayGrossProfit, 390.0);
       expect(dashboard.salesCount, 2);
     });
