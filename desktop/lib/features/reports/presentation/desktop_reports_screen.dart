@@ -305,12 +305,13 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
   }
 
   String get _periodLabel {
+    final lang = ref.read(desktopLocaleProvider).languageCode;
     if (_period == 'daily') {
-      return ModiriFormatters.toLatinDigits(DateFormat('yyyy-MM-dd', 'en_US').format(_selectedDate));
+      return ModiriFormatters.toLatinDigits(DateFormat('yyyy-MM-dd').format(_selectedDate));
     } else if (_period == 'monthly') {
-      return ModiriFormatters.toLatinDigits(DateFormat('MMMM yyyy', 'en_US').format(_selectedDate));
+      return ModiriFormatters.formatMonthYear(_selectedDate, languageCode: lang);
     } else {
-      return ModiriFormatters.toLatinDigits(DateFormat('yyyy', 'en_US').format(_selectedDate));
+      return ModiriFormatters.toLatinDigits(_selectedDate.year.toString());
     }
   }
 
@@ -536,7 +537,7 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
                       runSpacing: 8,
                       children: List.generate(12, (index) {
                         final m = index + 1;
-                        final label = DateFormat('MMM').format(DateTime(tempYear, m, 1));
+                        final label = ModiriFormatters.formatMonthShort(m, languageCode: loc.locale.languageCode);
                         final selected = tempMonth == m;
                         return ChoiceChip(
                           label: Text(label),
@@ -1039,7 +1040,7 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            p.toUpperCase(),
+                            loc.get(p),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -1269,7 +1270,7 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
                           children: [7, 30, 60, 90].map((d) {
                             final isSel = _slowMovingDays == d;
                             return ChoiceChip(
-                              label: Text('$d d'),
+                              label: Text('$d ${loc.get("days_unit")}'),
                               selected: isSel,
                               selectedColor: ModiriColors.brandAmber,
                               labelStyle: TextStyle(
@@ -1438,7 +1439,7 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
                         DataColumn(label: Text(loc.get('current_stock_label'))),
                         DataColumn(label: Text(loc.get('unit_cost'))),
                         DataColumn(label: Text(loc.get('selling_price'))),
-                        DataColumn(label: Text('${loc.get("units_sold")} ($_slowMovingDays d)')),
+                        DataColumn(label: Text('${loc.get("units_sold")} ($_slowMovingDays ${loc.get("days_unit")})')),
                         DataColumn(label: Text(loc.get('tied_up_capital'))),
                         DataColumn(label: Text(loc.get('days_in_inventory'))),
                       ],
@@ -1484,7 +1485,7 @@ class _DesktopReportsScreenState extends ConsumerState<DesktopReportsScreen>
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text('${it.daysInInventory} d', style: TextStyle(fontSize: 12, color: ModiriColors.textPrimary(isDark))),
+                                  Text('${it.daysInInventory} ${loc.get("days_unit")}', style: TextStyle(fontSize: 12, color: ModiriColors.textPrimary(isDark))),
                                   if (it.insufficientHistory) ...[
                                     const SizedBox(width: 4),
                                     Tooltip(

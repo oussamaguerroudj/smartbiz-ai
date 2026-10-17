@@ -69,4 +69,48 @@ class ModiriFormatters {
     if (dateTime == null) return '';
     return toLatinDigits(DateFormat('yyyy-MM-dd HH:mm', 'en_US').format(dateTime));
   }
+
+  static const _monthsAr = [
+    'جانفي', 'فيفري', 'مارس', 'أفريل', 'ماي', 'جوان',
+    'جويلية', 'أوت', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+
+  static const _monthsFr = [
+    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  ];
+
+  static const _monthsEn = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  /// Format month and year localized (e.g., "أكتوبر 2026", "Octobre 2026", "October 2026")
+  static String formatMonthYear(DateTime date, {String? languageCode}) {
+    final month = date.month;
+    final year = toLatinDigits(date.year.toString());
+    String monthName;
+    if (languageCode == 'ar') {
+      monthName = _monthsAr[month - 1];
+    } else if (languageCode == 'fr') {
+      monthName = _monthsFr[month - 1];
+    } else {
+      monthName = _monthsEn[month - 1];
+    }
+    return '$monthName $year';
+  }
+
+  /// Format short month name (e.g. for chips and charts)
+  static String formatMonthShort(int month, {String? languageCode}) {
+    if (month < 1 || month > 12) return '$month';
+    if (languageCode == 'ar') {
+      return _monthsAr[month - 1];
+    } else if (languageCode == 'fr') {
+      const frShort = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+      return frShort[month - 1];
+    } else {
+      const enShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return enShort[month - 1];
+    }
+  }
 }
